@@ -1,0 +1,6 @@
+>Rosalind_a 
+CGTAAATTCCCATATA
+>Rosalind_b
+CGTGGTATATACACAG
+>Rosalind_c
+ATATATACGT

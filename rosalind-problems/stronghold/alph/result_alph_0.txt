@@ -1,0 +1,11 @@
+8
+>robot
+AA
+>hamster
+AA
+>dog
+AA
+>mouse
+AA
+>rat
+AA

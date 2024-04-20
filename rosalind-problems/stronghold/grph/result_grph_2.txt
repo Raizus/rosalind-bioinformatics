@@ -1,0 +1,3 @@
+Rosalind_a Rosalind_c
+Rosalind_c Rosalind_a
+Rosalind_c Rosalind_b
