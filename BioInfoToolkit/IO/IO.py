@@ -60,9 +60,9 @@ def getFastaDataFromProteinIds(cIDs: str | list[str]):
         for line in FASTAData:
             if '>' in line:
                 FASTALabel = line[1:]
-                FASTADict[FASTALabel] = ""
+                FASTADict[cID] = ""
             else:
-                FASTADict[FASTALabel] += line.strip()
+                FASTADict[cID] += line.strip()
         sleep(sleepT)
 
     return FASTADict
