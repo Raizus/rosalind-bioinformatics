@@ -1,5 +1,11 @@
 {
     "python.analysis.extraPaths": ["${workspaceFolder}/"],
     "terminal.integrated.env.linux": {"PYTHONPATH": "${workspaceFolder}"},
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportUnusedImport": "warning",
+        "reportMissingImports": "warning",
+        "reportUnusedVariable": "warning",
+        "reportDuplicateImport": "warning",
+    }
 }
