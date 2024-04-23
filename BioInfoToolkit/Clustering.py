@@ -1,3 +1,4 @@
+from itertools import product
 from typing import Literal
 import numpy as np
 import numpy.typing as npt
@@ -21,6 +22,7 @@ def distanceToCenters(data: npt.NDArray, centers: npt.NDArray):
         dist = np.linalg.norm(data-center, axis=1)
         distances[:, i] = dist
     return distances
+
 
 def argminDistanceToCenters(data: npt.NDArray, centers: npt.NDArray):
     """Returns an array with the minium distance of each point in data to all centers
@@ -186,3 +188,52 @@ def softKMeansClustering(data: npt.NDArray, k: int, beta: float, iter: int = 100
             np.sum(hidden_matrix, axis=1, keepdims=True)
 
     return centers
+
+
+def hierarquicalClustering(dist_mat: npt.NDArray):
+    n = dist_mat.shape[0]
+    clusters: list[set[int]] = [set([i]) for i in range(n)]
+    new_clusters: list[set[int]] = []
+    cluster_dist_mat = np.copy(dist_mat)
+
+    def cluster_distance_avg(C1: set[int], C2: set[int]):
+        d_avg = 0
+        for i, j in product(C1, C2):
+            d_avg += dist_mat[i, j]
+        d_avg = d_avg / (len(C1)*len(C2))
+        return d_avg
+
+    while len(clusters) > 1:
+        # find the two closest clusters Ci Cj
+        triui = np.triu_indices_from(cluster_dist_mat, k=1)
+        argmin = int(np.argmin(cluster_dist_mat[triui]))
+        max_index = [triui[i][argmin] for i, _ in enumerate(triui)]
+
+        # merge Ci and Cj into a new cluster (Cnew = Ci + Cj)
+        C1 = clusters[max_index[0]]
+        C2 = clusters[max_index[1]]
+        Cnew = C1.union(C2)
+
+        # add new node to Cnew to the tree and connect to Ci, Cj by directed edges
+
+        # add a row and column to D computing the distance of each cluster to Cnew
+        new_dist = np.array([cluster_distance_avg(Cnew, cl)
+                            for cl in clusters], ndmin=2)
+        cluster_dist_mat = np.concatenate((cluster_dist_mat, new_dist), axis=0)
+        new_dist = np.concatenate((new_dist, np.zeros((1, 1))), axis=1)
+        cluster_dist_mat = np.concatenate(
+            (cluster_dist_mat, new_dist.transpose()), axis=1)
+
+        # remove rows and columns of D corresponding to Ci Cj
+        cluster_dist_mat = np.delete(cluster_dist_mat, max_index, 0)
+        cluster_dist_mat = np.delete(cluster_dist_mat, max_index, 1)
+
+        # remove Ci, Cj from clusters
+        clusters.remove(C1)
+        clusters.remove(C2)
+        # add Cnew to clusters
+        clusters.append(Cnew)
+        new_clusters.append(Cnew)
+
+    # assign a root
+    return new_clusters
