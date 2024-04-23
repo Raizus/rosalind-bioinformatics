@@ -1,8 +1,6 @@
-from BioInfoToolkit.Alignment import multisequenceAlign
-from BioInfoToolkit.Alignment.Alignment import getMultiAlignScoringFunc, multiAlignmentCost
+from BioInfoToolkit.Alignment.MultiAlignment import getMultiAlignScoringFunc, multiAlignmentCost, multisequenceAlign
 from BioInfoToolkit.IO.IO import read_FASTA, readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 import os
-from BioInfoToolkit.Sequences.SequenceUtils import is_subsequence_str
 from BioInfoToolkit.Sequences.StringUtils import strip_inserts
 
 """
@@ -27,11 +25,10 @@ def verify(result: tuple[int, list[str]], solution: tuple[int, list[str]], seqs:
 
     scoring_func = getMultiAlignScoringFunc(0, -1)
     alignment_score = multiAlignmentCost(aligned_seqs_res, scoring_func)
-    are_subseqs = all(is_subsequence_str(seq, strip_inserts(aligned_seq)) for seq, aligned_seq in
+    are_subseqs = all(seq == strip_inserts(aligned_seq) for seq, aligned_seq in
                       zip(seqs, aligned_seqs_res))
 
-    correct = (score_res == score_sol) and (
-        score_res == alignment_score) and are_subseqs
+    correct = (score_res == score_sol == alignment_score) and are_subseqs
     return correct
 
 

@@ -13,8 +13,31 @@ BLOSUM62: dict[tuple[str, str], int] = {
     ('A', 'A'): 4, ('A', 'C'): 0, ('A', 'D'): -2, ('A', 'E'): -1, ('A', 'F'): -2, ('A', 'G'): 0, ('A', 'H'): -2, ('A', 'I'): -1, ('A', 'K'): -1, ('A', 'L'): -1, ('A', 'M'): -1, ('A', 'N'): -2, ('A', 'P'): -1, ('A', 'Q'): -1, ('A', 'R'): -1, ('A', 'S'): 1, ('A', 'T'): 0, ('A', 'V'): 0, ('A', 'W'): -3, ('A', 'Y'): -2, ('C', 'A'): 0, ('C', 'C'): 9, ('C', 'D'): -3, ('C', 'E'): -4, ('C', 'F'): -2, ('C', 'G'): -3, ('C', 'H'): -3, ('C', 'I'): -1, ('C', 'K'): -3, ('C', 'L'): -1, ('C', 'M'): -1, ('C', 'N'): -3, ('C', 'P'): -3, ('C', 'Q'): -3, ('C', 'R'): -3, ('C', 'S'): -1, ('C', 'T'): -1, ('C', 'V'): -1, ('C', 'W'): -2, ('C', 'Y'): -2, ('D', 'A'): -2, ('D', 'C'): -3, ('D', 'D'): 6, ('D', 'E'): 2, ('D', 'F'): -3, ('D', 'G'): -1, ('D', 'H'): -1, ('D', 'I'): -3, ('D', 'K'): -1, ('D', 'L'): -4, ('D', 'M'): -3, ('D', 'N'): 1, ('D', 'P'): -1, ('D', 'Q'): 0, ('D', 'R'): -2, ('D', 'S'): 0, ('D', 'T'): -1, ('D', 'V'): -3, ('D', 'W'): -4, ('D', 'Y'): -3, ('E', 'A'): -1, ('E', 'C'): -4, ('E', 'D'): 2, ('E', 'E'): 5, ('E', 'F'): -3, ('E', 'G'): -2, ('E', 'H'): 0, ('E', 'I'): -3, ('E', 'K'): 1, ('E', 'L'): -3, ('E', 'M'): -2, ('E', 'N'): 0, ('E', 'P'): -1, ('E', 'Q'): 2, ('E', 'R'): 0, ('E', 'S'): 0, ('E', 'T'): -1, ('E', 'V'): -2, ('E', 'W'): -3, ('E', 'Y'): -2, ('F', 'A'): -2, ('F', 'C'): -2, ('F', 'D'): -3, ('F', 'E'): -3, ('F', 'F'): 6, ('F', 'G'): -3, ('F', 'H'): -1, ('F', 'I'): 0, ('F', 'K'): -3, ('F', 'L'): 0, ('F', 'M'): 0, ('F', 'N'): -3, ('F', 'P'): -4, ('F', 'Q'): -3, ('F', 'R'): -3, ('F', 'S'): -2, ('F', 'T'): -2, ('F', 'V'): -1, ('F', 'W'): 1, ('F', 'Y'): 3, ('G', 'A'): 0, ('G', 'C'): -3, ('G', 'D'): -1, ('G', 'E'): -2, ('G', 'F'): -3, ('G', 'G'): 6, ('G', 'H'): -2, ('G', 'I'): -4, ('G', 'K'): -2, ('G', 'L'): -4, ('G', 'M'): -3, ('G', 'N'): 0, ('G', 'P'): -2, ('G', 'Q'): -2, ('G', 'R'): -2, ('G', 'S'): 0, ('G', 'T'): -2, ('G', 'V'): -3, ('G', 'W'): -2, ('G', 'Y'): -3, ('H', 'A'): -2, ('H', 'C'): -3, ('H', 'D'): -1, ('H', 'E'): 0, ('H', 'F'): -1, ('H', 'G'): -2, ('H', 'H'): 8, ('H', 'I'): -3, ('H', 'K'): -1, ('H', 'L'): -3, ('H', 'M'): -2, ('H', 'N'): 1, ('H', 'P'): -2, ('H', 'Q'): 0, ('H', 'R'): 0, ('H', 'S'): -1, ('H', 'T'): -2, ('H', 'V'): -3, ('H', 'W'): -2, ('H', 'Y'): 2, ('I', 'A'): -1, ('I', 'C'): -1, ('I', 'D'): -3, ('I', 'E'): -3, ('I', 'F'): 0, ('I', 'G'): -4, ('I', 'H'): -3, ('I', 'I'): 4, ('I', 'K'): -3, ('I', 'L'): 2, ('I', 'M'): 1, ('I', 'N'): -3, ('I', 'P'): -3, ('I', 'Q'): -3, ('I', 'R'): -3, ('I', 'S'): -2, ('I', 'T'): -1, ('I', 'V'): 3, ('I', 'W'): -3, ('I', 'Y'): -1, ('K', 'A'): -1, ('K', 'C'): -3, ('K', 'D'): -1, ('K', 'E'): 1, ('K', 'F'): -3, ('K', 'G'): -2, ('K', 'H'): -1, ('K', 'I'): -3, ('K', 'K'): 5, ('K', 'L'): -2, ('K', 'M'): -1, ('K', 'N'): 0, ('K', 'P'): -1, ('K', 'Q'): 1, ('K', 'R'): 2, ('K', 'S'): 0, ('K', 'T'): -1, ('K', 'V'): -2, ('K', 'W'): -3, ('K', 'Y'): -2, ('L', 'A'): -1, ('L', 'C'): -1, ('L', 'D'): -4, ('L', 'E'): -3, ('L', 'F'): 0, ('L', 'G'): -4, ('L', 'H'): -3, ('L', 'I'): 2, ('L', 'K'): -2, ('L', 'L'): 4, ('L', 'M'): 2, ('L', 'N'): -3, ('L', 'P'): -3, ('L', 'Q'): -2, ('L', 'R'): -2, ('L', 'S'): -2, ('L', 'T'): -1, ('L', 'V'): 1, ('L', 'W'): -2, ('L', 'Y'): -1, ('M', 'A'): -1, ('M', 'C'): -1, ('M', 'D'): -3, ('M', 'E'): -2, ('M', 'F'): 0, ('M', 'G'): -3, ('M', 'H'): -2, ('M', 'I'): 1, ('M', 'K'): -1, ('M', 'L'): 2, ('M', 'M'): 5, ('M', 'N'): -2, ('M', 'P'): -2, ('M', 'Q'): 0, ('M', 'R'): -1, ('M', 'S'): -1, ('M', 'T'): -1, ('M', 'V'): 1, ('M', 'W'): -1, ('M', 'Y'): -1, ('N', 'A'): -2, ('N', 'C'): -3, ('N', 'D'): 1, ('N', 'E'): 0, ('N', 'F'): -3, ('N', 'G'): 0, ('N', 'H'): 1, ('N', 'I'): -3, ('N', 'K'): 0, ('N', 'L'): -3, ('N', 'M'): -2, ('N', 'N'): 6, ('N', 'P'): -2, ('N', 'Q'): 0, ('N', 'R'): 0, ('N', 'S'): 1, ('N', 'T'): 0, ('N', 'V'): -3, ('N', 'W'): -4, ('N', 'Y'): -2, ('P', 'A'): -1, ('P', 'C'): -3, ('P', 'D'): -1, ('P', 'E'): -1, ('P', 'F'): -4, ('P', 'G'): -2, ('P', 'H'): -2, ('P', 'I'): -3, ('P', 'K'): -1, ('P', 'L'): -3, ('P', 'M'): -2, ('P', 'N'): -2, ('P', 'P'): 7, ('P', 'Q'): -1, ('P', 'R'): -2, ('P', 'S'): -1, ('P', 'T'): -1, ('P', 'V'): -2, ('P', 'W'): -4, ('P', 'Y'): -3, ('Q', 'A'): -1, ('Q', 'C'): -3, ('Q', 'D'): 0, ('Q', 'E'): 2, ('Q', 'F'): -3, ('Q', 'G'): -2, ('Q', 'H'): 0, ('Q', 'I'): -3, ('Q', 'K'): 1, ('Q', 'L'): -2, ('Q', 'M'): 0, ('Q', 'N'): 0, ('Q', 'P'): -1, ('Q', 'Q'): 5, ('Q', 'R'): 1, ('Q', 'S'): 0, ('Q', 'T'): -1, ('Q', 'V'): -2, ('Q', 'W'): -2, ('Q', 'Y'): -1, ('R', 'A'): -1, ('R', 'C'): -3, ('R', 'D'): -2, ('R', 'E'): 0, ('R', 'F'): -3, ('R', 'G'): -2, ('R', 'H'): 0, ('R', 'I'): -3, ('R', 'K'): 2, ('R', 'L'): -2, ('R', 'M'): -1, ('R', 'N'): 0, ('R', 'P'): -2, ('R', 'Q'): 1, ('R', 'R'): 5, ('R', 'S'): -1, ('R', 'T'): -1, ('R', 'V'): -3, ('R', 'W'): -3, ('R', 'Y'): -2, ('S', 'A'): 1, ('S', 'C'): -1, ('S', 'D'): 0, ('S', 'E'): 0, ('S', 'F'): -2, ('S', 'G'): 0, ('S', 'H'): -1, ('S', 'I'): -2, ('S', 'K'): 0, ('S', 'L'): -2, ('S', 'M'): -1, ('S', 'N'): 1, ('S', 'P'): -1, ('S', 'Q'): 0, ('S', 'R'): -1, ('S', 'S'): 4, ('S', 'T'): 1, ('S', 'V'): -2, ('S', 'W'): -3, ('S', 'Y'): -2, ('T', 'A'): 0, ('T', 'C'): -1, ('T', 'D'): -1, ('T', 'E'): -1, ('T', 'F'): -2, ('T', 'G'): -2, ('T', 'H'): -2, ('T', 'I'): -1, ('T', 'K'): -1, ('T', 'L'): -1, ('T', 'M'): -1, ('T', 'N'): 0, ('T', 'P'): -1, ('T', 'Q'): -1, ('T', 'R'): -1, ('T', 'S'): 1, ('T', 'T'): 5, ('T', 'V'): 0, ('T', 'W'): -2, ('T', 'Y'): -2, ('V', 'A'): 0, ('V', 'C'): -1, ('V', 'D'): -3, ('V', 'E'): -2, ('V', 'F'): -1, ('V', 'G'): -3, ('V', 'H'): -3, ('V', 'I'): 3, ('V', 'K'): -2, ('V', 'L'): 1, ('V', 'M'): 1, ('V', 'N'): -3, ('V', 'P'): -2, ('V', 'Q'): -2, ('V', 'R'): -3, ('V', 'S'): -2, ('V', 'T'): 0, ('V', 'V'): 4, ('V', 'W'): -3, ('V', 'Y'): -1, ('W', 'A'): -3, ('W', 'C'): -2, ('W', 'D'): -4, ('W', 'E'): -3, ('W', 'F'): 1, ('W', 'G'): -2, ('W', 'H'): -2, ('W', 'I'): -3, ('W', 'K'): -3, ('W', 'L'): -2, ('W', 'M'): -1, ('W', 'N'): -4, ('W', 'P'): -4, ('W', 'Q'): -2, ('W', 'R'): -3, ('W', 'S'): -3, ('W', 'T'): -2, ('W', 'V'): -3, ('W', 'W'): 11, ('W', 'Y'): 2, ('Y', 'A'): -2, ('Y', 'C'): -2, ('Y', 'D'): -3, ('Y', 'E'): -2, ('Y', 'F'): 3, ('Y', 'G'): -3, ('Y', 'H'): 2, ('Y', 'I'): -1, ('Y', 'K'): -2, ('Y', 'L'): -1, ('Y', 'M'): -1, ('Y', 'N'): -2, ('Y', 'P'): -3, ('Y', 'Q'): -1, ('Y', 'R'): -2, ('Y', 'S'): -2, ('Y', 'T'): -2, ('Y', 'V'): -1, ('Y', 'W'): 2, ('Y', 'Y'): 7}
 
 
-def removeGaps(seq: str) -> str:
-    return seq.replace('-', '')
+def overlap_trim_s_t(s: str, t: str) -> tuple[str, str]:
+    """Trims the prefix of s and t by the length of the inserts ('-') at the start of t,
+    and trims the suffix of s and t by the length of the inserts ('-') at the end of s. Ex:
+        s:      SSSSSXX-XX-X------
+        t:      -----Y-YY-YYTTTTTT
+        new_s:       XX-XX-X
+        new_t:       Y-YY-YY
+    Args:
+        s (str):
+        t (str):
+
+    Returns:
+        new_s, new_t (tuple[str, str]): 
+    """
+    m = len(s)
+    new_s = s.rstrip('-')
+    ds = m - len(new_s)
+    t = t[:-ds]
+    n = len(t)
+
+    new_t = t.lstrip('-')
+    dt = n - len(new_t)
+    new_s = new_s[dt:]
+
+    return new_s, new_t
 
 
 class SimilarityScore:
@@ -265,6 +288,50 @@ def linearGapSemiGlobalAlignmentCost(alignedSeq1: str, alignedSeq2: str, gapPena
     return cost
 
 
+def linearGapOverlapAlignmentCost(s: str, t: str, gapPenalty: int, similarityScore: SimilarityScore) -> int | float:
+    if s[-1] == '-' or t[0] == '-':
+        return math.inf
+    
+    score = 0
+    # new_s, new_t = overlap_trim_s_t(s,t)
+
+    for i, (si, ti) in enumerate(zip(s, t)):
+        if si == '-' and ti == '-':
+            raise Exception(
+                f"s[{i}] and t[{i}] are both gaps. Alignment is invalid")
+        if si == '-' or ti == '-':
+            score += gapPenalty
+        else:
+            match = similarityScore.score(si, ti)
+            score += match
+    return score
+
+
+def globalAlignmentLinearGapGen(seq1: str, seq2: str, gap_penalty: int, similarity_score: SimilarityScore):
+    m = len(seq1)
+    n = len(seq2)
+
+    last_line = [gap_penalty*j for j in range(n+1)]
+    yield last_line
+
+    for i, xi in enumerate(seq1, 1):
+        curr_line = [0 for _ in range(m+1)]
+        curr_line[0] = i*gap_penalty
+        for j, yj in enumerate(seq2, 1):
+        # scores of col
+            score = similarity_score.score(xi, yj)
+
+            match = last_line[j-1] + score
+            delete = last_line[j] + gap_penalty
+            insert = curr_line[j-1] + gap_penalty
+
+            max_val = max(match, delete, insert)
+            curr_line[j] = max_val
+
+        yield curr_line
+        last_line = curr_line
+
+
 def globalAlignmentLinearGapPenalty(seq1: str, seq2: str, gapPenalty: int = -1,
                                     options: SimilarityScore = defaultSimilarityScore):
     """Needleman-Wunsch algorithm to compute optimal sequence alignment
@@ -395,66 +462,6 @@ def countOptimalGlobalAlignmentsLinearGap(seq1: str, seq2: str,
     return count
 
 
-def globalAlignmentLinearGapPenaltyScoreInLinearSpace(seq1: str, seq2: str,
-                                                      gapPenalty: int,
-                                                      similarityScore: SimilarityScore):
-    """Needleman-Wunsch algorithm to compute optimal sequence alignment
-
-    Args:
-        seq1 (str): a string sequence
-        seq2 (str): another string sequence
-
-    Returns:
-
-    """
-    # Match: The two letters at the current index are the same.
-    # Mismatch: The two letters at the current index are different.
-    # Indel (Insertion or Deletion): The best alignment involves one letter aligning to a gap in the other string.
-
-    # default scoring system:
-    # match: +1
-    # mismatch/indel: -1
-
-    # m x n matrix
-    m = len(seq1)
-    n = len(seq2)
-
-    # scores of col
-    prev = [0 for _ in range(m+1)]
-
-    for i in range(m+1):
-        prev[i] = gapPenalty*i
-
-    for j, yj in enumerate(seq2, 1):
-        # scores of col
-        curr = [0 for _ in range(m+1)]
-        curr[0] = j*gapPenalty
-        for i, xi in enumerate(seq1, 1):
-            score = similarityScore.score(xi, yj)
-
-            match = prev[i-1] + score
-            delete = prev[i] + gapPenalty
-            insert = curr[i-1] + gapPenalty
-
-            max_val = max(match, delete, insert)
-
-            curr[i] = max_val
-
-        prev = curr
-
-    # i, j = m, n
-    # while j == n:
-    #     if i > 0 and curr[i] == curr[i-1] + gapPenalty:
-    #         i = i - 1
-    #     elif i > 0 and j > 0 and curr[i] == prev[i-1] + similarityScore.score(seq1[i-1], seq2[j-1]):
-    #         i, j = i - 1, j - 1
-    #     else:
-    #         j = j - 1
-    # middle_edge = (i, j)
-
-    return prev
-
-
 def globalAlignmentLinearGapPenaltyMiddleNode(seq1: str, seq2: str,
                                               gapPenalty: int,
                                               similarityScore: SimilarityScore):
@@ -578,7 +585,8 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
         if prev == 'up' or j == 0:
             if Y[i][j] == V[i-1][j] + openingPenalty:
                 prev = 'diagonal'
-            # else still 'up'
+            else: 
+                prev = 'up'
 
             alignedSeq1 = xi + alignedSeq1
             alignedSeq2 = '-' + alignedSeq2
@@ -586,7 +594,8 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
         elif prev == 'left' or i == 0:
             if X[i][j] == V[i][j-1] + openingPenalty:
                 prev = 'diagonal'
-            # else still 'left'
+            else:
+                prev = 'left'
 
             alignedSeq1 = '-' + alignedSeq1
             alignedSeq2 = yj + alignedSeq2
@@ -821,8 +830,8 @@ def smithWatermanAffineGap(seq1: str, seq2: str, openingPenalty: int = -11,
     return alignedSeq1, alignedSeq2, V, max_ind
 
 
-def fittingAlignmentLinearGap(seq: str, motif: str,
-                              gapPenalty: int, similarityScore: SimilarityScore = defaultSimilarityScore):
+def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int, 
+                              similarityScore: SimilarityScore):
     """Computes the fitting aligment between a string s and a motif t. A fitting alignment is an alignment of a substring of s against all of t.
 
     Args:
@@ -835,8 +844,7 @@ def fittingAlignmentLinearGap(seq: str, motif: str,
     n = len(motif)
 
     H = [[0 for _ in range(n+1)] for _ in range(m+1)]
-    originMat: list[list[list[str]]] = [[[]
-                                         for _ in range(n+1)] for _ in range(m+1)]
+    originMat: list[list[list[str]]] = [[[] for _ in range(n+1)] for _ in range(m+1)]
 
     for j in range(1, n+1):
         H[0][j] = gapPenalty * j
@@ -852,12 +860,33 @@ def fittingAlignmentLinearGap(seq: str, motif: str,
             insert = H[i][j-1] + gapPenalty
 
             vals = [match, delete, insert]
-
+            H[i][j] = max(match, delete, insert)
+            
             max_val = max(vals)
             origin = [aux[l] for l, val in enumerate(vals) if val == max_val]
             originMat[i][j] = origin
 
-            H[i][j] = max(match, delete, insert)
+
+    max_score = max(H[i][n] for i in range(m+1))
+    max_idxs = [i for i in range(m+1) if H[i][n] == max_score]
+
+    return H, originMat, max_score
+
+
+def fittingAlignmentLinearGapBacktrack(seq: str, motif: str, H: list[list[int]],
+                                       gapPenalty: int, 
+                                       similarityScore: SimilarityScore):
+    """Computes the fitting aligment between a string s and a motif t. A fitting alignment is an alignment of a substring of s against all of t.
+
+    Args:
+        seq (str): _description_
+        motif (str): _description_
+        H (list[list[int]]): alignment cost matrix
+        gapPenalty (int): _description_
+        similarityScore (SimilarityScore, optional): _description_. Defaults to defaultSimilarityScore.
+    """
+    m = len(seq)
+    n = len(motif)
 
     max_score = max(H[i][n] for i in range(m+1))
     max_idxs = [i for i in range(m+1) if H[i][n] == max_score]
@@ -886,7 +915,7 @@ def fittingAlignmentLinearGap(seq: str, motif: str,
             alignedSeq2 = tj + alignedSeq2
             i, j = i - 1, j - 1
 
-    return alignedSeq1, alignedSeq2, H, originMat, max_score
+    return alignedSeq1, alignedSeq2
 
 
 def semiglobalAligmentLinearGap(seq1: str, seq2: str,
@@ -985,6 +1014,17 @@ def overlapAlignmentLinearGap(s: str, t: str,
 
             H[i][j] = max(match, v1, v2)
 
+    # last_line = [(gapPenalty*j, "", "-"*j) for j in range(n+1)]
+    # for i, si in enumerate(s, 1):
+    #     curr_line = [(0, "", "")]
+    #     for j, tj in enumerate(t, 1):
+    #         score = similarityScore.score(si, tj)
+            
+    #         match = last_line[j-1][0] + score
+    #         v1 = last_line[j][0] + gapPenalty
+    #         v2 = curr_line[j-1][0] + (0 if i == m else gapPenalty)
+
+
     score = H[m][n]
     i, j = m, n
 
@@ -1062,11 +1102,13 @@ def drawAlignmentMatrixSvg(F: list[list[int]], seq1: str, seq2: str):
 
 def add_backtrack_paths_to_alignment_svg_global_alignement(d: draw.Drawing,
                                                            originMat: list[list[list[str]]],
-                                                           seq1: str, seq2: str):
+                                                           seq1: str, seq2: str, idxs: list[tuple[int,int]] = []):
 
     cell_size = 50
-    i = len(seq1)
-    j = len(seq2)
+    if len(idxs) == 0:
+        i = len(seq1)
+        j = len(seq2)
+        idxs.append((i,j))
 
     def dir_to_cords(i: int, j: int, direction: str):
         if direction == 'up':
@@ -1090,79 +1132,181 @@ def add_backtrack_paths_to_alignment_svg_global_alignement(d: draw.Drawing,
                 draw_backtrack_arrows(i2, j2)
             drawn_dict[(i, j)] = True
 
-    draw_backtrack_arrows(i, j)
+    for i0, j0 in idxs:
+        draw_backtrack_arrows(i0, j0)
 
 
-def getMultiAlignScoringFunc(matchScore: int = 1, mismatchScore: int = -1,
-                             similarityDict: dict[tuple[str, str], int] | None = None) -> Callable[[list[str]], int]:
-    def score(chars: list[str]) -> int:
-        totalScore = 0
-
-        for x, y in combinations(chars, 2):
-            if similarityDict:
-                totalScore = similarityDict[(x, y)]
-            else:
-                similarityScore = matchScore if x == y else mismatchScore
-                totalScore += similarityScore
-
-        return totalScore
-
-    return score
-
-
-def multisequenceAlign(seqs: list[str],
-                       scoringFunc: Callable[[list[str]], int]) -> tuple[list[str], int]:
-    """Needleman-Wunsch algorithm to compute optimal global sequence alignment. Extends the 2 sequence alignement algorithm to arbitrary n sequences. Creates a matrix of size (n1, n2, ..., nk), where k is the number of sequences and ni is the length of sequence i
+def globalAlignmentLinearGapPenaltyScoreInLinearSpace2(seq1: str, seq2: str,
+                                                       gapPenalty: int,
+                                                       similarityScore: SimilarityScore):
+    """Needleman-Wunsch algorithm to compute optimal sequence alignment
 
     Args:
-        seqs (list[str]): a list of sequences to align
+        seq1 (str): a string sequence
+        seq2 (str): another string sequence
 
     Returns:
-        tuple[list[str], int]: tuple with a list of aligned sequences and the alignment score
+
     """
+    # Match: The two letters at the current index are the same.
+    # Mismatch: The two letters at the current index are different.
+    # Indel (Insertion or Deletion): The best alignment involves one letter aligning to a gap in the other string.
 
-    num_seq = len(seqs)
-    seqs_len = tuple(len(seq) for seq in seqs)
+    # default scoring system:
+    # match: +1
+    # mismatch/indel: -1
 
-    def tuple_add(t1: tuple[int, ...], t2: tuple[int, ...]):
-        return tuple(a + b for a, b in zip(t1, t2))
+    # m x n matrix
+    m = len(seq1)
+    n = len(seq2)
 
-    def generate_predecessors_delta(idxs: tuple[int, ...]):
-        aux = tuple([-1, 0] if i > 0 else [0] for i in idxs)
-        for i, di in enumerate(product(*aux)):
-            if all(v == 0 for v in di):
-                continue
-            yield di
+    # scores of col
+    prev = [0 for _ in range(m+1)]
 
-    # score matrix
-    fDims = tuple(s+1 for s in seqs_len)
-    F = np.zeros(fDims, dtype=np.int32)
+    for i in range(m+1):
+        prev[i] = gapPenalty*i
 
-    for idxs in product(*[list(range(0, n+1)) for n in seqs_len]):
-        values: list[int] = []
-        for delta in generate_predecessors_delta(idxs):
-            chars = ['-' if k == 0 else seqs[j][idxs[j] + k]
-                     for j, k in enumerate(delta)]
-            value = F[tuple_add(idxs, delta)]+scoringFunc(chars)
-            values.append(value)
+    for j, yj in enumerate(seq2, 1):
+        # scores of col
+        curr = [0 for _ in range(m+1)]
+        curr[0] = j*gapPenalty
+        for i, xi in enumerate(seq1, 1):
+            score = similarityScore.score(xi, yj)
 
-        max_val = max(values) if len(values) else 0
-        F[idxs] = max_val
+            match = prev[i-1] + score
+            delete = prev[i] + gapPenalty
+            insert = curr[i-1] + gapPenalty
 
-    # backtrack
-    alignedSeqs = ['' for _ in seqs]
-    idxs = seqs_len
-    final_score = int(F[idxs])
+            max_val = max(match, delete, insert)
 
-    while any(i > 0 for i in idxs):
-        # find which delta we came from
-        for delta in generate_predecessors_delta(idxs):
-            chars = ['-' if k == 0 else seqs[j][idxs[j] + k]
-                     for j, k in enumerate(delta)]
-            if F[idxs] == F[tuple_add(idxs, delta)]+scoringFunc(chars):
-                alignedSeqs = [chars[j] + seq for j,
-                               seq in enumerate(alignedSeqs)]
-                idxs = tuple_add(idxs, delta)
-                break
+            curr[i] = max_val
 
-    return alignedSeqs, final_score
+        prev = curr
+
+    # i, j = m, n
+    # while j == n:
+    #     if i > 0 and curr[i] == curr[i-1] + gapPenalty:
+    #         i = i - 1
+    #     elif i > 0 and j > 0 and curr[i] == prev[i-1] + similarityScore.score(seq1[i-1], seq2[j-1]):
+    #         i, j = i - 1, j - 1
+    #     else:
+    #         j = j - 1
+    # middle_edge = (i, j)
+
+    return prev
+
+
+
+def middle_edge(seq1: str, seq2: str, gapPenalty: int,
+                similarityScore: SimilarityScore):
+
+    mid_col = len(seq2) // 2
+
+    def meet(from_source_cost: list[int], to_sink_cost: list[int]):
+        pair = (0, 0)
+        best_score = -math.inf
+        try:
+            for i, value in enumerate(from_source_cost):
+                horizontal = value + to_sink_cost[i] + gapPenalty
+                if horizontal >= best_score:
+                    best_score = horizontal
+                    pair = (i, i)
+                diagonal = value + \
+                    to_sink_cost[i+1] + \
+                    similarityScore.score(seq1[i], seq2[mid_col])
+                if diagonal >= best_score:
+                    best_score = diagonal
+                    pair = (i, i+1)
+
+        except IndexError:
+            pass
+
+        return pair, int(best_score)
+
+    prefix = seq2[:mid_col]
+    suffix = seq2[mid_col+1:]
+    from_source_cost = globalAlignmentLinearGapPenaltyScoreInLinearSpace2(
+        seq1, prefix, gapPenalty, similarityScore)
+
+    seq1_b = seq1[::-1]
+    seq2_b = suffix[::-1]
+    to_sink_cost = globalAlignmentLinearGapPenaltyScoreInLinearSpace2(
+        seq1_b, seq2_b, gapPenalty, similarityScore)
+
+    to_sink_cost = to_sink_cost[::-1]
+
+    pair, best_score = meet(from_source_cost, to_sink_cost)
+    edge = ((pair[0], mid_col), (pair[1], mid_col+1))
+
+    return edge, best_score
+
+
+def globalAlignmentLinearGapPenaltyScoreInLinearSpace(seq1: str, seq2: str,
+                                                      gapPenalty: int,
+                                                      similarityScore: SimilarityScore):
+    edges = []
+
+    def recurse(top: int, bottom: int, left: int, right: int):
+        if left == right:
+            return 0
+        if top == bottom:
+            return 0
+
+        edge, score = middle_edge(seq1[top:bottom], seq2[left:right], gapPenalty, similarityScore)
+
+        n1 = (top + edge[0][0], left + edge[0][1])
+        n2 = (top + edge[1][0], left + edge[1][1])
+        edges.append((n1, n2))
+
+        recurse(top, n1[0], left, n1[1])
+        recurse(n2[0], bottom, n2[1], right)
+
+        return score
+
+    score = recurse(0, len(seq1), 0, len(seq2))
+
+    edges.sort(key=lambda x: x[0][1])
+    edges.sort(key=lambda x: x[0][0])
+
+    m = len(seq1)
+    n = len(seq2)
+    nodes: list[tuple[int, int]] = []
+    for edge in edges:
+        n1 = edge[0]
+        n2 = edge[1]
+
+        if len(nodes) == 0 or nodes[-1] != n1:
+            nodes.append(n1)
+        nodes.append(n2)
+
+    if nodes[0] != (0, 0):
+        nodes = [(0, 0)] + nodes
+
+    if nodes[-1] != (m, n):
+        nodes.append((m, n))
+
+    def alignmentFromEdges():
+        alignedSeq1 = ''
+        alignedSeq2 = ''
+        idx = len(nodes)-1
+        i, j = nodes[idx]
+        while i > 0 or j > 0:
+            (i2, j2) = nodes[idx-1]
+
+            if i-i2 == 0:  # horizontal
+                alignedSeq1 = '-'*(j-j2) + alignedSeq1
+                alignedSeq2 = seq2[j2:j] + alignedSeq2
+            elif j-j2 == 0:  # vertical
+                alignedSeq1 = seq1[i2:i] + alignedSeq1
+                alignedSeq2 = '-'*(i-i2) + alignedSeq2
+            else:  # diagonal
+                alignedSeq1 = seq1[i2:i] + alignedSeq1
+                alignedSeq2 = seq2[j2:j] + alignedSeq2
+
+            i, j = i2, j2
+            idx -= 1
+
+        return alignedSeq1, alignedSeq2
+
+    alignedSeq1, alignedSeq2 = alignmentFromEdges()
+    return score, alignedSeq1, alignedSeq2
