@@ -2,7 +2,7 @@ from BioInfoToolkit.HMM import profileHMM
 import os
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 from BioInfoToolkit.IO.IO_utils import print_and_save_matrix
-from testing import float_matrices_match
+from testing_utils import float_matrices_match
 
 """
 https://rosalind.info/problems/ba10f/

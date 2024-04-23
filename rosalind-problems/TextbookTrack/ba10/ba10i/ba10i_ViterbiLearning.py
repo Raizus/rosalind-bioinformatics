@@ -3,7 +3,7 @@ import numpy.typing as npt
 import os
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 from BioInfoToolkit.IO.IO_utils import emission_matrix_from_dict, matrix_text_to_dict, print_and_save_matrix,trans_matrix_from_dict
-from testing import float_matrices_match
+from testing_utils import float_matrices_match
 
 """
 https://rosalind.info/problems/ba10i/

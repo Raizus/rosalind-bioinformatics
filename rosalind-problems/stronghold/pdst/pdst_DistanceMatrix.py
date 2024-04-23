@@ -1,6 +1,7 @@
 from BioInfoToolkit.Sequences.SequenceUtils import distanceMatrix
 import os
 from BioInfoToolkit.IO import read_FASTA, readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
+from testing_utils import float_matrices_match
 
 """
 https://rosalind.info/problems/pdst/
@@ -16,12 +17,8 @@ For a general distance function d on n taxa s1,s2,…,sn (taxa are often represe
 
 
 def verify(result: list[list[float]], solution: list[list[float]]) -> bool:
-    if len(result) != len(solution):
-        return False
-    for line1, line2 in zip(result, solution):
-        if len(line1) != len(line2) or not all(abs(v1-v2) <= 0.001 for v1, v2 in zip(line1, line2)):
-            return False
-    return True
+    correct = float_matrices_match(result, solution)
+    return correct
 
 
 def solve(seqs: list[str]) -> list[list[float]]:
@@ -63,6 +60,6 @@ if __name__ == "__main__":
         print(out)
         writeTextFile(result_path, out, 'a')
 
-    # correct = solve_and_check(path)
-    # print(correct)
+    correct = solve_and_check(path)
+    print(correct)
 
