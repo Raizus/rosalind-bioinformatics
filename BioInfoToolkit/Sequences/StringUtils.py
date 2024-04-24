@@ -5,6 +5,27 @@ import random
 import re
 
 
+def strip_inserts(seq: str) -> str:
+    """Replaces all '-' in a string with emptry strings ''
+
+    Args:
+        seq (str):
+
+    Returns:
+        str:
+    """
+    return seq.replace('-', '')
+
+
+def rotationally_equivalent(s1: str, s2: str) -> bool:
+    res = False
+    for idx in range(len(s1)):
+        if s1[idx:] + s1[:idx] == s2:
+            res = True
+            break
+    return res
+
+
 def patternToNumber(string: str, alphabet: list[str]):
     L = len(alphabet)
     convert_dict = {symb: i for i, symb in enumerate(alphabet)}
