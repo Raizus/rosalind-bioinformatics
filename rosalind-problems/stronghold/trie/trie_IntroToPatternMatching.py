@@ -1,6 +1,5 @@
 
 from BioInfoToolkit.Sequences.Trie import Trie, TrieNode
-from BioInfoToolkit.Spectrometry.Spectrometry import get_prefix_masses, peptideMass
 import os
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 from BioInfoToolkit.IO import readTextFile, writeTextFile
