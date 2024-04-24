@@ -365,6 +365,28 @@ class PhyloTree:
         return character_table
 
 
+def consistency_matrix(character_table: list[str]):
+    ntaxa = len(character_table[0])
+    nchars = len(character_table)
+
+    consistency_mat = [[True for _ in range(nchars)] for _ in range(nchars)]
+
+    for i1, i2 in combinations(range(nchars), 2):
+        ch1 = character_table[i1]
+        ch2 = character_table[i2]
+
+        S1 = set(i for i, c in enumerate(ch1) if c == '1')
+        S1c = set(range(ntaxa)).difference(S1)
+        S2 = set(i for i, c in enumerate(ch2) if c == '1')
+        S2c = set(range(ntaxa)).difference(S2)
+        consistent = not conflicting_splits(S1, S1c, S2, S2c)
+
+        consistency_mat[i1][i2] = consistent
+        consistency_mat[i2][i1] = consistent
+
+    return consistency_mat
+
+
 def conflicting_splits(S1: set[int], S1c: set[int], S2: set[int], S2c: set[int]) -> bool:
     if not len(S1.intersection(S2)):
         return False
@@ -376,6 +398,29 @@ def conflicting_splits(S1: set[int], S1c: set[int], S2: set[int], S2c: set[int])
         return False
     return True
 
+def conflicting_splits_character_table(c1: str, c2: str) -> bool:
+    c1_b = [bit == '1' for bit in c1]
+    c1_bn = [bit == False for bit in c1_b]
+    c2_b = [bit == '1' for bit in c2]
+    c2_bn = [bit == False for bit in c2_b]
+
+    if any(b1 and b2 for b1,b2 in zip(c1_b, c2_b)):
+        return False
+    if any(b1 and b2 for b1, b2 in zip(c1_b, c2_bn)):
+        return False
+    if any(b1 and b2 for b1, b2 in zip(c1_bn, c2_b)):
+        return False
+    if any(b1 and b2 for b1, b2 in zip(c1_bn, c2_bn)):
+        return False
+
+    return True
+
+
+def is_character_table_consistent(table: list[str]) -> bool:
+    for c1,c2 in combinations(table, 2):
+        if conflicting_splits_character_table(c1,c2):
+            return False
+    return True
 
 def find_quartets(character_table: list[str], sort: bool = False) -> list[tuple[tuple[int, int], tuple[int, int]]]:
     """Creates a list of quartets from a partial or full character table
