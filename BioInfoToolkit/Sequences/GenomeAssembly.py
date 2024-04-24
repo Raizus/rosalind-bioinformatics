@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from itertools import combinations
+from functools import reduce
+from itertools import accumulate, combinations
 from typing import Iterable
 
 from graphviz import Digraph
@@ -220,7 +221,8 @@ class DeBruijnMultiGrapAbstract(ABC):
     def reconstructStringFromEulerianCycle(self) -> str:
         pass
 
-class DeBruijnMultiGraph(DeBruijnMultiGrapAbstract):
+
+class DeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
     def __init__(self, graph: nx.MultiDiGraph, k: int) -> None:
         self.graph = graph
         self.k = k
@@ -302,7 +304,36 @@ class DeBruijnMultiGraph(DeBruijnMultiGrapAbstract):
             contig = self.edgesPathToString(path)
             yield contig
 
-class PairedDeBruijnMultiGraph(DeBruijnMultiGrapAbstract):
+    def findAllEulerianCycles(self, start_node_id: str):
+        num_edges = len(self.graph.edges)
+        g = self.graph
+
+        seqs: list[str] = []
+
+        def recurse(node_id: str, path: list[str], count: int):
+            adj = dict(g.adj[node_id])
+            path.append(node_id)
+            count += 1
+
+            if len(adj) == 0:
+                if count == num_edges+1 and node_id == start_node_id: # found the eulerian path
+                    seq = reduce(lambda prev,next: prev+next[-1], path[1:], path[0])
+                    l=len(node_id)
+                    seqs.append(seq[:-l])
+            else:
+                for child_id, edge_dict in adj.items():
+                    edge_dict = dict(edge_dict)
+                    g.remove_edge(node_id, child_id)
+                    recurse(child_id, path, count)
+                    g.add_edge(node_id, child_id, seq=node_id+child_id[-1])
+
+            path.pop()
+
+        recurse(start_node_id, [], 0)
+        a = 0
+
+
+class PairedDeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
     d: int
 
     def __init__(self, graph: nx.MultiDiGraph, k: int, d: int) -> None:
@@ -311,7 +342,7 @@ class PairedDeBruijnMultiGraph(DeBruijnMultiGrapAbstract):
         self.d = d
     
     def reconstructStringFromEulerianPath(self):
-        edgesPathGen = nx.eulerian_path(self.graph)
+        edgesPathGen = nx.eulerian_path(self.graph, keys=True)
 
         string1 = ''
         string2 = ''
