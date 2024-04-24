@@ -4,7 +4,7 @@ import re
 
 def HMM_forward_algorithm(obs_space: list[str], state_space: list[str],
                           observations: str, initial_probs: npt.NDArray,
-                          trans_matrix: npt.NDArray, emission_matrix: npt.NDArray):
+                          trans_matrix: npt.NDArray, emission_matrix: npt.NDArray) -> float:
     # prior
     obs_space_dict = {obs: i for i, obs in enumerate(obs_space)}
     obs_array = [obs_space_dict[obs] for obs in observations]
@@ -15,7 +15,7 @@ def HMM_forward_algorithm(obs_space: list[str], state_space: list[str],
         alpha_i = emission_matrix[:, obs] * \
             (np.transpose(trans_matrix) @ alpha_i)
 
-    alpha_T = np.sum(alpha_i)
+    alpha_T = float(np.sum(alpha_i))
 
     return alpha_T
 
@@ -45,9 +45,6 @@ def viterbi_compute_matrices(obs_space: list[str], state_space: list[str],
 
     j = obs_space.index(observations[0])
     T1[:, 0] = initial_probs * emission_matrix[:, j]
-
-    j = 1
-    a = 0
 
     for j, obs in enumerate(observations[1:], 1):
         for i, state in enumerate(state_space):
@@ -254,6 +251,7 @@ def sequenceAlignmentWithProfileHMM(alignment: list[str], alphabet: list[str], o
     SI[1, 1] = SD[0, 1] + np.log(trans_matrix[3, 4]) + np.log(e_prob)
     SD[1, 1] = SI[1, 0] + np.log(trans_matrix[1, 3])
 
+    # TODO: fix division by zero when computing logarithm -> substitute by -infinity
     for i in range(1, N):
         for j in range(1, M):
             if i == 1 and j == 1:
