@@ -156,16 +156,28 @@ def deBruijnMultiGraphFromString(string: str, k: int):
     return graph
 
 
-def deBruijnMultiGraphFromKmers(kmers: Iterable[str]):
-    graph = nx.MultiDiGraph()
-    for kmer in kmers:
-        prefix = kmer[:-1]
-        suffix = kmer[1:]
+def deBruijnMultiGraphFromReads(reads: Iterable[str], k: int):
+    """Builds a deBruijn MultiGraph from reads, using k-mers of each read as edges in the graph.
+    Nodes will correspond to (k-1)-mers. If k-mers repeat then there will be multiple edges connecting the same two nodes.
 
-        if prefix not in graph.nodes:
-            graph.add_node(prefix)
-        if suffix not in graph.nodes:
-            graph.add_node(suffix)
+    Args:
+        reads (Iterable[str]): _description_
+        k (int): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    graph = nx.MultiDiGraph()
+    for read in reads:
+        for kmer in kmer_gen(read, k, False):
+            prefix = kmer[:-1]
+            suffix = kmer[1:]
+
+            if prefix not in graph.nodes:
+                graph.add_node(prefix)
+            if suffix not in graph.nodes:
+                graph.add_node(suffix)
 
         graph.add_edge(prefix, suffix, seq=kmer)    
     return graph
@@ -186,7 +198,7 @@ def deBruijnMultiGraphFromPairedKmers(kmerPairs: Iterable[tuple[str, str]]):
     return graph
 
 
-class DeBruijnMultiGrapAbstract(ABC):
+class DeBruijnMultiGraphAbstract(ABC):
     graph: nx.MultiDiGraph
     k: int
 
