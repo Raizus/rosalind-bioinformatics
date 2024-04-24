@@ -3,7 +3,7 @@ from collections import Counter, OrderedDict
 from itertools import accumulate, permutations
 import math
 from typing import TypeVar
-
+import drawsvg as draw
 import numpy as np
 
 import networkx as nx
@@ -1045,6 +1045,111 @@ def findModifiedPeptide(peptide: str, spectral_vector: list[int], num_mods: int,
                 peptide_mod += f"({delta})"
 
     return peptide_mod
+
+
+class PSMGraph:
+    graph: nx.DiGraph
+    peptide: str
+    spectral_vector: list[int]
+    prefix_masses: list[int]
+    prefix_mass_map: dict[int, int]
+
+    def __init__(self, peptide: str, spectral_vector: list[int], massDict: dict[str, float] | dict[str, int]) -> None:
+        prefix_masses = [0] + get_prefix_masses(peptide, massDict)
+        prefix_masses = [int(m) for m in prefix_masses]
+        peptide_mass = prefix_masses[-1]
+        spcvl = len(spectral_vector)
+        peptide_len = len(peptide)
+        prefix_mass_map = {m: i for i, m in enumerate(prefix_masses)}
+
+        graph = nx.DiGraph()
+
+        self.graph = graph
+        self.peptide = peptide
+        self.spectral_vector = spectral_vector
+        self.prefix_masses = prefix_masses
+        self.prefix_mass_map = prefix_mass_map
+
+        for prefix_mass in prefix_masses:
+            for i, si in enumerate(spectral_vector):
+                graph.add_node((prefix_mass, i), weight=si)
+
+        prev_nodes: list[tuple[int, int]] = [(0, 0)]
+        for i, prefix_mass in enumerate(prefix_masses[:-2]):
+            next_nodes: list[tuple[int, int]] = []
+            i2 = self.prefix_masses[i+1]
+            for node1 in prev_nodes:
+                i1, j1 = node1
+                for j2 in range(j1+1, spcvl-peptide_len+i+1):
+                    node2 = (i2, j2)
+                    graph.add_edge(node1, node2)
+                    next_nodes.append(node2)
+            prev_nodes = next_nodes
+
+        i2 = self.prefix_masses[-1]
+        for node1 in prev_nodes:
+            j2 = spcvl - 1
+            node2 = (i2, j2)
+            graph.add_edge(node1, node2)
+
+    def diff(self, mass_pref: int) -> int:
+        idx = self.prefix_mass_map[mass_pref]
+        return mass_pref - self.prefix_masses[idx-1]
+
+    def draw_svg(self):
+        cell_size = 50
+        font_size = 15
+        n_rows = len(self.peptide) + 1
+        n_cols = len(self.spectral_vector)
+        height = cell_size*(n_rows+3)
+        width = cell_size*(n_cols+3)
+        d = draw.Drawing(width, height)
+        d.append(draw.Rectangle(0, 0, width, height, fill="white"))
+
+        # draw nodes
+        node_r = 0.15*cell_size
+        for row in range(n_rows):
+            for col in range(n_cols):
+                c = draw.Circle((col + 2.5)*cell_size, (row + 2.5)
+                                * cell_size, node_r, fill='lightgray')
+                d.append(c)
+
+        # draw mass prefix labels
+        for i, prefix_mass in enumerate(self.prefix_masses):
+            text = draw.Text(str(prefix_mass), font_size, (1.5)*cell_size,
+                             (i + 2.5)*cell_size, text_anchor='middle', center=True)
+            d.append(text)
+
+        # draw aminoacid labels
+        for i, aa in enumerate(self.peptide):
+            text = draw.Text(aa, font_size, (0.5)*cell_size,
+                             (i + 1 + 2.5)*cell_size, text_anchor='middle', center=True)
+            d.append(text)
+
+        # draw column mass labels
+        for j in range(len(self.spectral_vector)):
+            text = draw.Text(str(j), font_size, (j + 2.5)*cell_size,
+                             (1.5)*cell_size, text_anchor='middle', center=True)
+            d.append(text)
+
+        # draw edges
+        for edge in self.graph.edges:
+            n1, n2 = edge
+            i1 = self.prefix_mass_map[n1[0]]
+            i2 = self.prefix_mass_map[n2[0]]
+            p1 = np.array([(n1[1] + 2.5)*cell_size, (i1 + 2.5)*cell_size])
+            p2 = np.array([(n2[1] + 2.5)*cell_size, (i2 + 2.5)*cell_size])
+            p12 = p2 - p1
+            p12 = p12 / np.linalg.norm(p12)
+            p1 = p1 + node_r * p12
+            p2 = p2 - node_r * p12
+
+            line = draw.Line(p1[0], p1[1], p2[0], p2[1],
+                             stroke_width=2, stroke='lightblue')
+            d.append(line)
+
+        return d
+
 
 def parseModifiedPeptideToArray(mod_peptide: str) -> list[int]:
     masses: list[int] = []
