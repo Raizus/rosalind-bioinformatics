@@ -1,3 +1,4 @@
+import math
 from BioInfoToolkit.Sequences.Profiling import findProfileMostProbableKmers
 from BioInfoToolkit.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 import os
@@ -20,13 +21,19 @@ Profile-most Probable k-mer Problem
 OutputT = str
 
 
-def verify(result: OutputT, solution: OutputT) -> bool:
-    # TODO: verify that the probability of the solution is the same as the probability of the result (they might be different if there are multiple solutions)
-    correct = len(result) == len(solution) and result == solution
+def verify(result: OutputT, solution: OutputT, text: str, k: int, profile_mat: list[list[float]]) -> bool:
+    alphabet = sorted(['A', 'C', 'G', 'T'])
+    alphabet_map = {symb: i for i, symb in enumerate(alphabet)}
+    prob_res = math.prod(profile_mat[alphabet_map[symb]][i]
+                                for i, symb in enumerate(result))
+    prob_sol = math.prod(profile_mat[alphabet_map[symb]][i]
+                         for i, symb in enumerate(solution))
+
+    correct = len(result) == k and text.find(result) != -1 and prob_res == prob_sol
     return correct
 
 
-def solve(sequence: str, k: int, profile_mat: list[list[float]]) -> OutputT:
+def solve(sequence: str, k: int, profile_mat: list[list[float]], alphabet: list[str]) -> OutputT:
     kmers, _ = findProfileMostProbableKmers(
         sequence, k, profile_mat, alphabet)
     return kmers[0]
@@ -49,11 +56,11 @@ def solve_and_check(input_path: str) -> bool:
     l = len(alphabet)
     profile_mat = [[float(k) for k in line.split()] for line in lines[2:2+l]]
 
-    result = solve(sequence, k, profile_mat)
+    result = solve(sequence, k, profile_mat, alphabet)
 
     solution = load_results(solution_path)
 
-    correct = verify(result, solution)
+    correct = verify(result, solution, sequence, k, profile_mat)
     return correct
 
 
@@ -65,11 +72,11 @@ if __name__ == "__main__":
     sequence = lines[0]
     k = int(lines[1])
 
-    alphabet = ['A', 'C', 'G', 'T']
+    alphabet = sorted(['A', 'C', 'G', 'T'])
     l = len(alphabet)
     profile_mat = [[float(k) for k in line.split()] for line in lines[2:2+l]]
 
-    kmer = solve(sequence, k, profile_mat)
+    kmer = solve(sequence, k, profile_mat, alphabet)
 
     out = kmer
     print(out)
