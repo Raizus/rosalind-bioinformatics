@@ -1,20 +1,21 @@
-from collections import Counter, defaultdict
-from BioInfoToolkit.IO.IO import readTextFile
+from collections import defaultdict
 from BioInfoToolkit.Sequences.SequenceUtils import deBruijnGraph, reverseComplement
 from BioInfoToolkit.Sequences.StringUtils import kmer_gen, rotationally_equivalent
-
-from BioInfoToolkit.Sequences.GenomeAssembly import DeBruijnMultiGraph, deBruijnMultiGraphFromReads
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 import os
 
 """
-    https://rosalind.info/problems/pcov/
+https://rosalind.info/problems/gasm/
 
-A circular string is a string that does not have an initial or terminal element; instead, the string is viewed as a necklace of symbols. We can represent a circular string as a string enclosed in parentheses. For example, consider the circular DNA string (ACGTAC), and note that because the string "wraps around" at the end, this circular string can equally be represented by (CGTACA), (GTACAC), (TACACG), (ACACGT), and (CACGTA). The definitions of substrings and superstrings are easy to generalize to the case of circular strings (keeping in mind that substrings are allowed to wrap around).
+Problem
 
-    Given: A collection of (error-free) DNA k-mers (k≤50) taken from the same strand of a circular chromosome. In this dataset, all k-mers from this strand of the chromosome are present, and their de Bruijn graph consists of exactly one simple cycle.
+A directed cycle is simply a cycle in a directed graph in which the head of one edge is equal to the tail of the next (so that every edge in the cycle is traversed in the same direction).
 
-    Return: A cyclic superstring of minimal length containing the reads (thus corresponding to a candidate cyclic chromosome).
+For a set of DNA strings S and a positive integer k, let Sk denote the collection of all possible k-mers of the strings in S.
+
+    Given: A collection S of (error-free) reads of equal length (not exceeding 50 bp). In this dataset, for some positive integer k, the de Bruijn graph Bk on Sk+1 ∪ Srck+1 consists of exactly two directed cycles.
+
+    Return: A cyclic superstring of minimal length containing every read or its reverse complement.
 """
 
 def generate_all_kmers(seqs: list[str], k: int):
@@ -43,10 +44,18 @@ def find_cycle(graph: defaultdict[str, set[str]]):
 
 
 def verify(result: str, solution: str, reads: list[str]) -> bool:
-    # TODO: maybe they're not necesarily equivalent and reads should be used to check the result
     rot_equiv = rotationally_equivalent(result, solution) or \
         rotationally_equivalent(result, reverseComplement(solution, 'DNA'))
-    correct = len(result) == len(solution) and rot_equiv
+    
+    # check if the superstring contains all the reads or their reverse complement
+    k = len(reads[0])
+    idxs: set[int] = set()
+    for kmer in kmer_gen(result, k, True):
+        idxs_ = [i for i, read in enumerate(
+            reads) if kmer == read or kmer == reverseComplement(read, 'DNA')]
+        idxs.update(idxs_)
+
+    correct = len(result) == len(solution) and rot_equiv and len(idxs) == len(reads)
     return correct
 
 
