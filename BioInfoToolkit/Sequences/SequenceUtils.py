@@ -176,6 +176,20 @@ def failure_array(seq: str) -> list[int]:
     return failure
 
 
+def is_subsequence_str(seq: str, subseq: str):
+    i1 = 0
+    v1 = subseq[i1]
+    l = len(subseq)
+    for v2 in seq:
+        if v2 != v1:
+            continue
+        i1 += 1
+        if i1 == l:
+            return True
+        v1 = subseq[i1]
+    return False
+
+
 def longestCommonString(sequences: list[str]) -> str:
     """Find the longest common substring from a list of strings
 
