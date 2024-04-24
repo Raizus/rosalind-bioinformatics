@@ -126,7 +126,7 @@ class OverlapGraph:
 
                 overlaps = overlapping(seq2, seq1, k)
                 if overlaps:
-                    graph.add_edge(key1, key2)
+                    graph.add_edge(key2, key1)
 
     def draw_dot(self):
         dot = Digraph(format='svg', graph_attr={'rankdir': 'LR'})
