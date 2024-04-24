@@ -237,7 +237,7 @@ def spectrumConvolution(spectrum: list[int]) -> Counter[int]:
     conv: list[int] = []
     spectrum = sorted(spectrum)
     for i1, m1 in enumerate(spectrum[:-1]):
-        for i2, m2 in enumerate(spectrum[i1+1:]):
+        for _, m2 in enumerate(spectrum[i1+1:]):
             diff = m2-m1
             if diff > 0:
                 conv.append(diff)
@@ -349,7 +349,7 @@ def peptideTheoreticalSpectrumTuple(peptide: tuple[int,...], cyclic: bool):
         kmers_freq = tuple_kmers_frequency_dictionary(peptide, k, cyclic)
         for kmer, freq in kmers_freq.items():
             mass = sum(kmer)
-            for i in range(freq):
+            for _ in range(freq):
                 spectrum.append(mass)
 
     spectrum.append(sum(peptide))
@@ -477,7 +477,7 @@ def drawSpectrumGraphDot(g: nx.MultiGraph) -> Digraph:
 
 
 def longestSeqsFromSpectrumGraph(g: nx.MultiGraph) -> list[list[str]]:
-    """Given the spectrum graph of a protein, returns the longest matching aminoacide sequence
+    """Given the spectrum graph of a protein, returns the longest matching aminoacid sequence
 
     Args:
         g (nx.MultiGraph): Protein spectrum graph
@@ -487,6 +487,7 @@ def longestSeqsFromSpectrumGraph(g: nx.MultiGraph) -> list[list[str]]:
     """
     lpath = list(nx.dag_longest_path(g))  # type: ignore
     prot_seq: list[list[str]] = []
+    # TODO: create path with minimum error
     for n1, n2 in zip(lpath[:-1], lpath[1:]):
         edges = g.adj[n1][n2]
         aas: list[str] = []
@@ -822,10 +823,10 @@ def peptideIdentification(spectral_vector: list[int], proteome: str,
                           massDict: dict[str, float] | dict[str, int]):
     n = len(proteome)
     spvl = len(spectral_vector)
-    print("Spectral vector length: ", spvl)
+    # print("Spectral vector length: ", spvl)
     min_mass = min(val for val in massDict.values())
     max_peptide_size = math.ceil(spvl/min_mass)
-    print("Max peptide size: ", max_peptide_size)
+    # print("Max peptide size: ", max_peptide_size)
 
     scoring_dict: dict[str, float] = dict()
     max_score = -math.inf
@@ -989,7 +990,7 @@ def findModifiedPeptide(peptide: str, spectral_vector: list[int], num_mods: int,
     prefix_masses = [int(m) for m in prefix_masses]
     peptide_mass = prefix_masses[-1]
     J = len(spectral_vector)
-    peptide_len = len(peptide)
+    # peptide_len = len(peptide)
 
     prefix_mass_map = {m: i for i, m in enumerate(prefix_masses)}
     diff = DiffArray(prefix_mass_map, prefix_masses)
