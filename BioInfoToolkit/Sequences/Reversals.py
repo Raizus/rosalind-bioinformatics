@@ -1,11 +1,24 @@
 # https://archive.is/0322E
 
-def performReversal(seq: list[int|str], start_idx: int, end_idx: int):
+
+
+from typing import TypeVar
+
+T = TypeVar('T')
+
+
+def performReversal(seq: list[T], start_idx: int, end_idx: int) -> list[T]:
     prefix = seq[:start_idx]
     reversed_subseq = seq[start_idx:end_idx][::-1]
     suffix = seq[end_idx:]
     return prefix + reversed_subseq + suffix
 
+
+def performReversals(seq: list[T], reversals: list[tuple[int, int]]) -> list[T]:
+    reversed_seq = seq
+    for start, end in reversals:
+        reversed_seq = performReversal(reversed_seq, start, end)
+    return reversed_seq
 
 def findBreakpoints(sequence: list[int | str], target: list[int | str]) -> list[int]:
     # a = 1, 2…4, 3…5, 6, 7, 8, 9, 10
