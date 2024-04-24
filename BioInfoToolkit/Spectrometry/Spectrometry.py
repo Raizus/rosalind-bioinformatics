@@ -9,8 +9,7 @@ import numpy as np
 import networkx as nx
 from graphviz import Digraph
 from BioInfoToolkit.Sequences.SequenceUtils import tuple_kmers_frequency_dictionary
-
-from BioInfoToolkit.Sequences.StringUtils import kmers_frequency_dictionary
+import re
 
 AminoacidMonoisotopicMass = {
     "A":   71.03711,
@@ -1046,3 +1045,13 @@ def findModifiedPeptide(peptide: str, spectral_vector: list[int], num_mods: int,
                 peptide_mod += f"({delta})"
 
     return peptide_mod
+
+def parseModifiedPeptideToArray(mod_peptide: str) -> list[int]:
+    masses: list[int] = []
+    mass_dict = AminoacidMonoisotopicMassInteger
+    for match in re.finditer(r'([A-Z])(?:\(([+-]\d+)\))?', mod_peptide):
+        aa = match[1]
+        mod = int(match[2]) if match.group(2) is not None else 0
+        mass = mass_dict[aa] + mod
+        masses.append(mass)
+    return masses
