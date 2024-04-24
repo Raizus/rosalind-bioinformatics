@@ -40,13 +40,7 @@ def verify(result: OutputT, solution: OutputT, sequences: list[str]) -> bool:
     score_sol = sum(sum(getMinimumHammingDistanceToKmer(seq, kmer)
                         for seq in sequences) for kmer in solution)
 
-    # TODO: change verification:
-    # might not be equal since we are doing a monte carlo search
-
-    # alphabet = ['A', 'C', 'G', 'T']
-    # profile = SequencesProfile(result, alphabet, 1)
-    # score_res_2 = profile.score()
-
+    # this assumes to monte carlo search will converge to the optimal score
     correct = score_res == score_sol and len(result) == len(solution)
     return correct
 
