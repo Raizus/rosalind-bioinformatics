@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 from itertools import combinations
 import math
 import random
-import re
+import numpy.typing as npt
 from typing import Literal
 import numpy as np
 
@@ -10,7 +10,8 @@ import networkx as nx
 from graphviz import Graph
 from BioInfoToolkit.Sequences.Profiling import SequencesProfile, findProfileMostProbableKmers
 
-from BioInfoToolkit.Sequences.StringUtils import getMinimumHammingDistanceToKmer, hamming_distance, kmer_gen, max_overlap, overlapping, select_random_kmer
+from BioInfoToolkit.Sequences.StringUtils import getMinimumHammingDistanceToKmer, hamming_distance, kmer_gen, select_random_kmer
+
 
 def generate_random_sequence(length: int, alphabet: list[str]) -> str:
     seq = "".join(random.choices(alphabet, k=length))
@@ -107,9 +108,9 @@ def minimum_skew(sequence: str):
     return min_skew, positions
 
 
-def distanceMatrix(seqs: list[str]):
+def distanceMatrix(seqs: list[str]) -> npt.NDArray[np.float64]:
     n = len(seqs)
-    distMat = np.zeros((n, n), dtype=float)
+    distMat = np.zeros((n, n), dtype=np.float64)
     for i, seq1 in enumerate(seqs):
         for j, seq2 in enumerate(seqs[i + 1:], i + 1):
             dist = hamming_distance(seq1, seq2) / min(len(seq1), len(seq2))
@@ -537,6 +538,17 @@ def deBruijnGraph(seqs: list[str], k: int) -> defaultdict[str, set[str]]:
 
 
 def greedyMotifSearch(sequences: list[str], k: int, alphabet: list[str], pseudocounts: int = 0):
+    """Implements the greedy motif search algorithm with pseudocounts
+
+    Args:
+        sequences (list[str]): sequence to search
+        k (int): motif length
+        alphabet (list[str]): _description_
+        pseudocounts (int, optional): Defaults to 0 (no pseudocounts).
+
+    Returns:
+        best_motifs, best_score (tuple[list[str], int]): 
+    """
     bestMotifs = [seq[0:k] for seq in sequences]
     scoreBestMotifs = sum(sum(getMinimumHammingDistanceToKmer(seq, kmer)
                           for seq in sequences) for kmer in bestMotifs)
@@ -544,11 +556,11 @@ def greedyMotifSearch(sequences: list[str], k: int, alphabet: list[str], pseudoc
     for kmer in kmer_gen(sequences[0], k):
         motifs = [kmer]
 
-        for i, seq2 in enumerate(sequences[1:]):
+        for _, seq2 in enumerate(sequences[1:]):
             profile = SequencesProfile(motifs, alphabet, pseudocounts)
             prob_mat: list[list[float]
                            ] = profile.get_probability_matrix().tolist()
-            kmers, best_prob = findProfileMostProbableKmers(
+            kmers, _ = findProfileMostProbableKmers(
                 seq2, k, prob_mat, alphabet)
             motif = kmers[0]
             motifs.append(motif)
@@ -561,11 +573,11 @@ def greedyMotifSearch(sequences: list[str], k: int, alphabet: list[str], pseudoc
     return bestMotifs, scoreBestMotifs
 
 
-def randomizedMotifSearchMonteCarlo(sequences: list[str], k: int, alphabet: list[str], nIter: int = 1000, pseudocounts: int = 0):
+def randomizedMotifSearchMonteCarlo(sequences: list[str], k: int, alphabet: list[str], n_iter: int = 1000, pseudocounts: int = 0):
     bestMotifs: list[str] = []
     bestScore = math.inf
 
-    for i in range(nIter):
+    for i in range(n_iter):
         motifs, score = randomizedMotifSearch(
             sequences, k, alphabet, pseudocounts)
         if score < bestScore:
@@ -586,7 +598,7 @@ def randomizedMotifSearch(sequences: list[str], k: int, alphabet: list[str], pse
         prob_mat: list[list[float]] = profile.get_probability_matrix().tolist()
         motifs: list[str] = []
         for seq in sequences:
-            kmers, best_prob = findProfileMostProbableKmers(
+            kmers, _ = findProfileMostProbableKmers(
                 seq, k, prob_mat, alphabet)
             motif = kmers[0]
             motifs.append(motif)
@@ -601,18 +613,30 @@ def randomizedMotifSearch(sequences: list[str], k: int, alphabet: list[str], pse
 
 
 def gibbsSamplerMonteCarlo(sequences: list[str], k: int, alphabet: list[str], N: int,
-                           nIter: int = 20, pseudocounts: int = 1):
-    bestMotifs: list[str] = []
-    bestScore = math.inf
+                           n_starts: int, pseudocounts: int = 1) -> tuple[list[str], int|float]:
+    """Runs Monte Carlo search using the gibbs sampler
 
-    for i in range(nIter):
-        print(i)
+    Args:
+        sequences (list[str]): sequences to search
+        k (int): motif length
+        alphabet (list[str]):
+        N (int): number of iterations of the sampler
+        n_starts (int, optional): Number of random starts (runs the sampler N times).
+        pseudocounts (int, optional): Defaults to 1.
+
+    Returns:
+        best_motifs, best_score (tuple[list[str], int]):
+    """
+    best_motifs: list[str] = []
+    best_score = math.inf
+
+    for _ in range(n_starts):
         motifs, score = gibbsSampler(sequences, k, N, alphabet, pseudocounts)
-        if score < bestScore:
-            bestScore = score
-            bestMotifs = motifs
+        if score < best_score:
+            best_score = score
+            best_motifs = motifs
 
-    return bestMotifs, bestScore
+    return best_motifs, best_score
 
 
 def gibbsSampler(sequences: list[str], k: int, N: int, alphabet: list[str], pseudocounts: int = 1):
@@ -624,7 +648,7 @@ def gibbsSampler(sequences: list[str], k: int, N: int, alphabet: list[str], pseu
 
     alphabet_map = {symb: i for i, symb in enumerate(alphabet)}
 
-    for j in range(N):
+    for _ in range(N):
         i = random.randrange(0, t)
         motifs2 = [motif for i2, motif in enumerate(motifs) if i2 != i]
         profile = SequencesProfile(motifs2, alphabet, pseudocounts)
