@@ -207,7 +207,7 @@ def affineGapGlobalAlignmentCost(alignedSeq1: str, alignedSeq2: str,
 
     x_gap_len = 0
     y_gap_len = 0
-    for i, (xi, yi) in enumerate(zip(alignedSeq1, alignedSeq2)):
+    for _, (xi, yi) in enumerate(zip(alignedSeq1, alignedSeq2)):
         if xi != '-' and yi != '-':
             match = similarityScore.score(xi, yi)
             cost += match
@@ -291,7 +291,7 @@ def linearGapSemiGlobalAlignmentCost(alignedSeq1: str, alignedSeq2: str, gapPena
 def linearGapOverlapAlignmentCost(s: str, t: str, gapPenalty: int, similarityScore: SimilarityScore) -> int | float:
     if s[-1] == '-' or t[0] == '-':
         return math.inf
-    
+
     score = 0
     # new_s, new_t = overlap_trim_s_t(s,t)
 
@@ -318,7 +318,7 @@ def globalAlignmentLinearGapGen(seq1: str, seq2: str, gap_penalty: int, similari
         curr_line = [0 for _ in range(m+1)]
         curr_line[0] = i*gap_penalty
         for j, yj in enumerate(seq2, 1):
-        # scores of col
+            # scores of col
             score = similarity_score.score(xi, yj)
 
             match = last_line[j-1] + score
@@ -840,7 +840,7 @@ def smithWatermanAffineGap(seq1: str, seq2: str, openingPenalty: int = -11,
     return alignedSeq1, alignedSeq2, V, max_ind
 
 
-def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int, 
+def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int,
                               similarityScore: SimilarityScore):
     """Computes the fitting aligment between a string s and a motif t. A fitting alignment is an alignment of a substring of s against all of t.
 
@@ -854,7 +854,8 @@ def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int,
     n = len(motif)
 
     H = [[0 for _ in range(n+1)] for _ in range(m+1)]
-    originMat: list[list[list[str]]] = [[[] for _ in range(n+1)] for _ in range(m+1)]
+    originMat: list[list[list[str]]] = [[[]
+                                         for _ in range(n+1)] for _ in range(m+1)]
 
     for j in range(1, n+1):
         H[0][j] = gapPenalty * j
@@ -871,11 +872,10 @@ def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int,
 
             vals = [match, delete, insert]
             H[i][j] = max(match, delete, insert)
-            
+
             max_val = max(vals)
             origin = [aux[l] for l, val in enumerate(vals) if val == max_val]
             originMat[i][j] = origin
-
 
     max_score = max(H[i][n] for i in range(m+1))
     max_idxs = [i for i in range(m+1) if H[i][n] == max_score]
@@ -884,7 +884,7 @@ def fittingAlignmentLinearGap(seq: str, motif: str, gapPenalty: int,
 
 
 def fittingAlignmentLinearGapBacktrack(seq: str, motif: str, H: list[list[int]],
-                                       gapPenalty: int, 
+                                       gapPenalty: int,
                                        similarityScore: SimilarityScore):
     """Computes the fitting aligment between a string s and a motif t. A fitting alignment is an alignment of a substring of s against all of t.
 
@@ -1029,11 +1029,10 @@ def overlapAlignmentLinearGap(s: str, t: str,
     #     curr_line = [(0, "", "")]
     #     for j, tj in enumerate(t, 1):
     #         score = similarityScore.score(si, tj)
-            
+
     #         match = last_line[j-1][0] + score
     #         v1 = last_line[j][0] + gapPenalty
     #         v2 = curr_line[j-1][0] + (0 if i == m else gapPenalty)
-
 
     score = H[m][n]
     i, j = m, n
@@ -1112,13 +1111,13 @@ def drawAlignmentMatrixSvg(F: list[list[int]], seq1: str, seq2: str):
 
 def add_backtrack_paths_to_alignment_svg_global_alignement(d: draw.Drawing,
                                                            originMat: list[list[list[str]]],
-                                                           seq1: str, seq2: str, idxs: list[tuple[int,int]] = []):
+                                                           seq1: str, seq2: str, idxs: list[tuple[int, int]] = []):
 
     cell_size = 50
     if len(idxs) == 0:
         i = len(seq1)
         j = len(seq2)
-        idxs.append((i,j))
+        idxs.append((i, j))
 
     def dir_to_cords(i: int, j: int, direction: str):
         if direction == 'up':
@@ -1262,7 +1261,8 @@ def globalAlignmentLinearGapPenaltyScoreInLinearSpace(seq1: str, seq2: str,
         if top == bottom:
             return 0
 
-        edge, score = middle_edge(seq1[top:bottom], seq2[left:right], gapPenalty, similarityScore)
+        edge, score = middle_edge(
+            seq1[top:bottom], seq2[left:right], gapPenalty, similarityScore)
 
         n1 = (top + edge[0][0], left + edge[0][1])
         n2 = (top + edge[1][0], left + edge[1][1])
