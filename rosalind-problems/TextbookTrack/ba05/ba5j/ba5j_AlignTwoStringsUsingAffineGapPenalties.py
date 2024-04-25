@@ -32,8 +32,6 @@ def verify(result: OutputT, solution: OutputT, seq1: str, seq2: str) -> bool:
 
     score = affineGapGlobalAlignmentCost(
         aligned_seq1_res, aligned_seq2_res, similarityScore, openingPenalty, extendingPenalty)
-    
-    print(score_res, score_sol, score)
 
     correct = is1 == is2 and (score_res == score_sol == score)
 
@@ -45,7 +43,7 @@ def solve(seq1: str, seq2: str) -> OutputT:
     extendingPenalty: int = -1
     similarityScore = SimilarityScore(similarityDict=BLOSUM62)
 
-    aligned_seq1, aligned_seq2, max_score, _, _, _, _ = globalAlignmentAffineGapPenalty(
+    aligned_seq1, aligned_seq2, max_score, _, _, _ = globalAlignmentAffineGapPenalty(
         seq1, seq2, openingPenalty, extendingPenalty, similarityScore)
 
     return max_score, aligned_seq1, aligned_seq2

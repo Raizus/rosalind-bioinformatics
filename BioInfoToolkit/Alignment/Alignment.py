@@ -537,7 +537,6 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
     V = [[0 for _ in range(n+1)] for _ in range(m+1)]
     X = [[0 for _ in range(n+1)] for _ in range(m+1)]
     Y = [[0 for _ in range(n+1)] for _ in range(m+1)]
-    G = [[0 for _ in range(n+1)] for _ in range(m+1)]
 
     for i in range(1, m+1):
         V[i][0] = openingPenalty + (i-1) * extendingPenalty
@@ -555,11 +554,11 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
                           openingPenalty)
             Y[i][j] = max(Y[i-1][j] + extendingPenalty,
                           V[i-1][j] + openingPenalty)
-            G[i][j] = match + V[i-1][j-1]
+            middle = match + V[i-1][j-1]
 
-            V[i][j] = max(G[i][j], X[i][j], Y[i][j])
+            V[i][j] = max(middle, X[i][j], Y[i][j])
 
-    score = max(G[m][n], X[m][n], Y[m][n])
+    score = V[m][n]
 
     alignedSeq1 = ""
     alignedSeq2 = ""
@@ -620,7 +619,7 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
     alignedSeq1 = '-'*i + seq1[0:j] + alignedSeq1
     alignedSeq2 = '-'*j + seq2[0:i] + alignedSeq2
 
-    return alignedSeq1, alignedSeq2, score, V, G, X, Y
+    return alignedSeq1, alignedSeq2, score, V, X, Y
 
 
 def globalAlignmentConstantGapPenalty(seq1: str, seq2: str, gapPenalty: int,
@@ -1203,7 +1202,6 @@ def globalAlignmentLinearGapPenaltyScoreInLinearSpace2(seq1: str, seq2: str,
     # middle_edge = (i, j)
 
     return prev
-
 
 
 def middle_edge(seq1: str, seq2: str, gapPenalty: int,
