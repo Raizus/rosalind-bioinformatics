@@ -559,7 +559,7 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
 
             V[i][j] = max(G[i][j], X[i][j], Y[i][j])
 
-    score = V[m][n]
+    score = max(G[m][n], X[m][n], Y[m][n])
 
     alignedSeq1 = ""
     alignedSeq2 = ""
@@ -567,13 +567,13 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
     i = len(seq1)
     j = len(seq2)
 
-    prev = 'diagonal'
+    traceback = 'diagonal'
     if V[i][j] == Y[i][j]:
-        prev = 'up'
+        traceback = 'up'
     if V[i][j] == X[i][j]:
-        prev = 'left'
+        traceback = 'left'
 
-    while i > 0 or j > 0:
+    while i > 0 and j > 0:
         xi = seq1[i-1]
         yj = seq2[j-1]
 
@@ -582,33 +582,43 @@ def globalAlignmentAffineGapPenalty(seq1: str, seq2: str, openingPenalty: int = 
         left = max(X[i][j-1] + extendingPenalty,
                    V[i][j-1] + openingPenalty)
 
-        if prev == 'up' or j == 0:
-            if Y[i][j] == V[i-1][j] + openingPenalty:
-                prev = 'diagonal'
-            else: 
-                prev = 'up'
-
-            alignedSeq1 = xi + alignedSeq1
-            alignedSeq2 = '-' + alignedSeq2
-            i = i - 1
-        elif prev == 'left' or i == 0:
-            if X[i][j] == V[i][j-1] + openingPenalty:
-                prev = 'diagonal'
-            else:
-                prev = 'left'
-
-            alignedSeq1 = '-' + alignedSeq1
-            alignedSeq2 = yj + alignedSeq2
-            j = j - 1
-        else:
-            if up == V[i][j]:
-                prev = 'up'
-            elif left > G[i][j]:
-                prev = 'left'
+        if traceback == "diagonal":
+            max_score = V[i][j]
+            if up == max_score:
+                traceback = 'up'
+            elif left == max_score:
+                traceback = 'left'
             else:
                 alignedSeq1 = xi + alignedSeq1
                 alignedSeq2 = yj + alignedSeq2
                 i, j = i - 1, j - 1
+
+        elif traceback == "up":
+            us = Y[i-1][j] + extendingPenalty
+
+            if up == us:
+                traceback = 'up'
+            else:
+                traceback = 'diagonal'
+
+            alignedSeq1 = xi + alignedSeq1
+            alignedSeq2 = '-' + alignedSeq2
+            i = i - 1
+
+        elif traceback == "left":
+            ls = X[i][j-1] + extendingPenalty
+
+            if left == ls:
+                traceback = 'left'
+            else:
+                traceback = 'diagonal'
+
+            alignedSeq1 = '-' + alignedSeq1
+            alignedSeq2 = yj + alignedSeq2
+            j = j - 1
+
+    alignedSeq1 = '-'*i + seq1[0:j] + alignedSeq1
+    alignedSeq2 = '-'*j + seq2[0:i] + alignedSeq2
 
     return alignedSeq1, alignedSeq2, score, V, G, X, Y
 
