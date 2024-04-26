@@ -92,7 +92,7 @@ def solve_and_check(input_path: str) -> bool:
 
 if __name__ == "__main__":
     cwd = os.path.realpath(os.path.dirname(__file__))
-    path = f'{cwd}/rosalind_ba4g_1.txt'
+    path = f'{cwd}/rosalind_ba4g_3.txt'
 
     lines = readTextFile(path)
     N = int(lines[0])
