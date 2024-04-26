@@ -648,7 +648,7 @@ def cyclopeptideSequencing(spectrum: list[int], massDict: dict[str, int]):
 
 
 def leaderboardCyclopeptideSequencing(spectrum: list[int], N: int, base_masses: list[int]):
-    """_summary_
+    """Implements the leaderboard Cyclopeptide sequencing algorithm keeping to top N candidates (with ties) every iteration
 
     Args:
         spectrum (list[int]): List of masses, sorted
@@ -712,19 +712,14 @@ def convolutionLeaderboardCyclopeptideSequencing(spectrum: list[int], M: int, N:
 
     sorted_counter = sorted(
         (item for item in spectral_conv.items()), key=lambda x: x[1], reverse=True)
-
-    sorted_spectral_conv: list[int] = []
-    for mass, count in sorted_counter:
-        sorted_spectral_conv.extend([mass]*count)
-    sorted_spectral_conv.sort()
-
+    
     # filter elements with mass >=57 ans <=200
     lb, ub = 57, 200
     sorted_counter = [item for item in sorted_counter if lb <= item[0] <= ub]
 
+    # top M elements with + ties with top M
     idx = min(len(sorted_counter), M-1)
     countM = sorted_counter[idx][1]
-    # top M elements with + ties with top M
     top_m_elements = sorted(
         [mass for mass, count in sorted_counter if count >= countM])
 

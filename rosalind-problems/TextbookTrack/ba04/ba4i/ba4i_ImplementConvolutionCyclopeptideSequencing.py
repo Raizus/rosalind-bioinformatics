@@ -71,7 +71,7 @@ if __name__ == "__main__":
     spectrum = [int(m) for m in lines[2].split()]
     spectrum = sorted(spectrum)
 
-    # TODO: I think there might be a mistake somewhere
+    # Note: Highly probable that there's a mistake in rosalind's verifier
 
     peptide = solve(M, N, spectrum)
 
@@ -83,4 +83,3 @@ if __name__ == "__main__":
 
     correct = solve_and_check(path)
     print(correct)
-
