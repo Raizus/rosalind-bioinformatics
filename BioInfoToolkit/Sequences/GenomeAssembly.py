@@ -316,33 +316,40 @@ class DeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
             contig = self.edgesPathToString(path)
             yield contig
 
-    def findAllEulerianCycles(self, start_node_id: str):
-        num_edges = len(self.graph.edges)
-        g = self.graph
 
-        seqs: list[str] = []
+    def generateAllEulerianCycles(self, source_id: str, node2_id: str):
+        """Generates strings assembled from all eulerian cycles (paths that traverse every edge and return to the starting node), starting with the edge from source_id to node2_id
 
-        def recurse(node_id: str, path: list[str], count: int):
-            adj = dict(g.adj[node_id])
-            path.append(node_id)
-            count += 1
+        Args:
+            source_id (str): source node id
+            node2_id (str): second node id (adjacent to source id)
 
-            if len(adj) == 0:
-                if count == num_edges+1 and node_id == start_node_id: # found the eulerian path
-                    seq = reduce(lambda prev,next: prev+next[-1], path[1:], path[0])
-                    l=len(node_id)
-                    seqs.append(seq[:-l])
+        Yields:
+            Generator[str, Any, None]: circular string generator
+        """
+        g = self.graph.copy()
+
+        def recurse(n1_id: str):
+            if g.number_of_edges() == 1 and source_id in self.graph[n1_id]:
+                yield [n1_id, source_id]
             else:
+                adj = dict(g.adj[n1_id])
                 for child_id, edge_dict in adj.items():
-                    edge_dict = dict(edge_dict)
-                    g.remove_edge(node_id, child_id)
-                    recurse(child_id, path, count)
-                    g.add_edge(node_id, child_id, seq=node_id+child_id[-1])
+                    # edge_dict = dict(edge_dict)
+                    g.remove_edge(n1_id, child_id)
+                    if nx.has_path(g, child_id, source_id):
+                        for path in recurse(child_id):
+                            yield [n1_id] + path
+                    g.add_edge(n1_id, child_id, seq=n1_id+child_id[-1])
 
-            path.pop()
+        k = self.k
+        if node2_id not in self.graph[source_id]:
+            return
 
-        recurse(start_node_id, [], 0)
-        a = 0
+        g.remove_edge(source_id, node2_id)
+        for path in recurse(node2_id):
+            seq = reduce(lambda x, y: x + y[-1], path[:-k+1], source_id)
+            yield seq
 
 
 class PairedDeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
