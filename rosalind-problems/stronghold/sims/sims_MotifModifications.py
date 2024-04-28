@@ -1,4 +1,4 @@
-from BioInfoToolkit import Alignment
+from BioInfoToolkit.Alignment.Alignment import SimilarityScore, fittingAlignmentLinearGap, fittingAlignmentLinearGapBacktrack, linearGapGlobalAlignmentCost
 from BioInfoToolkit.IO.IO import read_FASTA, readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 import os
 from BioInfoToolkit.Sequences.SequenceUtils import is_subsequence_str
@@ -29,8 +29,8 @@ def verify(result: OutputT, solution: OutputT, seq1: str, seq2: str) -> bool:
     is2 = is_subsequence_str(seq2, strip_inserts(res_seq2))
 
     gapPenalty: int = -1
-    similarityScore = Alignment.SimilarityScore(1, -1)
-    actual_score = Alignment.linearGapGlobalAlignmentCost(
+    similarityScore = SimilarityScore(1, -1)
+    actual_score = linearGapGlobalAlignmentCost(
         res_seq1, res_seq2, gapPenalty, similarityScore)
 
     correct = (score_res == score_sol == actual_score) and is1 and is2
@@ -39,10 +39,10 @@ def verify(result: OutputT, solution: OutputT, seq1: str, seq2: str) -> bool:
 
 def solve(seq1: str, seq2: str) -> OutputT:
     gapPenalty: int = -1
-    similarityScore = Alignment.SimilarityScore(1, -1)
-    H, max_score = Alignment.fittingAlignmentLinearGap(
+    similarityScore = SimilarityScore(1, -1)
+    H,_, max_score = fittingAlignmentLinearGap(
         seq1, seq2, gapPenalty, similarityScore)
-    alignedSeq1, alignedSeq2 = Alignment.fittingAlignmentLinearGapBacktrack(seq1, seq2, H, gapPenalty, similarityScore)
+    alignedSeq1, alignedSeq2 = fittingAlignmentLinearGapBacktrack(seq1, seq2, H, gapPenalty, similarityScore)
 
     return max_score, alignedSeq1, alignedSeq2
 
