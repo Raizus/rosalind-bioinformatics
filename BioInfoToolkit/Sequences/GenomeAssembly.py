@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import reduce
-from itertools import accumulate, combinations
+from itertools import combinations
 from typing import Iterable
 
 from graphviz import Digraph
@@ -136,14 +136,14 @@ class OverlapGraph:
             dot.node(str(node), f"{node}: {sequence}")
 
         for n1, nbrs in g.adj.items():
-            for n2, edge in nbrs.items():
+            for n2 in nbrs.keys():
                 dot.edge(str(n1), str(n2))
         return dot
 
 
 def deBruijnMultiGraphFromString(string: str, k: int):
     graph = nx.MultiDiGraph()
-    for i, kmer in enumerate(kmer_gen(string, k)):
+    for kmer in kmer_gen(string, k):
         prefix = kmer[:-1]
         suffix = kmer[1:]
 
@@ -210,7 +210,7 @@ class DeBruijnMultiGraphAbstract(ABC):
 
         for n1, nbrs in g.adj.items():
             for n2, edges in nbrs.items():
-                for edgeIdx, edgeData in edges.items():
+                for edgeIdx in edges.keys():
                     seq = g.edges[(n1, n2, edgeIdx)]['seq']
                     dot.edge(str(n1), str(n2), f"{seq}")
         return dot
@@ -287,7 +287,7 @@ class DeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
             unvisitedNodes.discard(node1)
             for node2, edgesDict in adjacencyDict.items():
                 unvisitedNodes.discard(node2)
-                for edgeIdx, edgesData in edgesDict.items():
+                for edgeIdx in edgesDict.keys():
                     newPath: list[tuple[str,str,int]] = [(node1, node2, edgeIdx)]
                     while in1out1node(node2):
                         node3 = next(g.successors(node2))
@@ -334,8 +334,7 @@ class DeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
                 yield [n1_id, source_id]
             else:
                 adj = dict(g.adj[n1_id])
-                for child_id, edge_dict in adj.items():
-                    # edge_dict = dict(edge_dict)
+                for child_id, _ in adj.items():
                     g.remove_edge(n1_id, child_id)
                     if nx.has_path(g, child_id, source_id):
                         for path in recurse(child_id):
@@ -375,7 +374,7 @@ class PairedDeBruijnMultiGraph(DeBruijnMultiGraphAbstract):
             string1 += label[0][-1]
             string2 += label[1][-1]
         
-        d, k = self.d, self.k
+        d = self.d
         string = string1 + string2[len(string2)-(d):]
         return string
 
