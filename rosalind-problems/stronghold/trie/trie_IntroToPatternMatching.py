@@ -98,7 +98,7 @@ def solve_and_check(input_path: str) -> bool:
 
 if __name__ == "__main__":
     cwd = os.path.realpath(os.path.dirname(__file__))
-    path = f'{cwd}/rosalind_trie_0.txt'
+    path = f'{cwd}/rosalind_trie_1.txt'
 
     lines = readTextFile(path)
     seqs = [line for line in lines if len(line) and not line.isspace()]
