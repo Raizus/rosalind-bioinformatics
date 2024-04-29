@@ -2,7 +2,7 @@ from BioInfoToolkit.Sequences.Trie import TrieNx
 import os
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 import re
-
+import networkx as nx
 
 """
 https://rosalind.info/problems/ba9a/
@@ -48,9 +48,27 @@ Trie Construction Problem
 OutputT = list[tuple[int,int,str]]
 
 
-def verify(result: OutputT, solution: OutputT) -> bool:
-    # TODO: check if correct
-    return False
+def verify(result: OutputT, solution: OutputT, seqs: list[str]) -> bool:
+    graph = nx.DiGraph()
+    for n1, n2, symb in result:
+        if n1 not in graph.nodes:
+            graph.add_node(n1)
+        if n2 not in graph.nodes:
+            graph.add_node(n2)
+        graph.add_edge(n1, n2, char=symb)
+
+    # build the sequences in graph and compare to seqs
+    root = 0
+    graph_seqs: list[str] = []
+    for node in graph:
+        if graph.out_degree(node) == 0:  # leaf
+            path = nx.shortest_path(graph, root, node)
+            seq = ''.join([graph.edges[(n1, n2)]['char']
+                          for n1, n2 in zip(path, path[1:])])
+            graph_seqs.append(seq)
+
+    correct = len(result) == len(solution) and set(graph_seqs) == set(seqs)
+    return correct
 
 
 def solve(patterns: list[str]) -> OutputT:
@@ -96,7 +114,7 @@ def solve_and_check(input_path: str) -> bool:
 
     solution = load_results(solution_path)
 
-    correct = verify(result, solution)
+    correct = verify(result, solution, seqs)
     return correct
 
 
