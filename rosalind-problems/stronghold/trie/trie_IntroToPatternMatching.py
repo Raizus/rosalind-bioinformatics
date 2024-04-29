@@ -4,7 +4,7 @@ import os
 from BioInfoToolkit.IO.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
 from BioInfoToolkit.IO import readTextFile, writeTextFile
 import re
-
+import networkx as nx
 
 """
 https://rosalind.info/problems/trie/
@@ -20,33 +20,47 @@ As a result of this method of construction, the symbols along the edges of any p
     Return: The adjacency list corresponding to the trie T for these patterns, in the following format. If T has n nodes, first label the root with 1 and then label the remaining nodes with the integers 2 through n in any order you like. Each edge of the adjacency list of T will be encoded by a triple containing the integer representing the edge's parent node, followed by the integer representing the edge's child node, and finally the symbol labeling the edge.
 """
 
-
-def save_result(result_path: str, node: TrieNode):
-    def dfs(node: TrieNode):
-        for label, childNode in node.children.items():
-            res = f"{node.id+1} {childNode.id+1} {label}"
-            print(res)
-            writeTextFile(result_path, res, "a")
-            dfs(childNode)
-
-    dfs(node)
-    
-
-def verify(result: list[tuple[int, int, str]], seqs: list[str]) -> bool:
-
-    return False
+OutputT = list[tuple[int, int, str]]
 
 
-def solve(seqs: list[str]) -> list[tuple[int, int, str]]:
+def verify(result: OutputT, solution: OutputT, seqs: list[str]) -> bool:
+    graph = nx.DiGraph()
+    for n1, n2, symb in result:
+        if n1 not in graph.nodes:
+            graph.add_node(n1)
+        if n2 not in graph.nodes:
+            graph.add_node(n2)
+        graph.add_edge(n1, n2, char=symb)
+
+    # build the sequences in graph and compare to seqs
+    root = 1
+    graph_seqs: list[str] = []
+    for node in graph:
+        if graph.out_degree(node) == 0: #leaf
+            path = nx.shortest_path(graph, root, node)
+            seq = ''.join([graph.edges[(n1, n2)]['char']
+                          for n1, n2 in zip(path, path[1:])])
+            graph_seqs.append(seq)
+
+    correct = len(result) == len(solution) and set(graph_seqs) == set(seqs)
+    return correct
+
+
+def solve(seqs: list[str]) -> OutputT:
     trie = Trie()
     for seq in seqs:
         trie.insert(seq)
 
-    adj_list: list[tuple[int, int, str]] = []
+    # dot = trie.draw_dot()
+    # dot.view()
+    # dot.render('trie', directory=f'{cwd}/')
+
+    adj_list: OutputT = []
 
     def dfs(node: TrieNode):
         for label, childNode in node.children.items():
-            adj_list.append((node.id, childNode.id, str(label)))
+            adj_list.append((node.id+1, childNode.id+1, str(label)))
+            dfs(childNode)
 
     dfs(trie.root)
     return adj_list
@@ -72,15 +86,15 @@ def load_results(path: str) -> list[tuple[int,int,str]]:
 def solve_and_check(input_path: str) -> bool:
     lines = readTextFile(input_path)
     seqs = [line for line in lines if len(line) and not line.isspace()]
-    adj_list = solve(seqs)
+
+    result = solve(seqs)
 
     solution_path = solution_path_from_input_path(input_path)
     solution = load_results(solution_path)
 
-    correct = verify(adj_list, seqs)
+    correct = verify(result, solution, seqs)
     return correct
 
-# TODO finish this
 
 if __name__ == "__main__":
     cwd = os.path.realpath(os.path.dirname(__file__))
@@ -88,18 +102,15 @@ if __name__ == "__main__":
 
     lines = readTextFile(path)
     seqs = [line for line in lines if len(line) and not line.isspace()]
-    
-    trie = Trie()
-    for seq in seqs:
-        trie.insert(seq)
 
-    dot = trie.draw_dot()
-    # dot.view()
-    dot.render('trie', directory=f'{cwd}/')
+    adj_list = solve(seqs)
 
     result_path = result_path_from_input_path(path)
     writeTextFile(result_path, None, 'w')
-    save_result(result_path, trie.root)
+    for n1,n2,symb in adj_list:
+        out = f"{n1} {n2} {symb}"
+        print(out)
+        writeTextFile(result_path, out, 'a')
 
-    # correct = solve_and_check(path)
-    # print(correct)
+    correct = solve_and_check(path)
+    print(correct)
