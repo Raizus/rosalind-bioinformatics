@@ -42,7 +42,7 @@ def stringFromBWT(bwt: str) -> str:
         str: reconstructed string
     """
     last_column = [c for c in bwt]
-    first_column = sorted(last_column)    
+    first_column = sorted(last_column)
     last_column = index_strings_by_occurrence(last_column)
     first_column = index_strings_by_occurrence(first_column)
 
@@ -50,7 +50,7 @@ def stringFromBWT(bwt: str) -> str:
 
     current = first_column[0]
     string = current[0]
-    for i in range(len(bwt)-1):
+    for _ in range(len(bwt)-1):
         next_symbol = temp_dict[current]
         string = next_symbol[0] + string
         current = next_symbol
@@ -173,16 +173,14 @@ def getFirstOccurences(first_column: list[str]) -> dict[str, int]:
     return first_occurence
 
 
-def BWTMatchingWithCheckpoints(bwt: str, pattern: str, c: int = 5,
-                               checkpoint_array: CheckpointArrayBWT | None = None,
+def BWTMatchingWithCheckpoints(bwt: str, pattern: str, checkpoint: int | CheckpointArrayBWT = 5,
                                first_occurence: dict[str, int] | None = None):
     """Performs Borrows-Wheeler Transform (BWT) matching, using checkpoint arrays. When performing multiple matches, providing a pre-computed checkpoint array and first ocurrences dictionary will speed up performance significantly
 
     Args:
         bwt (str): the BWT string
         pattern (str): the pattern to match
-        c (int, optional): creates checkpoints when i % c == 0 (i is the index of the bwt string), when checkpoint_array is not provided. Defaults to 5.
-        checkpoint_array (CheckpointArrayBWT | None, optional): Checkpoint array. Defaults to None.
+        checkpoint (CheckpointArrayBWT | int): Checkpoint array or the checkpoint distance to creates checkpoints when i % c == 0 (i is the index of the bwt string). Defaults to 5.
         first_occurence (dict[str, int] | None, optional): Dictionary of the first ocurrence of each symbol in the first column of the BWT. Defaults to None.
 
     Returns:
@@ -191,8 +189,10 @@ def BWTMatchingWithCheckpoints(bwt: str, pattern: str, c: int = 5,
     last_column = [char for char in bwt]
     first_column = sorted(last_column)
 
-    if checkpoint_array is None:
-        checkpoint_array = CheckpointArrayBWT(bwt, c)
+    if isinstance(checkpoint, int):
+        checkpoint_array = CheckpointArrayBWT(bwt, checkpoint)
+    else:
+        checkpoint_array = checkpoint
 
     # first occurence in first column
     if first_occurence is None:
@@ -210,8 +210,10 @@ def BWTMatchingWithCheckpoints(bwt: str, pattern: str, c: int = 5,
                 # bottomIdx = idx of the last ocurrence of symbol
                 # top = lastToFirst(topIndex)
                 # bottom = lastToFirst(bottomIndex)
-                top = first_occurence[symbol] + checkpoint_array.get_count(bwt, symbol, top-1)
-                bottom = first_occurence[symbol] + checkpoint_array.get_count(bwt, symbol, bottom) - 1
+                top = first_occurence[symbol] + \
+                    checkpoint_array.get_count(bwt, symbol, top-1)
+                bottom = first_occurence[symbol] + \
+                    checkpoint_array.get_count(bwt, symbol, bottom) - 1
             else:
                 return None
         else:
@@ -236,7 +238,8 @@ def BWTMultiplePatternMatching(bwt: str, patterns: list[str], c: int):
 
     matches: list[int] = []
     for pattern in patterns:
-        match = BWTMatchingWithCheckpoints(bwt, pattern, c, checkpoint_array, first_occurence)
+        match = BWTMatchingWithCheckpoints(
+            bwt, pattern, checkpoint_array, first_occurence)
         if match is not None:
             top, bottom = match
             matches.extend(suffix_array[i] for i in range(top, bottom+1))

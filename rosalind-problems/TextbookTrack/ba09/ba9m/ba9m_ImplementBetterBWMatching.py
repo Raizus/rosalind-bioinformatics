@@ -47,7 +47,6 @@ Implement BetterBWMatching
 
 OutputT = list[int]
 
-
 def verify(result: OutputT, solution: OutputT) -> bool:
     correct = result == solution
     return correct
@@ -61,7 +60,7 @@ def solve(bwt: str, patterns: list[str]) -> OutputT:
 
     for pattern in patterns:
         match = BWTMatchingWithCheckpoints(
-            bwt, pattern, c, checkpoint_array, first_occurence)
+            bwt, pattern, checkpoint_array, first_occurence)
         if match is not None:
             top, bottom = match
             n = bottom - top + 1
@@ -85,7 +84,6 @@ def solve_and_check(input_path: str) -> bool:
     result = solve(bwt, patterns)
 
     solution_path = solution_path_from_input_path(input_path)
-
     solution = load_results(solution_path)
 
     correct = verify(result, solution)
