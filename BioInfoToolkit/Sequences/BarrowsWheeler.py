@@ -247,55 +247,43 @@ def BWTMultiplePatternMatching(bwt: str, patterns: list[str], c: int):
     return matches
 
 
-def BWTInexactMatchingWithCheckpoints(bwt: str, pattern: str, d: int, c: int = 5,
-                               checkpoint_array: CheckpointArrayBWT | None = None,
-                               first_occurence: dict[str, int] | None = None):
-    """Performs Borrows-Wheeler Transform (BWT) matching, using checkpoint arrays. When performing multiple matches, providing a pre-computed checkpoint array and first ocurrences dictionary will speed up performance significantly
+def approximatePatternMatchingBwt(bwt: str, pattern: str, d: int):
+    def delta(char1: str, char2: str) -> int:
+        return int(char1 != char2)
 
-    Args:
-        bwt (str): the BWT string
-        pattern (str): the pattern to match
-        c (int, optional): creates checkpoints when i % c == 0 (i is the index of the bwt string), when checkpoint_array is not provided. Defaults to 5.
-        checkpoint_array (CheckpointArrayBWT | None, optional): Checkpoint array. Defaults to None.
-        first_occurence (dict[str, int] | None, optional): Dictionary of the first ocurrence of each symbol in the first column of the BWT. Defaults to None.
+    mismatch_counts: list[int] = [0 for _ in bwt]
 
-    Returns:
-        _type_: _description_
-    """
-    last_column = [char for char in bwt]
-    first_column = sorted(last_column)
+    last_to_first = lastToFirstArray(bwt)
+    indexes = list(range(len(bwt)))
 
-    mismatch_counts = [0 for _ in bwt]
-
-    if checkpoint_array is None:
-        checkpoint_array = CheckpointArrayBWT(bwt, c)
-
-    # first occurence in first column
-    if first_occurence is None:
-        first_occurence = getFirstOccurences(first_column)
-
-
-    for i in range(len(pattern)-1, -1, -1):
+    i = len(pattern)-1
+    while i >= 0:
         symbol = pattern[i]
 
-    top = 0
-    bottom = len(last_column)-1
-    i = len(pattern)-1
-    while top <= bottom:
-        if i >= 0:
-            symbol = pattern[i]
-            i -= 1
-            if symbol in last_column[top:bottom+1]:
-                # topIdx = idx of first ocurrence of symbol from top to bottom in last_column
-                # bottomIdx = idx of the last ocurrence of symbol
-                # top = lastToFirst(topIndex)
-                # bottom = lastToFirst(bottomIndex)
-                top = first_occurence[symbol] + \
-                    checkpoint_array.get_count(bwt, symbol, top-1)
-                bottom = first_occurence[symbol] + \
-                    checkpoint_array.get_count(bwt, symbol, bottom) - 1
-            else:
-                return None
-        else:
-            return top, bottom
+        # update mismatch counts
+        mismatch_counts = [count+delta(bwt[idx], symbol)
+                           for idx, count in zip(indexes, mismatch_counts)]
 
+        # if count > d or symbol == '$' drop those indexes
+        keep_idxs = [j for j, (idx, count) in enumerate(
+            zip(indexes, mismatch_counts)) if count <= d and bwt[idx] != '$']
+        indexes = [indexes[j] for j in keep_idxs]
+        mismatch_counts = [mismatch_counts[j] for j in keep_idxs]
+
+        indexes = [last_to_first[idx] for idx in indexes]
+        i -= 1
+
+    suffix_array = suffixArrayFromBWT(bwt, last_to_first)
+    match_indexes = [suffix_array[idx] for idx in indexes]
+
+    return sorted(match_indexes)
+
+
+def approximateMultiplePatternMatchingBwt(string: str, patterns: list[str], d: int):
+    matches_dict: dict[int, list[int]] = dict()
+    bwt = barrowsWheelerTransform(string)
+    for i, pattern in enumerate(patterns):
+        matches_i = approximatePatternMatchingBwt(bwt, pattern, d)
+        matches_dict[i] = matches_i
+
+    return matches_dict
