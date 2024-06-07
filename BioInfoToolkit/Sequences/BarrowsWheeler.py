@@ -120,6 +120,7 @@ def buildCheckpointCountArraysBWT(bwt: str, c: int):
         if i % c == 0:
             checkpoint_array.append(counts)
             counts = counts.copy()
+
     return checkpoint_array
 
 
@@ -134,20 +135,9 @@ class CheckpointArrayBWT:
             bwt (str): BWT string
             c (int): creates checkpoints when i % c == 0 (i is the index of the bwt string)
         """
-        l = len(bwt)
+        # l = len(bwt)
 
-        checkpoint_array: list[dict[str, int]] = []
-        counts: dict[str, int] = dict()
-        checkpoint_array.append(dict())
-
-        for i, char in enumerate(bwt, 1):
-            counts.setdefault(char, 0)
-            counts[char] += 1
-            if i % c == 0:
-                checkpoint_array.append(counts)
-                counts = counts.copy()
-
-        self.array = checkpoint_array
+        self.array = buildCheckpointCountArraysBWT(bwt, c)
         self.c = c
 
     def get_count(self, bwt: str, symbol: str, i: int):
