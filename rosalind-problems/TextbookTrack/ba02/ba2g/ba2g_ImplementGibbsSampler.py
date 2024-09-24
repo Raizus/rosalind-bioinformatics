@@ -1,8 +1,3 @@
-from BioInfoToolkit.Sequences.SequenceUtils import gibbsSamplerMonteCarlo
-from BioInfoToolkit.Sequences.StringUtils import getMinimumHammingDistanceToKmer
-from BioInfoToolkit.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
-import os
-
 """
 https://rosalind.info/problems/ba2g/
 
@@ -29,23 +24,26 @@ Implement GibbsSampler
 
 """
 
+from BioInfoToolkit.Sequences.Profiling import SequencesProfile
+from BioInfoToolkit.Sequences.SequenceUtils import gibbsSamplerMonteCarlo
+from BioInfoToolkit.Sequences.StringUtils import getMinimumHammingDistanceToKmer
+from BioInfoToolkit.IO import readTextFile, result_path_from_input_path, solution_path_from_input_path, writeTextFile
+import os
+
+
 OutputT = list[str]
 
 
 def verify(result: OutputT, solution: OutputT, sequences: list[str]) -> bool:
-    score_res = sum(sum(getMinimumHammingDistanceToKmer(seq, kmer)
-                        for seq in sequences) for kmer in result)
-    score_sol = sum(sum(getMinimumHammingDistanceToKmer(seq, kmer)
-                        for seq in sequences) for kmer in solution)
+    pseudocounts = 1
+    alphabet = ['A', 'C', 'G', 'T']
+    score_res = SequencesProfile(result, alphabet, pseudocounts).score()
+    score_sol = SequencesProfile(solution, alphabet, pseudocounts).score()
+    print(score_res, score_sol)
 
-    # TODO: change verification:
-    # might not be equal since we are doing a monte carlo search
-
-    # alphabet = ['A', 'C', 'G', 'T']
-    # profile = SequencesProfile(result, alphabet, 1)
-    # score_res_2 = profile.score()
-
-    correct = score_res <= score_sol and len(result) == len(solution)
+    # TODO: good chance score won't be the same
+    # this assumes to monte carlo search will converge to the optimal score
+    correct = score_res == score_sol and len(result) == len(solution)
     return correct
 
 
