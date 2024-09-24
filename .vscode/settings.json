@@ -7,5 +7,10 @@
         "reportMissingImports": "warning",
         "reportUnusedVariable": "warning",
         "reportDuplicateImport": "warning",
-    }
+    },
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
