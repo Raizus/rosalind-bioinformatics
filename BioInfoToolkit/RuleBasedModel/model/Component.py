@@ -32,6 +32,18 @@ class MoleculeTypeComponent:
     def is_stateless(self) -> bool:
         return len(self._states) == 0
 
+    def matches_component(self, other: Any) -> bool:
+        if not isinstance(other, MoleculeTypeComponent):
+            return False
+
+        if self._name != other.name:
+            return False
+
+        if self._states != other.states:
+            return False
+
+        return True
+
     def copy(self):
         new = MoleculeTypeComponent(self._name, self._states.copy())
         return new
@@ -75,18 +87,6 @@ class Component(MoleculeTypeComponent):
     @bond.setter
     def bond(self, bond: str):
         self._bond = bond
-
-    def matches_component(self, other: Any) -> bool:
-        if not isinstance(other, MoleculeTypeComponent):
-            return False
-
-        if self._name != other.name:
-            return False
-
-        if self._states != other.states:
-            return False
-
-        return True
 
     def is_bonded(self) -> bool:
         return len(self.bond) > 0 and self.bond != '?'
@@ -140,3 +140,9 @@ def components_gen(component: MoleculeTypeComponent | Component):
             yield component2
     else:
         yield Component(component.name, component.states, state, bond)
+
+
+def components_all_equal(components: list[MoleculeTypeComponent] | list[Component]):
+    if len(components) <= 1:
+        return True
+    return all(components[0].matches_component(comp2) for comp2 in components[1:])

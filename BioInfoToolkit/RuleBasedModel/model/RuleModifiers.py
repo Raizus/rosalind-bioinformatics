@@ -3,7 +3,7 @@ from enum import Enum
 from typing import TypedDict
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Parsers import MoleculeDict
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeDict
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 
 

@@ -3,24 +3,10 @@ from functools import reduce
 from itertools import accumulate, product
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Observable import Observable
+from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import BidirectionalReaction, ReactionRule
 from BioInfoToolkit.RuleBasedModel.model.Pattern import ComplexReactant, Molecule, generate_species
 import numpy as np
-
-
-class Parameter:
-    declaration: str
-    name: str
-    value: int|float
-
-    def __init__(self, name: str, declaration: str, value: int|float) -> None:
-        self.name = name
-        self.declaration = declaration
-        self.value = value
-
-    def __repr__(self) -> str:
-        out = f"{self.name} {self.declaration}"
-        return out
 
 
 class ReactionModel:
@@ -211,11 +197,11 @@ class ReactionModel:
 
         out += "Parameters:\n"
         for parameter in self.parameters_dict.values():
-            out += f"\t{parameter.name} {parameter.declaration}\n"
+            out += f"\t{parameter.name} {parameter.expression}\n"
 
         out += "Species:\n"
         for specie in self.species_init_concentrations.values():
-            out += f"\t{specie.name} {specie.declaration}\n"
+            out += f"\t{specie.name} {specie.expression}\n"
 
         return out
 

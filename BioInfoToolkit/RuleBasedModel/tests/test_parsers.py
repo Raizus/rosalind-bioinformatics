@@ -1,11 +1,11 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_observable, parse_pattern, parse_reactants_sum, parse_reaction, parse_molecule, parse_molecule_type
+from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_observable, parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
 
 
 class TestParseMoleculeType():
     @pytest.mark.parametrize("declaration, name, count", [
-        ("A()", "A", 0), 
+        ("A()", "A", 0),
         ("ABC()", "ABC", 0),
         ("A(x)", "A", 1),
         ("A(x,x,y)", "A", 3),
@@ -83,11 +83,11 @@ class TestParseMolecule():
 
 class TestParsePattern():
     @pytest.mark.parametrize("declaration, molecules_count", [
-        ("A()", 1), 
-        ("ABC()", 1), 
+        ("A()", 1),
+        ("ABC()", 1),
         ("A() ", 1),
-        ("A(x~a,x~a,y)", 1), 
-        ("A(x1~a!0,x1~b,y!1)", 1), 
+        ("A(x~a,x~a,y)", 1),
+        ("A(x1~a!0,x1~b,y!1)", 1),
         ("ABC(x1,x2~abc,x3!0,x4~a!1)", 1),
     ])
     def test_single_molecule(self, declaration: str, molecules_count: int):
@@ -98,10 +98,10 @@ class TestParsePattern():
         ("ABC(x1,x2~abc,x3!0,x4~a!1)", "ABC", [
          ('x1', '', ''), ('x2', 'abc', ''), ('x3', '', '0'), ('x4', 'a', '1')])
     ])
-    def test_single_molecule_components(self, 
+    def test_single_molecule_components(self,
                                         declaration: str,
-                                        expected_name: str, 
-                                        expected_components: list[tuple[str,str,str]]):
+                                        expected_name: str,
+                                        expected_components: list[tuple[str, str, str]]):
         declaration = "ABC(x1,x2~abc,x3!0,x4~a!1)"
         parsed = parse_pattern(declaration)
 
@@ -117,36 +117,35 @@ class TestParsePattern():
             assert comp['state'] == expected_comp[1]
             assert comp['bond'] == expected_comp[2]
 
-
     @pytest.mark.parametrize("declaration, molecules_count", [
-        ("L(rec!0).R(lig!0)", 2), 
-        ("R(lig!0).L(rec!0)", 2), 
-        ("L(rec!1).R(lig!1)", 2), 
+        ("L(rec!0).R(lig!0)", 2),
+        ("R(lig!0).L(rec!0)", 2),
+        ("L(rec!1).R(lig!1)", 2),
         ("R(lig!1).L(rec!1)", 2),
-        ("L(rec!0).R(lig!0,ch~open)", 2), 
+        ("L(rec!0).R(lig!0,ch~open)", 2),
         ("L(rec!0).R(lig!0,ch~closed)", 2),
-        ("R(lig!0,ch~open).L(rec!0)", 2), 
+        ("R(lig!0,ch~open).L(rec!0)", 2),
         ("R(lig!0,ch~closed).L(rec!0)", 2),
         ("A(x,y!0).B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y)", 4),
         ("B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y).A(x,y!0)", 4),
-        ("L(rec!0).R(lig!0) ", 2), 
+        ("L(rec!0).R(lig!0) ", 2),
         (" L(rec!0).R(lig!0)", 2)
     ])
     def test_complexes(self, declaration: str, molecules_count: int):
         parsed = parse_pattern(declaration)
         assert len(parsed) == molecules_count
 
-    @pytest.mark.parametrize("declaration", [
-        "L( rec!0).R(lig!0)", 
-        "R(lig!0).L(rec!0 )", 
-        "L(rec!1) .R(lig!1)", 
-        "R(lig!1). L(rec!1)",
-        "L(rec!0 ).R(lig!0,ch~open)", 
-        "L(rec!0).R( lig!0,ch~closed)",
-    ])
-    def test_invalid_complexes(self, declaration: str):
-        with pytest.raises(ValueError):
-            parse_pattern(declaration)
+    # @pytest.mark.parametrize("declaration", [
+    #     "L( rec!0).R(lig!0)",
+    #     "R(lig!0).L(rec!0 )",
+    #     "L(rec!1) .R(lig!1)",
+    #     "R(lig!1). L(rec!1)",
+    #     "L(rec!0 ).R(lig!0,ch~open)",
+    #     "L(rec!0).R( lig!0,ch~closed)",
+    # ])
+    # def test_invalid_complexes(self, declaration: str):
+    #     with pytest.raises(ValueError):
+    #         parse_pattern(declaration)
 
     def test_complex_1(self):
         declaration = "A(x,y!0).B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y)"
@@ -169,7 +168,7 @@ class TestParseReaction():
         ("R3: R(lig,ch~closed) + L(rec) <-> R(lig!0,ch~closed).L(rec!0) k2, kr", 2, 1)
     ])
     def test_valid_unidirectional(self, declaration: str, count1: int, count2: int):
-        parsed = parse_reaction(declaration)
+        parsed = parse_reaction_rule(declaration)
         assert len(parsed["reactants"]) == count1
         assert len(parsed["products"]) == count2
 

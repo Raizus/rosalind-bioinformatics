@@ -1,15 +1,15 @@
 import pytest
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_patterns
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_specie
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, generate_species_from_molecule_type
 
 
 class TestSpecies():
     molecules: dict[str, MoleculeType] = {
-        "A": MoleculeType("A(b,b,c)"),
-        "B": MoleculeType("B(a)"),
-        "C": MoleculeType("C(a)"),
+        "A": MoleculeType.from_declaration("A(b,b,c)"),
+        "B": MoleculeType.from_declaration("B(a)"),
+        "C": MoleculeType.from_declaration("C(a)"),
     }
 
     species_str_list = [
@@ -36,66 +36,38 @@ class TestSpecies():
     def test_matching(self, declaration: str, count: int):
         target_pattern = Pattern.from_declaration(declaration, self.molecules)
         patterns = [Pattern.from_declaration(decl, self.molecules) for decl in self.species_str_list]
-        matches = [pattern2 for pattern2 in patterns if match_patterns(target_pattern, pattern2)]
+        matches = [pattern2 for pattern2 in patterns if match_pattern_specie(target_pattern, pattern2)]
         l = len(matches)
         assert l == count
 
+class TestPatternMatching:
+    molecules = {
+        "L": MoleculeType.from_declaration("L(l,l)"),
+        "R": MoleculeType.from_declaration("R(r,r)"),
+    }
 
-# class TestSpecies2():
-#     molecules = {
-#         "L": MoleculeType("L(t)"),
-#         "T": MoleculeType("T(l,r,Phos~U~P,Meth~A~B~C)"),
-#         "CheY": MoleculeType("CheY(Phos~U~P)"),
-#         "CheZ": MoleculeType("CheZ()"),
-#         "CheB": MoleculeType("CheB(Phos~U~P)"),
-#         "CheR": MoleculeType("CheR(t)")
-#     }
+    @pytest.mark.parametrize("pattern_str, species_str", [
+        ('R(r!1).L(l,l!1)', 'L(l!1,l!2).L(l,l!3).R(r!1,r!3).R(r,r!2)'),
+    ])
+    def test_matching(self, pattern_str: str, species_str: str):
+        pattern = Pattern.from_declaration(pattern_str, self.molecules)
+        species = Pattern.from_declaration(species_str, self.molecules)
 
-#     species_str_list = [
-#         "L(t)",
-#         "T(Phos~U, l)",
-#         "T(Phos~P, l)",
-#         "CheY(Phos~U)",
-#         "CheY(Phos~P)",
-#         "CheZ()",
-#         "L(t!1).T(Phos~U, l!1)",
-#         "L(t!1).T(Phos~P, l!1)",
-#     ]
-
-#     @pytest.mark.parametrize("declaration", species_str_list)
-#     def test_valid(self, declaration: str):
-#         specie = Pattern.from_declaration(declaration, self.molecules)
-#         assert specie is not None
-
-#     @pytest.mark.parametrize("declaration, count", [
-#         ('A(b)', 4),
-#         ('A(b!+)', 4),
-#         ('A(b!?)', 6),
-#         ('A(b).C()', 2)
-#     ])
-#     def test_matching(self, declaration: str, count: int):
-#         target_pattern = Pattern.from_declaration(declaration, self.molecules)
-#         patterns = [Pattern.from_declaration(
-#             decl, self.molecules) for decl in self.species_str_list]
-#         matches = [pattern2 for pattern2 in patterns if match_patterns(
-#             target_pattern, pattern2)]
-#         l = len(matches)
-#         assert l == count
-
+        assert match_pattern_specie(pattern, species) == 1
 
 
 class TestSpeciesGeneration():
     molecules: dict[str, MoleculeType] = {
-        "L": MoleculeType("L(t)"),
-        "T": MoleculeType("T(l,r,Phos~U~P,Meth~A~B~C)"),
-        "CheY": MoleculeType("CheY(Phos~U~P)"),
-        "CheZ": MoleculeType("CheZ()"),
-        "CheB": MoleculeType("CheB(Phos~U~P)"),
-        "CheR": MoleculeType("CheR(t)"),
+        "L": MoleculeType.from_declaration("L(t)"),
+        "T": MoleculeType.from_declaration("T(l,r,Phos~U~P,Meth~A~B~C)"),
+        "CheY": MoleculeType.from_declaration("CheY(Phos~U~P)"),
+        "CheZ": MoleculeType.from_declaration("CheZ()"),
+        "CheB": MoleculeType.from_declaration("CheB(Phos~U~P)"),
+        "CheR": MoleculeType.from_declaration("CheR(t)"),
     }
 
     def test_species_generation(self):
-        species = [specie 
+        species = [specie
                    for molecule_type in self.molecules.values()
                    for specie in generate_species_from_molecule_type(molecule_type)
                    ]

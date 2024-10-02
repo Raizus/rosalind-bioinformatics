@@ -1,9 +1,11 @@
 import abc
 from enum import Enum
-from functools import reduce
+from functools import partial, reduce
+import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Component import Component
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, node_pattern_matching_func
+from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, node_matching
 
 
 def idxs_from_reactants(reactants: list[Pattern]):
@@ -40,19 +42,17 @@ class ReactionTransformation(abc.ABC):
     #   - Break bond: involves 2 components in two different molecules in the same reactants
     #   - Change Component State: Involves a single component
 
+    # the reaction center here refers to the reaction rules
+    # when applying the action to a given chemical array,
+    # the corresponding node mapping must be provided
     reaction_center_in: list[tuple[int, int, int]]
     reaction_center_out: list[tuple[int, int, int]]
+    patterns_graph: nx.Graph
 
-    # list of components that do not participate in the transformation,
-    # but are nonetheless required and influence the reaction rate
-    reaction_context_in: list[tuple[int, int, int]]
-    reaction_context_out: list[tuple[int, int, int]]
-
-    def __init__(self, reactants: list[Pattern], products: list[Pattern]) -> None:
+    def __init__(self, graph: nx.Graph) -> None:
         self.reaction_center_in = []
         self.reaction_center_out = []
-        self.reaction_context_in = idxs_from_reactants(reactants)
-        self.reaction_context_out = idxs_from_reactants(products)
+        self.patterns_graph = graph
 
     @abc.abstractmethod
     def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
@@ -62,88 +62,234 @@ class ReactionTransformation(abc.ABC):
 class FormBondTransform(ReactionTransformation):
     transformation = TransformationType.FORM_BOND
     bond: str
+    patterns: list[Pattern]
+
+    @classmethod
+    def assert_correct_idxs(cls, center_in: list[tuple[int, int, int]],
+                            center_out: list[tuple[int, int, int]]):
+        # vreaking involves 2 different components
+        assert len(center_in) == 2 and len(center_out) == 2
+
+        center1_in, center2_in = center_in[0], center_in[1]
+        idx1_in = center1_in[0]
+        idx2_in = center2_in[0]
+
+        center1_out, center2_out = center_out[0], center_out[1]
+        idx1_out, mol_idx1_out, _ = center1_out
+        idx2_out, mol_idx2_out, _ = center2_out
+
+        # reaction centers in the input belong to 1 reagent
+        # and in the output belong to 2 different reagents
+        # and affected components in each center must be in different molecules
+        assert idx1_in != idx2_in and idx1_out == idx2_out
+        assert mol_idx1_out != mol_idx2_out
 
     def __init__(self,
                  reactants: list[Pattern],
-                 products: list[Pattern],
+                 graph_r: nx.Graph,
+                 graph_p: nx.Graph,
                  center_in: list[tuple[int, int, int]],
                  center_out: list[tuple[int, int, int]]
                  ) -> None:
+        super().__init__(graph_r)
+        self.patterns = reactants
 
-        assert len(center_in) == 2 and len(center_out) == 2
-
-        reactants_idxs = idxs_from_reactants(reactants)
-        product_idxs = idxs_from_reactants(products)
+        FormBondTransform.assert_correct_idxs(center_in, center_out)
 
         center1_in, center2_in = center_in[0], center_in[1]
-        idx1_in, mol_idx1_in, comp_idx1_in = center1_in
-        idx2_in, mol_idx2_in, comp_idx2_in = center2_in
-
         center1_out, center2_out = center_out[0], center_out[1]
-        idx1_out, mol_idx1_out, comp_idx1_out = center1_out
-        idx2_out, mol_idx2_out, comp_idx2_out = center2_out
 
-        assert idx1_in != idx2_in and idx1_out == idx2_out
-        assert mol_idx1_in != mol_idx2_in and mol_idx1_out != mol_idx2_out
+        idx1_in = center1_in[0]
+        self.reactant_idx = idx1_in
 
         self.reaction_center_in = center_in
         self.reaction_center_out = center_out
 
-        for idx in center_in:
-            reactants_idxs.remove(idx)
-        for idx in center_out:
-            product_idxs.remove(idx)
+        n1_in = graph_r.nodes[center1_in]
+        n2_in = graph_r.nodes[center2_in]
 
-        self.reaction_context_in = reactants_idxs
-        self.reaction_context_out = product_idxs
+        n1_out = graph_p.nodes[center1_out]
+        n2_out = graph_p.nodes[center2_out]
 
-        # find bond label
-        reactant1_in, molecule1_in, comp1_in = objs_from_idx(
-            reactants, center1_in)
-        reactant2_in, molecule2_in, comp2_in = objs_from_idx(
-            reactants, center2_in)
-        reactant1_out, molecule1_out, comp1_out = objs_from_idx(
-            products, center1_out)
-        reactant2_out, molecule2_out, comp2_out = objs_from_idx(
-            products, center2_out)
+        mol1_in_name = n1_in.get('molecule_name')
+        mol1_out_name = n1_out.get('molecule_name')
+        mol2_in_name = n2_in.get('molecule_name')
+        mol2_out_name = n2_out.get('molecule_name')
 
-        assert molecule1_in._name == molecule1_out._name
-        assert molecule2_in._name == molecule2_out._name
-        assert comp1_in.name == comp1_out.name
-        assert comp2_in.name == comp2_out.name
+        comp1_in_name = n1_in.get('comp_name', None)
+        comp2_in_name = n2_in.get('comp_name', None)
+        comp1_out_name = n1_out.get('comp_name', None)
+        comp2_out_name = n2_out.get('comp_name', None)
 
-        bond1 = comp1_out.bond
-        bond2 = comp2_out.bond
+        comp1_out_bond: str = n1_out.get('bond', '')
+        comp2_out_bond: str = n2_out.get('bond', '')
 
-        assert bond1 == bond2 and len(bond1) and len(bond2)
-        self.bond = bond1
+        # assert molecule and component match between reaction centers in
+        # input and output
+        assert mol1_in_name == mol1_out_name
+        assert mol2_in_name == mol2_out_name
+        assert comp1_in_name == comp1_out_name
+        assert comp2_in_name == comp2_out_name
 
-    # def apply(self, reactants: list[Pattern]) -> list[Pattern]:
-    #     reaction_center_in = self.reaction_center_in
-    #     reaction_center_out = self.reaction_center_out
-    
-    #     center1_in, center2_in = reaction_center_in[0], reaction_center_in[1]
-    #     reactant1_in, molecule1_in, comp1_in = objs_from_idx(
-    #         reactants, center1_in)
-    #     reactant2_in, molecule2_in, comp2_in = objs_from_idx(
-    #         reactants, center2_in)
+        assert comp1_out_bond == comp2_out_bond and len(
+            comp1_out_bond) and len(comp2_out_bond)
 
-    #     # need to bond reactant1 to reactant2 and set the bond in comp1 and comp2
+        self.bond = comp1_out_bond
+
+    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
+        products = [reactant.copy() for reactant in reactants]
+
+        center1 = self.reaction_center_in[0]
+        center2 = self.reaction_center_in[1]
+        i1 = center1[0]
+        i2 = center2[0]
+
+        specie1 = products[i1]
+        specie2 = products[i2]
+
+        match_func = node_pattern_matching_func
+        matcher1 = nx.isomorphism.GraphMatcher(
+            specie1.graph, self.patterns[i1].graph, match_func)
+        matcher2 = nx.isomorphism.GraphMatcher(
+            specie2.graph, self.patterns[i2].graph, match_func)
+
+        map1 = next(matcher1.subgraph_isomorphisms_iter())
+        map2 = next(matcher2.subgraph_isomorphisms_iter())
+        map1 = {n2: n1 for n1, n2 in map1.items()}
+        map2 = {n2: n1 for n1, n2 in map2.items()}
+        n1 = map1[center1[1:]]
+        n2 = map2[center2[1:]]
+
+        new_species = form_bond(specie1, specie2, n1, n2)
+
+        products[i1] = new_species
+        products.pop(i2)
+
+        return products
+
+    def __repr__(self) -> str:
+        out = f"{self.transformation.value}: "
+        return out
+
+
+class BreakBondTransform(ReactionTransformation):
+    transformation = TransformationType.BREAK_BOND
+    patterns: list[Pattern]
+    bond: str
+
+    @classmethod
+    def assert_correct_idxs(cls, center_in: list[tuple[int, int, int]],
+                            center_out: list[tuple[int, int, int]]):
+        # vreaking involves 2 different components
+        assert len(center_in) == 2 and len(center_out) == 2
+
+        center1_in, center2_in = center_in[0], center_in[1]
+        idx1_in, mol_idx1_in, _ = center1_in
+        idx2_in, mol_idx2_in, _ = center2_in
+
+        center1_out, center2_out = center_out[0], center_out[1]
+        idx1_out = center1_out[0]
+        idx2_out = center2_out[0]
+
+        # reaction centers in the input belong to 1 reagent
+        # and in the output belong to 2 different reagents
+        # and affected components in each center must be in different molecules
+        assert idx1_in == idx2_in and idx1_out != idx2_out
+        assert mol_idx1_in != mol_idx2_in
+
+    def __init__(self,
+                 reactants: list[Pattern],
+                 graph_r: nx.Graph,
+                 graph_p: nx.Graph,
+                 center_in: list[tuple[int, int, int]],
+                 center_out: list[tuple[int, int, int]]) -> None:
+        super().__init__(graph_r)
+        self.patterns = reactants
+
+        BreakBondTransform.assert_correct_idxs(center_in, center_out)
+
+        center1_in, center2_in = center_in[0], center_in[1]
+        center1_out, center2_out = center_out[0], center_out[1]
+
+        idx1_in = center1_in[0]
+        self.reactant_idx = idx1_in
+
+        self.reaction_center_in = center_in
+        self.reaction_center_out = center_out
+
+        n1_in = graph_r.nodes[center1_in]
+        n2_in = graph_r.nodes[center2_in]
+
+        n1_out = graph_p.nodes[center1_out]
+        n2_out = graph_p.nodes[center2_out]
+
+        mol1_in_name = n1_in.get('molecule_name')
+        mol1_out_name = n1_out.get('molecule_name')
+        mol2_in_name = n2_in.get('molecule_name')
+        mol2_out_name = n2_out.get('molecule_name')
+
+        comp1_in_name = n1_in.get('comp_name', None)
+        comp2_in_name = n2_in.get('comp_name', None)
+        comp1_out_name = n1_out.get('comp_name', None)
+        comp2_out_name = n2_out.get('comp_name', None)
+
+        comp1_in_bond: str = n1_in.get('bond', '')
+        comp2_in_bond: str = n2_in.get('bond', '')
+
+        # assert molecule and component match between reaction centers in
+        # input and output
+        assert mol1_in_name == mol1_out_name
+        assert mol2_in_name == mol2_out_name
+        assert comp1_in_name == comp1_out_name
+        assert comp2_in_name == comp2_out_name
+
+        assert comp1_in_bond == comp2_in_bond and len(
+            comp1_in_bond) and len(comp2_in_bond)
+
+        self.bond = comp1_in_bond
+
+    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
+        products = [reactant.copy() for reactant in reactants]
+
+        center1 = self.reaction_center_in[0]
+        i = center1[0]
+        specie = products[i]
+        match_func = node_pattern_matching_func
+        matcher = nx.isomorphism.GraphMatcher(
+            specie.graph, self.patterns_graph, match_func)
+        for mapping in matcher.subgraph_isomorphisms_iter():
+            mapping = {n2: n1 for n1, n2 in mapping.items()}
+            n1 = mapping[center1]
+            bond_id: str = specie.graph.nodes[n1]['bond']
+
+            new_species = specie.break_bond(bond_id)
+            products = products[:i] + list(new_species) + products[i+1:]
+
+            return products
+
+        return products
+
+    def __repr__(self) -> str:
+        out = f"{self.transformation.value}:"
+        return out
 
 
 class ChangeStateAction(ReactionTransformation):
     transformation = TransformationType.CHANGE_COMPONENT_STATE
     # reaction_center_in: list[tuple[int, int, int]]
     # reaction_center_out: list[tuple[int, int, int]]
-    component_in: Component
-    component_out: Component
+    patterns: list[Pattern]
+    old_state: str
+    new_state: str
 
     def __init__(self,
                  reactants: list[Pattern],
-                 products: list[Pattern],
+                 graph_r: nx.Graph,
+                 graph_p: nx.Graph,
                  center_in: list[tuple[int, int, int]],
                  center_out: list[tuple[int, int, int]]) -> None:
-        super().__init__(reactants, products)
+        super().__init__(graph_r)
+        self.patterns = reactants
 
         # only 1 component in the reaction center
         assert len(center_in) == 1 and len(center_out) == 1
@@ -151,77 +297,66 @@ class ChangeStateAction(ReactionTransformation):
         center1_in = center_in[0]
         center1_out = center_out[0]
 
-        _, molecule1_in, comp1_in = objs_from_idx(
-            reactants, center1_in)
-        _, molecule1_out, comp1_out = objs_from_idx(
-            products, center1_out)
+        n1 = graph_r.nodes[center1_in]
+        n2 = graph_p.nodes[center1_out]
+
+        mol1_name = n1.get('molecule_name')
+        comp1_name = n1.get('comp_name', None)
+        comp1_state: str = n1.get('state', '')
+
+        mol2_name = n2.get('molecule_name')
+        comp2_name = n2.get('comp_name', None)
+        comp2_state: str = n2.get('state', '')
 
         # assert valid state change
-        assert molecule1_in._name == molecule1_out._name
-        assert comp1_in.name == comp1_out.name
-        assert (comp1_in.state != comp1_out.state
-                and len(comp1_in.state) > 0 
-                and len(comp1_out.state) > 0)
+        assert mol1_name == mol2_name
+        assert comp1_name == comp2_name
+        assert (comp1_state != comp2_state
+                and len(comp1_state) > 0
+                and len(comp2_state) > 0)
 
-        # center and context
+        # reaction center
         self.reaction_center_in = center_in
         self.reaction_center_out = center_out
-        self.reaction_context_in = [idx for idx in self.reaction_context_in if idx not in center_in]
-        self.reaction_context_out = [
-            idx for idx in self.reaction_context_out if idx not in center_out]
 
         # affected components
-        self.component_in = comp1_in
-        self.component_out = comp1_out
+        self.old_state = comp1_state
+        self.new_state = comp2_state
 
     def __repr__(self) -> str:
-        out = (f"{self.transformation.value}: {self.reaction_center_in[0]} ({self.component_in})" +
-            f" -> {self.reaction_center_out[0]} ({self.component_out})")
+        comp1_str = f"{self.old_state}"
+        comp2_str = f"{self.new_state}"
+        out = (f"{self.transformation.value}: " +
+               f"{self.reaction_center_in[0]} ({comp1_str})" +
+               f" -> {self.reaction_center_out[0]} ({comp2_str})")
         return out
 
     def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
         # find affected reactant
         products = [reactant.copy() for reactant in reactants]
-        i,j,k = self.reaction_center_in[0]
-        products[i].update_component_state((j, k), self.component_out.state)
+        # reactants_g = build_chemical_array_graph(products)
+        # find map from reactant rules patterns graph to species reactants graph
+        # note the reactant rules patterns graph is a isomorphic to a subgraph of
+        # the species reactants graph
+        center = self.reaction_center_in[0]
+        i,j,k = center
+        specie = products[i]
 
-        return products
+        match_func = node_pattern_matching_func
+        matcher = nx.isomorphism.GraphMatcher(
+            specie.graph, self.patterns_graph, match_func)
+        for mapping in matcher.subgraph_isomorphisms_iter():
+            # reverse the map, we want the pattern to species map
+            mapping = {n2: n1 for n1, n2 in mapping.items()}
 
-
-class CreateMoleculeAction(ReactionTransformation):
-    transformation = TransformationType.CREATE_MOLECULE
-    molecule_pattern: Pattern
-    product_idx: int
-
-    def __init__(self, reactants: list[Pattern],
-                 products: list[Pattern],
-                 center_out: list[tuple[int, int, int]]) -> None:
-        super().__init__(reactants, products)
-
-        assert len(center_out) > 0
-        assert all(center_out[0][0] == idx[0] for idx in center_out)
-        assert all(center_out[0][1] == idx[1] for idx in center_out)
-        i, j = center_out[0][0], center_out[0][1]
-        self.reaction_center_out = center_out
-
-        # verify center (must be all components belonging to the same molecule and the same pattern)
-        extracted_context = [idx for idx in self.reaction_context_out if idx[0] == i]
-        assert set(center_out) == set(extracted_context)
-
-        # remove center from context
-        self.reaction_context_out = [idx for idx in self.reaction_context_out
-                                     if idx not in extracted_context]
-
-        # extract molecule from center
-        self.molecule_pattern = products[i].copy()
-        self.product_idx = i
-
-    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
-        products = [reactant.copy() for reactant in reactants]
-        i = self.product_idx
-
-        # make sure we insert in the correct index
-        products = products[:i] + [self.molecule_pattern] + products[i+1:]
+            # affected node
+            node: tuple[int, int] = mapping[self.reaction_center_in[0]]
+            j,k = node
+            molecules = [mol.copy() for mol in specie.molecules]
+            molecules[j].change_state(k, self.new_state)
+            new_specie = Pattern(molecules)
+            products[i] = new_specie
+            return products
         return products
 
 

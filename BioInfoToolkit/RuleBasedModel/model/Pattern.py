@@ -1,17 +1,12 @@
 from collections import Counter, defaultdict
 from itertools import product
-from typing import Any, TypedDict
+from typing import Any
 import networkx as nx
 import graphviz
-from BioInfoToolkit.RuleBasedModel.model.Component import Component, components_gen, sort_components
+from BioInfoToolkit.RuleBasedModel.model.Component import Component, components_all_equal, components_gen, sort_components
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Parsers import MoleculeDict, parse_pattern, parse_molecule
-
-
-def components_all_equal(components: list[Component]):
-    if len(components) <= 1:
-        return True
-    return all(components[0].matches_component(comp2) for comp2 in components[1:])
+from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_pattern, parse_molecule
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeDict
 
 
 class Molecule:
@@ -26,7 +21,8 @@ class Molecule:
         self._components_counts = Counter(
             [component._name for component in components])
         self._compartment = None
-        self._components = components
+        sorted_comps = sort_components(components)
+        self._components = sorted_comps
 
         for comp_name in self._components_counts.keys():
             comps = [comp for comp in self._components if comp._name == comp_name]
@@ -52,20 +48,10 @@ class Molecule:
     def compartment(self):
         return self._compartment
 
-    def update_component_state(self, idx: int, new_state: str):
-        if not 0 <= idx < len(self.components):
-            return False
-
-        component = self.components[idx]
-        try:
-            component.state = new_state
-        except ValueError as _:
-            return False
-
-        return True
-
     @classmethod
-    def from_dict(cls, parsed: MoleculeDict, molecule_types: dict[str, MoleculeType], add_remaining: bool = True):
+    def from_dict(cls, parsed: MoleculeDict,
+                  molecule_types: dict[str, MoleculeType],
+                  add_remaining: bool = True):
         molecule_name = parsed["name"]
         parsed_components = parsed["components"]
 
@@ -191,23 +177,12 @@ class Molecule:
         new = Molecule(self._name, new_components)
         return new
 
-    def is_specie(self) -> bool:
-        return all(component.is_stateless() or (component.state in component.state)
-                   for component in self.components)
-
-    def is_pattern(self) -> bool:
-        return not self.is_specie()
-
-    def generate_species(self):
-        if self.is_specie():
-            yield self
-            return
-
-        components_iters = [components_gen(component)
-                            for component in self.components]
-        for comps in product(*components_iters):
-            specie = Molecule(self._name, list(comps))
-            yield specie
+    def change_state(self, idx: int, state: str) -> bool:
+        if 0 <= idx < len(self.components):
+            comp = self.components[idx]
+            comp.state = state
+            return True
+        return False
 
 
 def generate_species(molecule: MoleculeType):
@@ -221,31 +196,6 @@ def generate_species(molecule: MoleculeType):
     for aux2 in product(*components_iters):
         reagent = Molecule(name, list(aux2))
         yield reagent
-
-
-#     def generate_species(self):
-#         if self.is_specie():
-#             yield self
-#             return
-
-#         molecules_iters = [molecule.generate_species() for molecule in self.parts]
-#         for molecules in product(*molecules_iters):
-#             specie = ComplexReactant(list(molecules))
-#             yield specie
-
-#             # TODO: Account for multiplicity
-#             # find bonded components with multiplicity greater than 1
-#             # generate all possible combinations
-
-#     def number_molecules(self) -> int:
-#         return len(self.parts)
-
-
-# class NodeLabelDict(TypedDict):
-#     molecule_name: str
-#     component_name: str | None
-#     state: str | None
-#     bond: str | None
 
 
 class Pattern:
@@ -262,24 +212,25 @@ class Pattern:
         # create graph
         for i, molecule in enumerate(self.molecules):
             parent_id = (i, -1)
-            label = (molecule._name, None, None, None)
-            graph.add_node(parent_id, label=label, node_id=parent_id)
+            graph.add_node(parent_id, molecule_name=molecule.name, node_id=parent_id)
             for j, component in enumerate(molecule.components):
                 child_id = (i, j)
-                label = (molecule._name, component.name,
-                            component.state, component.bond)
-                graph.add_node(child_id, label=label, node_id=child_id)
+                graph.add_node(child_id, molecule_name=molecule.name,
+                               comp_name=component.name, states=component.states,
+                               state=component.state, bond=component.bond,
+                               node_id=child_id)
                 graph.add_edge(parent_id, child_id)
                 bond = component.bond
-                if len(bond) and bond != '?':
+                if len(bond) and bond not in ('?', '+'):
                     self._bonds[bond].append(child_id)
 
         for bond_id, nodes in self._bonds.items():
-            if len(nodes) == 2 and bond_id != '+':
+            if len(nodes) == 2:
                 node1, node2 = nodes
                 graph.add_edge(node1, node2, bond=bond_id)
             else:
-                msg = f"There are bonds ({bond_id}) with a number of nodes different than 2 ({len(nodes)})."
+                msg = (f"There are bonds ({bond_id}) with a number " +
+                "of nodes different than 2 ({len(nodes)}).")
                 print(msg)
 
     @classmethod
@@ -304,9 +255,15 @@ class Pattern:
     def graph(self):
         return self._graph
 
+    @property
+    def bonds(self):
+        return self._bonds
+
     def __eq__(self, other: object) -> bool:
         """Compares to patterns. If two different pattern graphs are isomorphic, then
-        the patterns are considered equal. Nodes match if they are the same molecule, same_component, same_component state and bonding. The bonding label may be different but the edges have to match (the edge label may not) (obviously, or it wouldn't be isomorphic)
+        the patterns are considered equal. Nodes match if they are the same molecule,
+        same_component, same_component state and bonding. The bonding label may be
+        different but the edges have to match (the edge label may not).
 
         Args:
             other (object): _description_
@@ -324,10 +281,15 @@ class Pattern:
             return False
 
         def node_matching(n1: Any, n2: Any) -> bool:
-            color_id1: tuple[str, str | None, str | None, str | None] = n1['label']
-            color_id2: tuple[str, str | None, str | None, str | None] = n2['label']
-            mol1_name, comp1_name, comp1_state, comp1_bond = color_id1
-            mol2_name, comp2_name, comp2_state, comp2_bond = color_id2
+            mol1_name = n1.get('molecule_name')
+            comp1_name = n1.get('comp_name', None)
+            comp1_state = n1.get('state', None)
+            comp1_bond = n1.get('bond', None)
+
+            mol2_name = n2.get('molecule_name')
+            comp2_name = n2.get('comp_name', None)
+            comp2_state = n2.get('state', None)
+            comp2_bond = n2.get('bond', None)
 
             component_match = mol1_name == mol2_name and comp1_name == comp2_name
             state_match = comp1_state == comp2_state
@@ -342,7 +304,6 @@ class Pattern:
             elif comp1_bond == '+':
                 bond_match = comp2_bond is not None and len(comp2_bond) > 0
 
-
             full_match = component_match and state_match and bond_match
             return full_match
 
@@ -352,28 +313,6 @@ class Pattern:
     def molecule_counts(self) -> Counter[str]:
         counts = Counter(molecule.name for molecule in self.molecules)
         return counts
-
-    def update_component_state(self, pos: tuple[int, int], new_state: str):
-        i, j = pos
-        if not 0 <= i < len(self.molecules):
-            return False
-
-        molecule = self.molecules[i]
-        if not 0 <= j < len(molecule.components):
-            return False
-
-        component = molecule.components[j]
-        try:
-            component.state = new_state
-            # need to update the graph
-            label: tuple[str, str | None, str | None, str |
-                         None] = self.graph.nodes[(i, j)]['label']
-            new_label = (label[0], label[1], new_state, label[3])
-            nx.set_node_attributes(self.graph, {(i, j): new_label}, 'label')
-        except ValueError as _:
-            return False
-
-        return True
 
     def number_of_molecules(self) -> int:
         return len(self.molecules)
@@ -402,25 +341,25 @@ class Pattern:
 
         # Add nodes for molecules and components
         for node_id, node_data in self._graph.nodes(data=True):
-            label_data = node_data['label']
-            molecule_name = label_data[0]
-            component_name = label_data[1]
-            state = label_data[2]
-            bond = label_data[3]
+            molecule_name: str | None = node_data.get('molecule_name')
+            component_name: str | None = node_data.get('comp_name', None)
+            state: str | None = node_data.get('state', None)
+            bond: str | None = node_data.get('bond', None)
+
             label = ""
             shape = ""
             style = ""
 
             # Molecule node
             if component_name is None:
-                label = f"({molecule_name}, {node_id[0]})"
+                label = f"({molecule_name})"
                 shape = 'rectangle'
             else:
                 # Component node
-                molecule_idx, component_idx = node_id
-                label = f"({component_name}, {molecule_idx}, {component_idx})"
+                label = f"({component_name}"
                 if state:
                     label += f"~{state}"
+                label += ')'
                 shape = 'ellipse'
 
                 # Determine border style
@@ -431,6 +370,7 @@ class Pattern:
                 else:
                     style = 'solid'
 
+            label = f"{node_id}\n"+ label
             dot.node(str(node_id), label=label, shape=shape, style=style)
 
         # Add edges between molecules and components
@@ -449,70 +389,127 @@ class Pattern:
         # Render graph to file
         dot.render(filename)
 
+    def break_bond(self, bond_id: str):
+        n1, n2 = self.bonds[bond_id]
+        g_copy = self.graph.copy()
+        g_copy.remove_edge(n1, n2)
 
-def node_matching_func(n1: Any, n2: Any) -> bool:
-    color_id1: tuple[str, str | None, str | None, str | None] = n1['label']
-    color_id2: tuple[str, str | None, str | None, str | None] = n2['label']
-    mol1_name, comp1_name, comp1_state, comp1_bond = color_id1
-    mol2_name, comp2_name, comp2_state, comp2_bond = color_id2
+        molecules = [mol.copy() for mol in self.molecules]
+        for n in (n1, n2):
+            molecules[n[0]].components[n[1]].bond = ''
+
+        # build 2 new patterns
+        patterns: list[Pattern] = []
+        for nodes in nx.connected_components(g_copy):
+            molecule_idxs = [i for (i, j) in nodes if j == -1]
+            molecules_a = [molecules[i] for i in molecule_idxs]
+            new_patt = Pattern(molecules_a)
+            patterns.append(new_patt)
+
+        pattern1, pattern2 = patterns[0], patterns[1]
+        return pattern1, pattern2
+
+
+def form_bond(pattern1: Pattern,
+              pattern2: Pattern,
+              n1: tuple[int, int],
+              n2: tuple[int, int]) -> Pattern:
+
+    molecules1 = [mol.copy() for mol in pattern1.molecules]
+    molecules2 = [mol.copy() for mol in pattern2.molecules]
+    # we must rename the bonds to avoid collision
+    bond_id = 1
+    for molecules in (molecules1, molecules2):
+        bond_remap: dict[str, str] = {}
+        for mol in molecules:
+            for comp in mol.components:
+                if not (comp.bond and comp.bond not in ('+', '?')):
+                    continue
+
+                if comp.bond in bond_remap:
+                    comp.bond = bond_remap[comp.bond]
+                else:
+                    bond_remap[comp.bond] = str(bond_id)
+                    comp.bond = bond_remap[comp.bond]
+                    bond_id += 1
+
+    molecules1[n1[0]].components[n1[1]].bond = str(bond_id)
+    molecules2[n2[0]].components[n2[1]].bond = str(bond_id)
+
+    new_pattern = Pattern(molecules1+molecules2)
+    return new_pattern
+
+
+def node_pattern_matching_func(n1: Any, n2: Any) -> bool:
+    mol1_name = n1.get('molecule_name')
+    comp1_name = n1.get('comp_name', None)
+    comp1_state = n1.get('state', None)
+    comp1_bond = n1.get('bond', None)
+
+    mol2_name = n2.get('molecule_name')
+    comp2_name = n2.get('comp_name', None)
+    comp2_state = n2.get('state', None)
+    comp2_bond = n2.get('bond', None)
 
     component_match = mol1_name == mol2_name and comp1_name == comp2_name
+
+    # state does not have to match, but must be either undefined in both or defined in both
     state_match = comp1_state == comp2_state
     if comp2_state is not None and len(comp2_state) == 0:
         state_match = True
 
     # check bonds
-    bond_match = comp1_bond == comp2_bond
-    if comp2_bond == '?':
+    is_bonded1 = bool(comp1_bond)
+    is_bonded2 = bool(comp2_bond)
+    bond_match = is_bonded1 == is_bonded2
+    if comp2_bond == '?' or comp1_bond == '?':
         bond_match = True
     elif comp2_bond == '+':
         bond_match = comp1_bond is not None and len(comp1_bond) > 0
+    elif comp1_bond == '+':
+        bond_match = comp2_bond is not None and len(comp2_bond) > 0
 
     full_match = component_match and state_match and bond_match
     return full_match
 
 
-def match_patterns(pattern1: Pattern, pattern2: Pattern, count: bool = False) -> int:
+def match_pattern_specie(pattern: Pattern, specie: Pattern, count: bool = False) -> int:
     """Checks if the pattern1 graph is isomorphic to a subgraph of the pattern2 graph.
+    To check if a species pattern matches a general pattern, pattern2 should be the species patter and pattern1 the general pattern.
     For species-observables, count should be False and for molecules-observables it should be True.
     If count is False returns 1 if there's a match and 0 otherwise.
     If count is True returns a count of all subgraph isomorphisms with distinct nodes.
+
+    Args:
+        pattern1 (Pattern): _description_
+        pattern2 (Pattern): _description_
+        count (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        int: _description_
     """
-    counts1 = pattern1.molecule_counts()
-    counts2 = pattern2.molecule_counts()
+    counts1 = pattern.molecule_counts()
+    counts2 = specie.molecule_counts()
 
     # check for the molecules
     for name, count1 in counts1.items():
         count2 = counts2.get(name, 0)
         if count2 < count1:
-            print(f"{pattern2} needs to have at least {count1} '{name}' molecules")
+            print(f"{specie} needs to have at least {count1} '{name}' molecules")
             return 0
 
     # check for subgraph isomorphism
     matcher = nx.isomorphism.GraphMatcher(
-        pattern2.graph, pattern1.graph, node_matching_func)
+        specie.graph, pattern.graph, node_pattern_matching_func)
     num_matches = 0
     if count:
         nodes_set: list[set[tuple[int, int]]] = []
         num_matches = 0
-        for g in matcher.subgraph_isomorphisms_iter():
-            nodes = set(n for n in g.keys())
+        for mapping in matcher.subgraph_isomorphisms_iter():
+            nodes = set(n for n in mapping.keys())
             if nodes not in nodes_set:
                 nodes_set.append(nodes)
                 num_matches += 1
-        # num_matches = len([1 for _ in matcher.subgraph_isomorphisms_iter()])
     else:
         num_matches = int(matcher.subgraph_is_isomorphic())
     return num_matches
-
-
-# if __name__ == "__main__":
-#     pattern_str = "A(x,y!0).B(p!0,q~q1!1).C(r~r2!1,s!2).A(x!2,y)"
-#     molecule_types = {
-#         "A": MoleculeType("A(x,y)"),
-#         "B": MoleculeType("B(p,q~q1~q2)"),
-#         "C": MoleculeType("C(r~r1~r2,s)"),
-#     }
-
-#     pattern = Pattern.from_declaration(pattern_str, molecule_types)
-#     pattern.draw_graph()

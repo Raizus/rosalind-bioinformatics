@@ -1,36 +1,42 @@
-from collections import defaultdict
-from BioInfoToolkit.RuleBasedModel.model.Component import MoleculeTypeComponent
+from collections import Counter
+from BioInfoToolkit.RuleBasedModel.model.Component import MoleculeTypeComponent, components_all_equal
 from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_molecule_type
 
 
 class MoleculeType:
     name: str
-    components_counts: defaultdict[str, int]
+    components_counts: Counter[str]
     components: dict[str, MoleculeTypeComponent]
 
-    def __init__(self, declaration: str) -> None:
+    def __init__(self, name: str, components: list[MoleculeTypeComponent]) -> None:
+        self.name = name
+        self.components = {}
+
+        # validate
+        counts = Counter([comp.name for comp in components])
+        unique_components: list[MoleculeTypeComponent] = []
+        for comp_name in counts:
+            comps = [comp for comp in components if comp.name == comp_name]
+            if not components_all_equal(comps):
+                raise ValueError("Components with the same name must have the same states.")
+            unique_components.append(comps[0])
+
+        self.components = {comp.name: comp for comp in unique_components}
+        self.components_counts = counts
+
+    @classmethod
+    def from_declaration(cls, declaration: str) -> "MoleculeType":
         parsed = parse_molecule_type(declaration)
         if not parsed:
             raise ValueError(f"Invalid molecule declaration: {declaration}")
 
-        self.name = parsed["name"]
-        self.components = dict()
-        self.components_counts = defaultdict(int)
+        name = parsed["name"]
+        parsed_components = parsed['components']
+        components = [MoleculeTypeComponent(p_comp['name'], p_comp['states'])
+                      for p_comp in parsed_components]
 
-        parsed_components = parsed["components"]
-        for parsed_component in parsed_components:
-            comp_name = parsed_component["name"]
-            states = parsed_component['states']
-            component = MoleculeTypeComponent(comp_name, states)
-            if comp_name in self.components:
-                if self.components[comp_name] == component:
-                    self.components_counts[comp_name] += 1
-                else:
-                    raise ValueError(
-                        f"Component {component} has the same name as an already existing component but have different sets of allowed states {self.components[comp_name]}")
-            else:
-                self.components_counts[comp_name] += 1
-                self.components[comp_name] = component
+        molecule_type = MoleculeType(name, components)
+        return molecule_type
 
     def __repr__(self) -> str:
         out = f"{self.name}("

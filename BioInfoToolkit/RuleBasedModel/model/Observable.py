@@ -1,6 +1,6 @@
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_observable
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_patterns
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_specie
 
 
 class Observable:
@@ -30,5 +30,9 @@ class Observable:
 
     def match_species(self, species: Pattern):
         count = not self.type == 'Species'
-        num_matches = match_patterns(self.pattern, species, count)
+        num_matches = match_pattern_specie(self.pattern, species, count)
         return num_matches
+
+    def __repr__(self) -> str:
+        out = f"{self.type}\t\t{self.label}\t{self.pattern})"
+        return out

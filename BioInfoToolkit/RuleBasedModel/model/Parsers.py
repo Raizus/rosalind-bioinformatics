@@ -1,153 +1,15 @@
-from typing import Any, TypedDict
+from typing import Any
 import pyparsing as pp
+
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeTypeComponentDict, \
+    MoleculeTypeDict, MoleculeDict, ReactionRuleDict, ObservableDict, \
+    ParameterDict, SeedSpeciesDict, NAME_EXPRESSION, STATE, MOLECULE_PARSER, \
+    COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_dict_list
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_molecule_to_dict
 
 # Define the grammar for parsing
 pp.ParserElement.enablePackrat()
-
-# Define a word starting with a letter
-NAME_EXPRESSION = pp.Word(pp.alphas, pp.alphanums + "_")
-NUMS = pp.Word(pp.nums)
-
-# Define state and bond (alphanumeric, can start with number)
-state = NAME_EXPRESSION ^ NUMS
-BOND_NAME = NUMS ^ pp.Literal('+') ^ pp.Literal('?')
-BOND_EXPRESSION = pp.Optional(pp.Literal(
-    '!') + BOND_NAME('bond')).leaveWhitespace()
-
-# Define component format
-COMPONENT_PARSER = pp.Group(
-    NAME_EXPRESSION('name') +
-    pp.Optional(pp.Literal('~') + state('state')).leaveWhitespace() +
-    pp.Optional(pp.Literal('!') + BOND_NAME('bond')).leaveWhitespace()
-)
-
-# Define the format for components enclosed in parentheses
-COMPONENTS_PARSER = pp.delimitedList(COMPONENT_PARSER, ',').leaveWhitespace()
-COMBINED_COMPONENTS_PARSER = pp.delimitedList(
-    COMPONENT_PARSER, ',', True).leaveWhitespace()
-
-
-# Define the overall expression format
-MOLECULE_PARSER = (NAME_EXPRESSION('molecule_name') +
-                   pp.Literal('(').leaveWhitespace() +
-                   pp.Optional(COMPONENTS_PARSER)('components') +
-                   pp.Literal(')').leaveWhitespace())
-
-COMBINED_MOLECULE_PARSER = pp.Combine(
-    NAME_EXPRESSION('molecule_name') +
-    pp.Literal('(').leaveWhitespace() +
-    pp.Optional(COMBINED_COMPONENTS_PARSER)('components') +
-    pp.Literal(')').leaveWhitespace()
-)
-
-COMPLEX_PARSER = pp.delimitedList(pp.Group(MOLECULE_PARSER), '.', min=2)
-COMBINED_COMPLEX_PARSER = pp.delimitedList(
-    pp.Group(COMBINED_MOLECULE_PARSER), '.', True, min=2)
-
-# COMPLEX_PARSER = pp.Group(MOLECULE_PARSER) + \
-#     pp.OneOrMore(pp.Suppress('.').leaveWhitespace() + \
-#     pp.Group(MOLECULE_PARSER).leaveWhitespace())
-
-PATTERN_PARSER = COMPLEX_PARSER | pp.Group(MOLECULE_PARSER)
-
-variable = pp.Word(pp.alphas, pp.alphanums+'_')
-
-# Define numeric literals
-number = pp.Word("+-" + pp.nums + ".", pp.nums + ".")
-
-# Operators: +, -, *, /, and ^
-plus = pp.oneOf("+ -")
-mult = pp.oneOf("* /")
-exp = pp.Literal("^")
-
-# Forward declaration for handling nested parentheses
-EXPRESSION_PATTERN = pp.Forward()
-
-# Parentheses
-lparen = pp.Suppress("(")
-rparen = pp.Suppress(")")
-
-# Define an expression that can be a number, variable, or parenthesized expression
-operand = number | variable | (lparen + EXPRESSION_PATTERN + rparen)
-
-# Define the expression grammar using infix notation
-EXPRESSION_PATTERN <<= pp.infixNotation(
-    operand,
-    [
-        (exp, 2, pp.opAssoc.RIGHT),  # Exponentiation
-        (mult, 2, pp.opAssoc.LEFT),  # Multiplication and division
-        (plus, 2, pp.opAssoc.LEFT),  # Addition and subtraction
-    ]
-)
-
-
-class MoleculeTypeComponentDict(TypedDict):
-    name: str
-    states: set[str]
-
-
-class MoleculeTypeDict(TypedDict):
-    name: str
-    components: list[MoleculeTypeComponentDict]
-
-
-class ComponentDict(TypedDict):
-    name: str
-    state: str
-    bond: str
-
-
-class MoleculeDict(TypedDict):
-    name: str
-    components: list[ComponentDict]
-
-
-class ReactionDict(TypedDict):
-    name: str
-    reactants: list[list[MoleculeDict]]
-    products: list[list[MoleculeDict]]
-    forward_rate: str
-    reverse_rate: str | None
-
-
-class ObservableDict(TypedDict):
-    type: str
-    label: str
-    pattern: list[MoleculeDict]
-
-
-def parsed_molecule_to_dict(parsed: pp.ParseResults):
-    name = parsed.molecule_name
-    if not isinstance(name, str):
-        raise ValueError("Molecule name must be a string.")
-
-    components: list[ComponentDict] = []
-    parsed_components = parsed.components
-    if isinstance(parsed_components, pp.ParseResults):
-        for parsed_comp in parsed_components:
-            comp: ComponentDict = {
-                'name': parsed_comp.name,
-                'state': parsed_comp.get('state', ''),
-                'bond': parsed_comp.get('bond', '')
-            }
-            components.append(comp)
-
-    result: MoleculeDict = {
-        'name': name,
-        'components': components
-    }
-    return result
-
-
-def parsed_pattern_to_dict_list(parsed: pp.ParseResults | Any):
-    if not isinstance(parsed, pp.ParseResults):
-        raise TypeError(f"{parsed} must be of type ParseResults.")
-
-    parts: list[MoleculeDict] = []
-    for parsed_molecule in parsed:
-        reactant = parsed_molecule_to_dict(parsed_molecule)
-        parts.append(reactant)
-    return parts
 
 
 def parse_molecule(declaration: str):
@@ -209,8 +71,7 @@ def parse_reactants_sum(string: str):
     return reactants
 
 
-
-def parsed_reaction_to_reaction_dict(parsed: pp.ParseResults):
+def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
     name = parsed.name
     forward_rate = parsed.forward_rate
     reverse_rate = parsed.get('reverse_rate', None)
@@ -230,7 +91,7 @@ def parsed_reaction_to_reaction_dict(parsed: pp.ParseResults):
     left_reactants = parsed_reactants_to_list(left_side)
     right_reactants = parsed_reactants_to_list(right_side)
 
-    result: ReactionDict = {
+    result: ReactionRuleDict = {
         "name": name,
         "reactants": left_reactants,
         "products": right_reactants,
@@ -241,7 +102,7 @@ def parsed_reaction_to_reaction_dict(parsed: pp.ParseResults):
     return result
 
 
-def parse_reaction(reaction_str: str):
+def parse_reaction_rule(reaction_str: str):
     """Parses a biochemical reaction and verifies the correctness of complexes and bonds."""
 
     reagent_pattern = pp.Group(
@@ -254,18 +115,21 @@ def parse_reaction(reaction_str: str):
     arrow_unidirectional = pp.Suppress('->')
     arrow_bidirectional = pp.Suppress('<->')
 
-    expression_parser = pp.Combine(EXPRESSION_PATTERN)
+    expression_parser = pp.Combine(EXPRESSION_PARSER)
 
     forward_rate_pattern = expression_parser('forward_rate')
     reverse_rate_pattern = expression_parser('reverse_rate')
 
-    unidirectional_pattern = (NAME_EXPRESSION('name') + pp.Suppress(':')).leaveWhitespace() + \
+    name_parser = pp.Optional((NAME_EXPRESSION('name') +
+                   pp.Suppress(':')).leaveWhitespace())
+
+    unidirectional_pattern = name_parser + \
         left_side_reactants + \
         arrow_unidirectional + \
         right_side_reactants + \
         forward_rate_pattern
 
-    bidirectional_pattern = (NAME_EXPRESSION('name') + pp.Literal(':')).leaveWhitespace() + \
+    bidirectional_pattern = name_parser + \
         left_side_reactants + \
         arrow_bidirectional + \
         right_side_reactants + \
@@ -277,7 +141,7 @@ def parse_reaction(reaction_str: str):
 
     try:
         parsed = rule_parser.parseString(reaction_str)
-        reaction = parsed_reaction_to_reaction_dict(parsed)
+        reaction = parsed_rule_to_rule_dict(parsed)
         return reaction
     except (pp.ParseException, pp.ParseBaseException) as ee:
         raise ValueError(
@@ -286,10 +150,15 @@ def parse_reaction(reaction_str: str):
 
 def parse_molecule_type(declaration: str):
     """A valid declaration has the format: name() or name(parameters).
-    Parameters are comma separated, without spaces after the comma, and can be a word specifying a binding site, or a word followed by one or more tilde and a string specifying a state and possible state values. For example:
-        - T(l,Phos~U~P) means T has a binding site with L, and the can be either phosphorylated or unphosphorylated.
-        - or T(l,r,Phos~U~P,Meth~A~B~C) same has above, plus a binding side with R and a methilation state with can be either A, B or C
-    Returns a dictionary with name, binding_sites, and a dictionary of state dict[str, set[str]], if the name is valid    
+    Parameters are comma separated, without spaces after the comma, and can be a word 
+    specifying a binding site, or a word followed by one or more tilde and a string 
+    specifying a state and possible state values. For example:
+        - T(l,Phos~U~P) means T has a binding site with L, and the can be either 
+        phosphorylated or unphosphorylated.
+        - or T(l,r,Phos~U~P,Meth~A~B~C) same has above, plus a binding side 
+        with R and a methilation state with can be either A, B or C
+    Returns a dictionary with name, binding_sites, and a dictionary of 
+    state dict[str, set[str]], if the name is valid    
 
     Args:
         declaration (str): _description_
@@ -299,7 +168,7 @@ def parse_molecule_type(declaration: str):
     """
 
     # Define the format for components enclosed in parentheses
-    molecule_type_state = pp.Suppress('~') + state
+    molecule_type_state = pp.Suppress('~') + STATE
     molecule_type_states = pp.Group(pp.Optional(molecule_type_state[2, ...]))
     molecule_type_component = \
         (NAME_EXPRESSION('name') + molecule_type_states('states')).leaveWhitespace()
@@ -373,3 +242,33 @@ def parse_observable(declaration: str) -> ObservableDict:
     }
 
     return result
+
+
+def parse_parameter(declaration: str) -> ParameterDict:
+    expression_parser = pp.Combine(EXPRESSION_PARSER)
+    parameter_parser = NAME_EXPRESSION('name') + expression_parser('expression')
+
+    try:
+        parsed = parameter_parser.parseString(declaration)
+        result = parsed_parameter_to_parameter_dict(parsed)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        raise ValueError(
+            f"Parameter {declaration} not declared correctly.") from ee
+
+
+
+def parse_seed_species(declaration: str) -> SeedSpeciesDict:
+    expression_parser = pp.Combine(EXPRESSION_PARSER)
+    reagent_parser = pp.Group(
+        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+
+    seed_species_parser = reagent_parser('pattern') + expression_parser('expression')
+
+    try:
+        parsed = seed_species_parser.parseString(declaration)
+        result = parsed_seed_species_to_seed_species_dict(parsed)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        raise ValueError(
+            f"Seed species {declaration} not declared correctly.") from ee

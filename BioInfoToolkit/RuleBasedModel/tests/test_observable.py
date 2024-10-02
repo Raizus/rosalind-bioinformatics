@@ -7,9 +7,9 @@ from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 
 class TestObservable():
     molecules: dict[str, MoleculeType] = {
-        "A": MoleculeType("A(b,b,c)"),
-        "B": MoleculeType("B(a)"),
-        "C": MoleculeType("C(a)"),
+        "A": MoleculeType.from_declaration("A(b,b,c)"),
+        "B": MoleculeType.from_declaration("B(a)"),
+        "C": MoleculeType.from_declaration("C(a)"),
     }
 
     species_str_list = [
@@ -46,8 +46,8 @@ class TestObservable():
         observable = Observable.from_declaration(declaration, self.molecules)
         species = [Pattern.from_declaration(
             species_str, self.molecules) for species_str in self.species_str_list]
-        matches = {pattern2: observable.match_species(
-            pattern2) for pattern2 in species}
-        filtered_matches = {patt: count for patt, count in matches.items() if count > 0}
+        matches = {i: observable.match_species(
+            pattern2) for i, pattern2 in enumerate(species)}
+        filtered_matches = {i: count for i, count in matches.items() if count > 0}
         assert len(filtered_matches) == expected_num_matches
         assert sum(filtered_matches.values()) == total_counts

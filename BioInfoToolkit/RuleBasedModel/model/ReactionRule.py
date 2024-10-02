@@ -1,77 +1,16 @@
-from collections import defaultdict
 from functools import partial
-from typing import Any
+from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_reaction
+from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_reaction_rule
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
-from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import ChangeStateAction, ReactionTransformation, apply_transforms
+from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import BreakBondTransform, \
+    ChangeStateAction, FormBondTransform, ReactionTransformation, apply_transforms
+from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, \
+    compare_chemical_array_graphs, node_matching
 
-
-def node_matching(n1: Any, n2: Any, 
-                  match_state: bool = False,
-                  match_bond: bool = True) -> bool:
-    label1: tuple[str, str | None, str |
-                  None, str | None] = n1['label']
-    label2: tuple[str, str | None, str |
-                  None, str | None] = n2['label']
-    mol1_name, comp1_name, comp1_state, comp1_bond = label1
-    mol2_name, comp2_name, comp2_state, comp2_bond = label2
-
-    component_match = mol1_name == mol2_name and comp1_name == comp2_name
-    # state does not have to match, but must be either undefined in both or defined in both
-    state_match = comp1_state == comp2_state
-    if not match_state:
-        state_match = ((comp1_state == comp2_state)
-                       or (comp1_state is not None
-                           and comp2_state is not None
-                           and len(comp2_state) > 0 and len(comp1_state) > 0))
-
-    # check bonds
-    comp1_is_bonded = (comp1_bond is not None
-                       and len(comp1_bond) > 0
-                       and comp1_bond != '?')
-    comp2_is_bonded = (comp2_bond is not None
-                       and len(comp2_bond) > 0
-                       and comp2_bond != '?')
-
-    bond_match = True
-    if match_bond:
-        bond_match = comp1_is_bonded == comp2_is_bonded
-        if comp1_bond == '?' or comp2_bond == '?':
-            bond_match = True
-        elif comp1_bond == '+':
-            bond_match = comp2_bond is not None and len(comp2_bond) > 0
-
-    full_match = component_match and state_match and bond_match
-    return full_match
-
-
-def build_chemical_array_graph(chemical_array: list[Pattern]) -> nx.Graph:
-    """If we build the reactants graph (which is equivalent to combining the graphs of each pattern,
-    with nodes relabeled so patterns don't combine), 
-    then we can analize the graphs of reactants and products
-
-    Args:
-        reactants (list[Pattern]): _description_
-    """
-    graph = nx.Graph()
-    # create graph
-    for i, pattern in enumerate(chemical_array):
-        pattern_g = pattern.graph
-        node_map: dict[tuple[int,int], tuple[int,int,int]] = \
-            {(j,k): (i,j,k) for j,k in pattern_g.nodes}
-        new_pattern_graph: nx.Graph = nx.relabel_nodes(pattern_g, node_map)
-        graph: nx.Graph = nx.compose(graph, new_pattern_graph)
-    return graph
-
-
-def compare_chemical_array_graphs(graph1: nx.Graph, graph2: nx.Graph) -> bool:
-    match_func = partial(node_matching, match_state=True)
-    is_iso: bool = nx.isomorphism.is_isomorphic(graph1, graph2, match_func)
-    return is_iso
-
+ChemArrayNodeId = tuple[int, int, int]
 
 class ReactionRule:
     """Allowed transformations:
@@ -134,7 +73,7 @@ class ReactionRule:
 
     @classmethod
     def from_declaration(cls, declaration: str, molecules: dict[str, MoleculeType]):
-        reaction_dict = parse_reaction(declaration)
+        reaction_dict = parse_reaction_rule(declaration)
 
         if reaction_dict is None:
             raise ValueError(f"Invalid reaction declaration: {declaration}")
@@ -155,6 +94,18 @@ class ReactionRule:
     def is_bidirectional(self) -> bool:
         return self.reverse_rate is not None
 
+    def get_forward(self) -> "ReactionRule":
+        new_rule = ReactionRule(self.name, self.reactants, self.products, self.forward_rate)
+        return new_rule
+    
+    def get_reverse(self) -> "ReactionRule":
+        if self.reverse_rate:
+            name = f"_reverse_{self.name}"
+            new_rule = ReactionRule(name, self.products,
+                                    self.reactants, self.reverse_rate)
+            return new_rule
+        raise TypeError(f"Reaction rule must have a reverse rate ({self.reverse_rate})")
+
     def __repr__(self) -> str:
         left_side = ' + '.join(str(reagent) for reagent in self.reactants)
         right_side = ' + '.join(str(reagent) for reagent in self.products)
@@ -166,221 +117,6 @@ class ReactionRule:
 
         out = f"{self.name}: {left_side} {arrow} {right_side} {rates_str}"
         return out
-
-
-def reactants_tuples_gen(reactants: list[Pattern]):
-    for i, pattern in enumerate(reactants):
-        for j, molecule in enumerate(pattern.molecules):
-            yield ((i,j), (pattern, molecule))
-
-
-def _find_pattern_to_pattern_mapping(
-        reactants: list[Pattern],
-        products: list[Pattern]
-) -> tuple[dict[int, set[int]], dict[int, set[int]]]:
-    """ Finds a map between reagents and products
-    A reactant matches with a product if their graphs are isomorphic (ignoring state changes)
-    This can be used to detect state changes in components.
-
-    Args:
-        reactants (list[Pattern]): _description_
-        products (list[Pattern]): _description_
-
-    Returns:
-        dict[int, set[int]]: _description_
-    """
-    # finds a map between reagents and products
-    # a reactant matches with a product if their graphs are isomorphic (ignoring state changes)
-    # this can be used to detect state changes in components.
-
-    # reactants_g = build_reactants_graph(reactants)
-    # products_g = build_reactants_graph(products)
-
-    mapping: dict[int, set[int]] = {}
-    for i, reactant in enumerate(reactants):
-        mapping[i] = set()
-        for j, product in enumerate(products):
-            g1 = reactant.graph
-            g2 = product.graph
-            is_iso: bool = nx.isomorphism.is_isomorphic(g1, g2, node_matching)
-            if is_iso:
-                mapping[i].add(j)
-
-    reverse_map: dict[int, set[int]] = {}
-    for i, js in mapping.items():
-        for j in js:
-            if j in reverse_map:
-                reverse_map[j].add(i)
-            else:
-                reverse_map[j] = set([i])
-
-    return mapping, reverse_map
-
-
-def find_molecule_to_molecule_mapping(reactants: list[Pattern],
-                                      products: list[Pattern]):
-
-    for n1_id, (patt1, mol1) in reactants_tuples_gen(reactants):
-        for n2_id, (patt2, mol2) in reactants_tuples_gen(products):
-            # check if molecule graphs are isomorphic
-            match_func = partial(node_matching, match_state=False)
-            nx.isomorphism.is_isomorphic(g1, g2, )
-            pass
-
-
-def _find_molecule_mapping(
-        reactants: list[Pattern],
-        products: list[Pattern]
-        ) -> dict[tuple[int, int], set[tuple[int, int]]]:
-    # finds a map between reagents and products
-    # the keys of the dictionary are a tuple (i,j) means the molecule j of reactant i,
-    # the same applies for values (molecule j of product i)
-
-    # reactants -> products
-    mapping_in_out: dict[tuple[int, int], set[tuple[int, int]]] = {}
-    for (n1_id, (_, molecule1)) in reactants_tuples_gen(reactants):
-        # find matching molecules in the products
-        mapping_in_out[n1_id] = set()
-        comp_counts1 = molecule1.components_counts
-        for (n2_id, (_, molecule2)) in reactants_tuples_gen(products):
-            comp_counts2 = molecule2.components_counts
-            if molecule1.name == molecule2.name and comp_counts1 == comp_counts2:
-                mapping_in_out[n1_id].add(n2_id)
-
-    return mapping_in_out
-
-
-def find_molecule_mappings(reactants: list[Pattern], products: list[Pattern]):
-    aux_mapping_in_out = _find_molecule_mapping(reactants, products)
-    aux_mapping_out_in = _find_molecule_mapping(reactants=products, products=reactants)
-
-    # we want to build a map where each molecule maps to at most 1 other molecule
-    mapping_in_out: dict[tuple[int, int], tuple[int, int]] = {}
-    mapping_out_in: dict[tuple[int, int], tuple[int, int]] = {}
-
-    # We want each molecule in the reactants to map to at most one other
-    # molecule in the products.
-    # However, if a molecule is deleted then a molecule in the reactants side
-    # does not map to any molecule in the products side.
-
-    # assign trivial mappings first, then the rest
-
-    for n_id_in, y in aux_mapping_in_out.items():
-        if len(y) == 1:
-            n_id_out = list(y)[0]
-            y2 = mapping_out_in.get(n_id_out, {})
-            if len(y2) == 1:
-                n_id_out2 = list(y2)[0]
-                if (n_id_out2 == n_id_in):
-                    mapping_in_out[n_id_in] = n_id_out
-                    mapping_out_in[n_id_in] = n_id_out
-
-    # update provisory mappings
-    for n1 in mapping_in_out:
-        aux_mapping_in_out.pop(n1)
-    for n1 in mapping_out_in:
-        aux_mapping_out_in.pop(n1)
-
-    # now the other cases
-    # if there's a value in aux_mapping_in_out with length of 0, then molecules are deleted
-    # if there's a value in aux_mapping_out_in with length of 0, then molecules are created
-
-    # we are left with other mappings
-
-
-def find_bijective_map(mapping: dict[int, set[int]], reverse_mapping: dict[int, set[int]]):
-    bijective_map: dict[int, int] = {}
-
-    for i, js in mapping.items():
-        if len(js) == 1:
-            j = next(iter(js))
-            _is = reverse_mapping[j]
-            if len(_is) == 1:
-                i2 = next(iter(js))
-                if i2 == i:
-                    bijective_map[i] = j
-    return bijective_map
-
-
-def find_state_changes(reactants: list[Pattern], products: list[Pattern]):
-    reactants_map, reverse_map = _find_pattern_to_pattern_mapping(
-        reactants, products)
-    bijective_map = find_bijective_map(reactants_map, reverse_map)
-
-    considered_reactants: set[int] = set()
-    considered_products: set[int] = set()
-
-    transformations: list[ReactionTransformation] = []
-
-    for i, js in reactants_map.items():
-        # len(js) == 0 this can mean created / destroyed molecules
-        # or bond forming / breaking, ignore for now
-
-        # we have a 1 to 1 reactant to product map (check for state changes)
-        if len(js) == 1 and i in bijective_map and bijective_map[i] == next(iter(js)):
-            j = next(iter(js))
-            reactant = reactants[i]
-            product = products[j]
-
-            # either state changes or no changes at all
-            # are isomorphic -> no changes to this reactant from input to output
-            if reactant == product:
-                considered_reactants.add(i)
-                considered_products.add(j)
-            else:  # 1 or more state changes
-                # find component changes
-                # check all isomorphism mappings, and compare component by component
-                matcher = nx.isomorphism.GraphMatcher(
-                    reactant.graph, product.graph, node_matching)
-                for node_map in matcher.isomorphisms_iter():
-                    for n1, n2 in node_map.items():
-                        _, comp1_name, comp1_state, _ = reactant.graph.nodes[n1]['label']
-                        _, comp2_name, comp2_state, _ = product.graph.nodes[n2]['label']
-
-                        if comp1_name and comp2_name and comp1_state != comp2_state:
-                            center_in: list[tuple[int, int, int]] = [(i, *n1)]
-                            center_out: list[tuple[int, int, int]] = [(j, *n2)]
-                            action = ChangeStateAction(
-                                reactants, products, center_in, center_out)
-                            transformations.append(action)
-                    break
-
-    return transformations, considered_reactants, considered_products
-
-
-def find_molecule_creation(reactants: list[Pattern], products: list[Pattern]):
-    pass
-
-
-def decompose_reaction(reaction: ReactionRule) -> list[ReactionTransformation]:
-    reactants = reaction.reactants
-    products = reaction.products
-    current_reactants = reactants
-    all_transformations: list[ReactionTransformation] = []
-
-    while not compare_chemical_array_graphs(
-        build_chemical_array_graph(current_reactants),
-                                   reaction.products_graph):
-        # state change transformations do not change the number or order of reactants
-        transformations, considered_reactants, considered_products = \
-            find_state_changes(current_reactants, products)
-        
-        if len(transformations):
-            all_transformations.extend(transformations)
-            current_reactants = apply_transforms(current_reactants, transformations)
-            continue
-        
-        # apply transformations and check new products, if it's the same we're finished
-
-        # Note that creating and destroying molecules or breaking and forming bonds will change the number of reactants in a list
-
-        # Start with molecule creation and destruction
-
-        # Then bond breaking
-
-        # Then bond forming
-
-    return transformations
 
 
 def verify_transformations(reactants: list[Pattern],
@@ -401,3 +137,268 @@ def verify_transformations(reactants: list[Pattern],
     prods2_g = build_chemical_array_graph(products_res)
     g_equal = compare_chemical_array_graphs(products_g, prods2_g)
     return g_equal
+
+
+def reactant_idxs_iter(
+    chemical_array: list[Pattern]
+) -> Generator[list[ChemArrayNodeId], Any, None]:
+    """Iterator that yields a list of node ids for each molecule in the chemical array
+
+    Args:
+        chemical_array (list[Pattern]): _description_
+
+    Yields:
+        Generator[list[ChemArrayNodeId], Any, None]: list of node ids for each molecule
+    """
+    for i, reactant in enumerate(chemical_array):
+        for j, mol in enumerate(reactant.molecules):
+            idxs: list[ChemArrayNodeId] = [(i, j, -1)]
+            for k, _ in enumerate(mol.components):
+                idxs.append((i,j,k))
+            yield idxs
+
+
+def reaction_graph_node_matchings(
+    reactants: list[Pattern],
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+) -> list[tuple[ChemArrayNodeId, ChemArrayNodeId]]:
+    """Returns a list of possible node matchings between reactants graph 
+    and the products graph. Finds node matches by searching for isomorphisms
+    molecule by molecule
+
+    Args:
+        reactants (list[Pattern]): input reactants
+        graph_r (nx.Graph): graph corresponding to reactants
+        graph_p (nx.Graph): graph corresponding to products
+
+    Returns:
+        list[tuple[ChemArrayNodeId, ChemArrayNodeId]]: list of node pairs, where the first node
+        is a node in the reactants graph and the second is a node in the products graph
+    """
+    # We want to match nodes in graph_r to graph_p
+    # However we want to do it molecule by molecule and not node by node
+    # since we want to match whole molecules, between the reactants and
+    # products
+    node_pairs: list[tuple[ChemArrayNodeId, ChemArrayNodeId]] = []
+    match_func = partial(node_matching, match_state=False, match_bond=False)
+
+    for node_ids in reactant_idxs_iter(reactants):
+        mol_subgraph = graph_r.subgraph(node_ids)
+        matcher = nx.isomorphism.GraphMatcher(graph_p, mol_subgraph, match_func)
+        for mappings in matcher.subgraph_isomorphisms_iter():
+            for n2, n1 in mappings.items():
+                node_pair = (n1, n2)
+                node_pairs.append(node_pair)
+
+    return node_pairs
+
+
+def reactants_to_products_node_map(
+    reactants: list[Pattern],
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+) -> tuple[
+        dict[ChemArrayNodeId, ChemArrayNodeId],
+        dict[ChemArrayNodeId, ChemArrayNodeId]
+        ]:
+
+    node_pairs = reaction_graph_node_matchings(reactants, graph_r, graph_p)
+
+    # create a bipartite graph matching nodes in the reactants to nodes in the products
+    # to find a max matching, and use the max matching to build the node map
+    bipartite_graph = nx.Graph()
+    top_nodes: list[tuple[int, int, int, int]] = []
+    for _n1, _n2 in node_pairs:
+        nb1: tuple[int, int, int, int] = (0, *_n1)
+        nb2: tuple[int, int, int, int] = (1, *_n2)
+        if nb1 not in bipartite_graph.nodes:
+            top_nodes.append(nb1)
+            data = graph_r.nodes[_n1]
+            bipartite_graph.add_node(nb1, **data)
+        if nb2 not in bipartite_graph.nodes:
+            data = graph_p.nodes[_n2]
+            bipartite_graph.add_node(nb2, **data)
+        bipartite_graph.add_edge(nb1, nb2)
+
+    max_matching = nx.algorithms.bipartite.matching.maximum_matching(
+        bipartite_graph, top_nodes=top_nodes)
+
+    # reconvert to cordinates in the reactants and products graphs
+    node_map: dict[ChemArrayNodeId, ChemArrayNodeId] = {}
+    node_map_reverse: dict[ChemArrayNodeId, ChemArrayNodeId] = {}
+    for _n1, _n2 in max_matching.items():
+        n1: ChemArrayNodeId = _n1[1:]
+        n2: ChemArrayNodeId = _n2[1:]
+        if _n1[0] == 0:
+            node_map[n1] = n2
+        else:
+            node_map_reverse[n1] = n2
+
+    return node_map, node_map_reverse
+
+
+def find_state_changes(
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map: dict[ChemArrayNodeId, ChemArrayNodeId]
+) -> dict[ChemArrayNodeId, ChemArrayNodeId]:
+    """Returns a mapping between component nodes in the reactants graph and 
+    component nodes in the products graph, for those components that change
+    state.
+
+    Args:
+        graph_r (nx.Graph): reactants graph
+        graph_p (nx.Graph): products graph
+        node_map (dict[ChemArrayNodeId, ChemArrayNodeId]): node mapping
+
+    Returns:
+        dict[ChemArrayNodeId, ChemArrayNodeId]: node mapping
+    """
+    state_changes: dict[ChemArrayNodeId, ChemArrayNodeId] = {}
+    for n1, n2 in node_map.items():
+        comp1_state = graph_r.nodes[n1].get('state', None)
+        comp2_state = graph_p.nodes[n2].get('state', None)
+
+        if comp1_state != comp2_state:
+            state_changes[n1] = n2
+
+    return state_changes
+
+
+def find_bond_breaks(
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map: dict[ChemArrayNodeId, ChemArrayNodeId]
+) -> tuple[
+    list[ChemArrayNodeId],
+    list[ChemArrayNodeId]
+] | None:
+    # find bonded edge on reactants graph
+    for (n1, n2, bond) in graph_r.edges.data('bond', None): # type: ignore
+        if not bond:
+            continue
+
+        # check if matching edge is on products graph
+        n1_out = node_map.get(n1, None)
+        n2_out = node_map.get(n2, None)
+        if not n1_out or not n2_out:
+            raise ValueError("One of the bonded molecules was deleted.")
+
+        # bond break
+        edge_out = graph_p.edges.get((n1_out, n2_out))
+        if edge_out is None:
+            context_in: list[tuple[int, int, int]] = [n1, n2]
+            context_out: list[tuple[int, int, int]] = [n1_out, n2_out]
+            return context_in, context_out
+        elif edge_out.get('bond') != bond:
+            raise ValueError("Label changed from reactants to products.")
+
+
+def find_bond_formations(
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map_reverse: dict[tuple[int, int, int], tuple[int, int, int]]
+) -> tuple[
+    list[ChemArrayNodeId],
+    list[ChemArrayNodeId]
+] | None:
+    for (n1, n2, bond) in graph_p.edges.data('bond', None): # type: ignore
+        if not bond:
+            continue
+
+        n1_in = node_map_reverse.get(n1, None)
+        n2_in = node_map_reverse.get(n2, None)
+        edge_in = graph_r.edges.get((n1_in, n2_in))
+        if not n1_in or not n2_in:
+            raise ValueError("One of the bonded molecules was created.")
+
+        # bond formation
+        if edge_in is None:
+            context_in: list[ChemArrayNodeId] = [n1_in, n2_in]
+            context_out: list[ChemArrayNodeId] = [n1, n2]
+            return context_in, context_out
+
+
+def find_deleted_molecules(
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map: dict[tuple[int, int, int], tuple[int, int, int]]
+):
+    nodes1_g = set(node_map.keys())
+    # find nodes in graph_r that are not in nodes1_g
+    # these will correspond to molecules in graph_r that don't map to graph_p
+    # i.e., deleted molecules
+    missing_n1 = [n1 for n1 in graph_r.nodes if n1 not in nodes1_g]
+    # split nodes by molecule to find which molecules are deleted
+    subgraph = graph_r.subgraph(missing_n1).copy()
+    for c in nx.connected_components(subgraph):
+        # molecule nodes
+        mol_nodes = [n1 for n1 in c if n1[2] == -1]
+        for n1 in mol_nodes:
+            subgraph.nodes[n1]['label']
+
+
+def find_transformation(
+    curr_reactants: list[Pattern],
+    curr_graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map: dict[ChemArrayNodeId, ChemArrayNodeId],
+    node_map_reverse: dict[ChemArrayNodeId, ChemArrayNodeId]
+) -> list[ReactionTransformation]:
+
+    transformations: list[ReactionTransformation] = []
+
+    # find state changes
+    state_changes = find_state_changes(
+        curr_graph_r, graph_p, node_map)
+    for n1, n2 in state_changes.items():
+        state_change_action = ChangeStateAction(curr_reactants,
+                                                curr_graph_r, graph_p, [n1], [n2])
+        transformations.append(state_change_action)
+
+    if len(transformations) == 0:
+        return transformations
+
+    # find bond breaks
+    bond_breaks = find_bond_breaks(curr_graph_r, graph_p, node_map)
+    if bond_breaks:
+        bond_break_action = BreakBondTransform(curr_reactants, curr_graph_r, graph_p,
+                                               bond_breaks[0], bond_breaks[1])
+        transformations.append(bond_break_action)
+
+    if len(transformations) == 0:
+        return transformations
+
+    # find bond formations
+    bond_forms = find_bond_formations(curr_graph_r, graph_p, node_map_reverse)
+    if bond_forms:
+        bond_forms_action = FormBondTransform(curr_reactants, curr_graph_r, graph_p,
+                                              bond_forms[0], bond_forms[1])
+        transformations.append(bond_forms_action)
+
+    find_deleted_molecules(curr_graph_r, graph_p, node_map)
+
+    return transformations
+
+
+def decompose_reaction(reaction: ReactionRule):
+    curr_graph_r = reaction.reactants_graph
+    graph_p = reaction.products_graph
+    curr_reactants = reaction.reactants
+
+    transformations: list[ReactionTransformation] = []
+
+    while not compare_chemical_array_graphs(curr_graph_r, graph_p):
+        node_map, node_map_reverse = reactants_to_products_node_map(curr_reactants,
+                                                                    curr_graph_r, graph_p)
+        transformations2 = find_transformation(curr_reactants, curr_graph_r, graph_p,
+                                              node_map, node_map_reverse)
+        if len(transformations2) == 0:
+            break
+
+        transformations.extend(transformations2)
+        curr_reactants = apply_transforms(curr_reactants, transformations2)
+        curr_graph_r = build_chemical_array_graph(curr_reactants)
+
+    return transformations

@@ -2,7 +2,7 @@ import pytest
 
 from BioInfoToolkit.RuleBasedModel.model.Component import Component
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, match_patterns
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, match_pattern_specie
 
 
 def test_valid_1():
@@ -10,13 +10,12 @@ def test_valid_1():
                   Component('x', {'a', 'b'}),
                   Component('y', set())]
     reactant = Molecule('A', components)
-
     assert isinstance(reactant, Molecule)
 
 
 def test_from_declaration():
     molecules: dict[str, MoleculeType] = {
-        "A": MoleculeType("A(x~a~b,x~a~b,y)")
+        "A": MoleculeType.from_declaration("A(x~a~b,x~a~b,y)")
     }
 
     declaration = "A(x~a,x~a,y)"
@@ -25,8 +24,8 @@ def test_from_declaration():
 
 
 class TestMolecule():
-    molecules: dict[str, MoleculeType] = {
-        "A": MoleculeType("A(x~a~b,x~a~b,y)")
+    molecule_types: dict[str, MoleculeType] = {
+        "A": MoleculeType.from_declaration("A(x~a~b,x~a~b,y)")
     }
 
     @pytest.mark.parametrize("declaration", [
@@ -36,7 +35,7 @@ class TestMolecule():
         "A(x~a,x~a)", "A(x~a,y)", "A(x~b,y)", "A(y)"
     ])
     def test_valid(self, declaration: str):
-        reactant = Molecule.from_declaration(declaration, self.molecules)
+        reactant = Molecule.from_declaration(declaration, self.molecule_types)
         assert isinstance(reactant, Molecule)
 
     @pytest.mark.parametrize("declaration", [
@@ -47,52 +46,20 @@ class TestMolecule():
     ])
     def test_invalid(self, declaration: str):
         with pytest.raises(ValueError):
-            Molecule.from_declaration(declaration, self.molecules)
-
-    @pytest.mark.parametrize("declaration", [
-        "A(x~a,x~a,y)", "A(x~a,x~b,y)", "A(x~b,x~a,y)", "A(x~b,x~b,y)",
-        "A(y,x~a,x~a)", "A(x~a,y,x~b)", "A(x~b,y,x~a)", "A(y,x~b,x~b)",
-        "A(x~a,x~a)"
-    ])
-    def test_is_species(self, declaration: str):
-        reactant = Molecule.from_declaration(declaration, self.molecules)
-        assert reactant.is_specie() is True
-
-    @pytest.mark.parametrize("declaration", [
-        "A()",
-        "A(x~a,y)", "A(x~b,y)", "A(y)"
-    ])
-    def test_is_pattern(self, declaration: str):
-        molecule = Molecule.from_declaration(declaration, self.molecules)
-        assert molecule.is_pattern() is True
-
-    @pytest.mark.parametrize("declaration, expected", [
-        ("A()", 4),
-        ("A(y)", 4),
-        ("A(x~a,y)", 2), 
-        ("A(x~b,y)", 2), 
-        ("A(x~b)", 2),
-        ("A(x~a,x~b,y)", 1),
-        ("A(x~a,x~a,y)", 1),
-        ("A(x~a,x~a)", 1),
-    ])
-    def test_generate_species(self, declaration: str, expected: int):
-        reactant = Molecule.from_declaration(declaration, self.molecules)
-        species = [specie for specie in reactant.generate_species()]
-        assert len(species) == expected
+            Molecule.from_declaration(declaration, self.molecule_types)
 
 
 class TestPattern():
     molecules: dict[str, MoleculeType] = {
-        "L": MoleculeType("L(rec)"),
-        "R": MoleculeType("R(lig,ch~closed~open)")
+        "L": MoleculeType.from_declaration("L(rec)"),
+        "R": MoleculeType.from_declaration("R(lig,ch~closed~open)")
     }
 
     molecules2: dict[str, MoleculeType] = {
-        "A": MoleculeType("A(x,y)"),
-        "B": MoleculeType("B(p,q~a~b)"),
-        "C": MoleculeType("C(r~d~e,s)"),
-        "D": MoleculeType("D(a,a)")
+        "A": MoleculeType.from_declaration("A(x,y)"),
+        "B": MoleculeType.from_declaration("B(p,q~a~b)"),
+        "C": MoleculeType.from_declaration("C(r~d~e,s)"),
+        "D": MoleculeType.from_declaration("D(a,a)")
     }
 
     @pytest.mark.parametrize("declaration", [
@@ -109,8 +76,8 @@ class TestPattern():
         "B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y).A(x,y!0)"
     ])
     def test_valid_2(self, declaration: str):
-        complex = Pattern.from_declaration(declaration, self.molecules2)
-        assert isinstance(complex, Pattern)
+        pattern = Pattern.from_declaration(declaration, self.molecules2)
+        assert isinstance(pattern, Pattern)
 
     # @pytest.mark.parametrize("declaration", [
     #     "L(rec!0).R(lig!0,ch~open)", "L(rec!0).R(lig!0,ch~closed)"
@@ -182,6 +149,6 @@ class TestPattern():
         pattern1 = Pattern.from_declaration(pattern1_str, self.molecules)
         pattern2 = Pattern.from_declaration(pattern2_str, self.molecules)
 
-        match_counts = match_patterns(pattern1, pattern2)
+        match_counts = match_pattern_specie(pattern1, pattern2)
         match = match_counts > 0
         assert match == expected
