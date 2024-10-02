@@ -2,8 +2,8 @@ from typing import Any
 import pyparsing as pp
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, \
-    COMPLEX_PARSER, EXPRESSION_PARSER, LABEL_PARSER, MOLECULE_PARSER, NAME_EXPRESSION, \
-    NUMS, VARIABLE_PARSER, NetworkParameterDict, NetworkSeedSpeciesDict, ObservablesGroupDict, \
+    COMPLEX_PARSER, EXPRESSION_PARSER, LABEL_PARSER, MOLECULE_PARSER, \
+    NUMS, VARIABLE_PARSER, NetworkParameterDict, NetworkSeedSpeciesDict, ObservablesGroupDict, ParsingError, \
     ReactionDict, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
 
 
@@ -107,7 +107,7 @@ def parse_reaction(declaration: str) -> ReactionDict:
         parsed = reaction_parser.parseString(declaration)
     except (pp.ParseException, pp.ParseBaseException) as exc:
         msg = f"Reaction declaration '{declaration}' is not in the correct format."
-        raise ValueError(msg) from exc
+        raise ParsingError(msg) from exc
 
     result = parsed_reaction_to_dict(parsed)
     return result
@@ -133,7 +133,7 @@ def parse_observables_group(declaration: str) -> ObservablesGroupDict:
         parsed = obs_group_parser.parseString(declaration)
     except (pp.ParseException, pp.ParseBaseException) as exc:
         msg = f"Observables group declaration '{declaration}' is not in the correct format."
-        raise ValueError(msg) from exc
+        raise ParsingError(msg) from exc
 
     result = parsed_obs_group_to_dict(parsed)
     return result
@@ -152,7 +152,7 @@ def parse_parameters(declaration: str) -> NetworkParameterDict:
         parsed = parameter_parser.parseString(declaration)
 
     except (pp.ParseException, pp.ParseBaseException) as ee:
-        raise ValueError(
+        raise ParsingError(
             f"Parameter {declaration} not declared correctly.") from ee
 
     p_id = parsed.id
@@ -181,7 +181,7 @@ def parse_seed_species(declaration: str) -> NetworkSeedSpeciesDict:
     try:
         parsed = seed_species_parser.parseString(declaration)
     except (pp.ParseException, pp.ParseBaseException) as ee:
-        raise ValueError(
+        raise ParsingError(
             f"Seed species {declaration} not declared correctly.") from ee
 
     sp_id = parsed.sp_id

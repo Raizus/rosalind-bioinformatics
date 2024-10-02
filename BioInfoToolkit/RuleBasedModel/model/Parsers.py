@@ -2,7 +2,7 @@ from typing import Any
 import pyparsing as pp
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeTypeComponentDict, \
-    MoleculeTypeDict, MoleculeDict, ReactionRuleDict, ObservableDict, \
+    MoleculeTypeDict, MoleculeDict, ParsingError, ReactionRuleDict, ObservableDict, \
     ParameterDict, SeedSpeciesDict, NAME_EXPRESSION, STATE, MOLECULE_PARSER, \
     COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_dict_list
@@ -17,7 +17,7 @@ def parse_molecule(declaration: str):
     try:
         parsed = molecule_parser.parseString(declaration)
     except pp.ParseException as ee:
-        raise ValueError(
+        raise ParsingError(
             f"Reactant {declaration} not declared correctly") from ee
 
     result = parsed_molecule_to_dict(parsed)
@@ -28,8 +28,7 @@ def parse_pattern(declaration: str) -> list[MoleculeDict]:
     try:
         parsed = PATTERN_PARSER.parseString(declaration)
     except pp.ParseException as ee:
-        raise ValueError(
-            f"Complex {declaration} not declared correctly.") from ee
+        raise ParsingError(f"Complex {declaration} not declared correctly.") from ee
 
     if not isinstance(parsed, pp.ParseResults):
         raise TypeError(f"{parsed} must be of type ParseResults.")
@@ -38,7 +37,7 @@ def parse_pattern(declaration: str) -> list[MoleculeDict]:
     return molecules
 
 
-def parsed_reactants_to_list(parsed: pp.ParseResults | Any):
+def parsed_reactants_to_list(parsed: pp.ParseResults | Any) -> list[list[MoleculeDict]]:
     if not isinstance(parsed, pp.ParseResults):
         raise TypeError(f"{parsed} must be of type ParseResults.")
 
@@ -77,13 +76,13 @@ def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
     reverse_rate = parsed.get('reverse_rate', None)
 
     if not isinstance(name, str):
-        raise ValueError("Name must be a string.")
+        raise TypeError("Name must be a string.")
 
     if not isinstance(forward_rate, str):
-        raise ValueError("forward_rate must be a string.")
+        raise TypeError("forward_rate must be a string.")
 
     if reverse_rate is not None and not isinstance(reverse_rate, str):
-        raise ValueError("reverse_rate must be a string or none.")
+        raise TypeError("reverse_rate must be a string or none.")
 
     left_side = parsed.left_side_reactants
     right_side = parsed.right_side_reactants
@@ -144,8 +143,7 @@ def parse_reaction_rule(reaction_str: str):
         reaction = parsed_rule_to_rule_dict(parsed)
         return reaction
     except (pp.ParseException, pp.ParseBaseException) as ee:
-        raise ValueError(
-            f"Reaction {reaction_str} not declared correctly.") from ee
+        raise ParsingError(f"Reaction {reaction_str} not declared correctly.") from ee
 
 
 def parse_molecule_type(declaration: str):
@@ -186,12 +184,12 @@ def parse_molecule_type(declaration: str):
     try:
         parsed = molecule_type_parser.parseString(declaration)
     except pp.ParseException as e:
-        raise ValueError(
+        raise ParsingError(
             f"Molecule {declaration} not declared correctly.") from e
 
     name = parsed.molecule_name
     if not isinstance(name, str):
-        raise ValueError("Molecule name must be a string.")
+        raise TypeError("Molecule name must be a string.")
 
     components: list[MoleculeTypeComponentDict] = []
     parsed_components = parsed.components
@@ -253,9 +251,8 @@ def parse_parameter(declaration: str) -> ParameterDict:
         result = parsed_parameter_to_parameter_dict(parsed)
         return result
     except (pp.ParseException, pp.ParseBaseException) as ee:
-        raise ValueError(
-            f"Parameter {declaration} not declared correctly.") from ee
-
+        msg = f"Parameter {declaration} not declared correctly."
+        raise ParsingError(msg) from ee
 
 
 def parse_seed_species(declaration: str) -> SeedSpeciesDict:
@@ -270,5 +267,5 @@ def parse_seed_species(declaration: str) -> SeedSpeciesDict:
         result = parsed_seed_species_to_seed_species_dict(parsed)
         return result
     except (pp.ParseException, pp.ParseBaseException) as ee:
-        raise ValueError(
-            f"Seed species {declaration} not declared correctly.") from ee
+        msg = f"Seed species {declaration} not declared correctly."
+        raise ParsingError(msg) from ee

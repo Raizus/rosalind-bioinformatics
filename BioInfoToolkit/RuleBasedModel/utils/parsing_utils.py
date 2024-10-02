@@ -3,6 +3,10 @@ from typing import Any, TypedDict
 import pyparsing as pp
 
 
+class ParsingError(Exception):
+    pass
+
+
 class MoleculeTypeComponentDict(TypedDict):
     """Typed dict for molecule type component"""
     name: str
