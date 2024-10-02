@@ -3,7 +3,7 @@ import pyparsing as pp
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, \
     COMPLEX_PARSER, EXPRESSION_PARSER, LABEL_PARSER, MOLECULE_PARSER, NAME_EXPRESSION, \
-    NUMS, NetworkParameterDict, NetworkSeedSpeciesDict, ObservablesGroupDict, \
+    NUMS, VARIABLE_PARSER, NetworkParameterDict, NetworkSeedSpeciesDict, ObservablesGroupDict, \
     ReactionDict, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
 
 
@@ -144,7 +144,7 @@ def parse_parameters(declaration: str) -> NetworkParameterDict:
     expression_parser = pp.Combine(EXPRESSION_PARSER)
     comment_parser = pp.Optional(COMMENT_PARSER)
     parameter_parser = (id_parser +
-                        NAME_EXPRESSION('name') +
+                        VARIABLE_PARSER('name') +
                         expression_parser('expression') +
                         comment_parser)
 
