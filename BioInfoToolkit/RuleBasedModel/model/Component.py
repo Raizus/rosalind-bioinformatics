@@ -3,9 +3,9 @@ from typing import Any
 
 class MoleculeTypeComponent:
     _name: str
-    _states: set[str]
+    _states: set[str] | None
 
-    def __init__(self, name: str, states: set[str]) -> None:
+    def __init__(self, name: str, states: set[str] | None) -> None:
         self._name = name
         self._states = states
 
@@ -17,7 +17,7 @@ class MoleculeTypeComponent:
 
     def __repr__(self) -> str:
         out = f"{self._name}"
-        if len(self._states):
+        if self._states:
             out = out + '~' + "~".join(sorted(self._states))
         return out
 
@@ -30,7 +30,8 @@ class MoleculeTypeComponent:
         return self._states
 
     def is_stateless(self) -> bool:
-        return len(self._states) == 0
+        out = bool(self._states) and len(self._states) == 0
+        return out
 
     def matches_component(self, other: Any) -> bool:
         if not isinstance(other, MoleculeTypeComponent):
@@ -39,13 +40,16 @@ class MoleculeTypeComponent:
         if self._name != other.name:
             return False
 
-        if self._states != other.states:
+        if ((self._states is not None)
+            and (other.states is not None)
+            and (self._states != other.states)):
             return False
 
         return True
 
     def copy(self):
-        new = MoleculeTypeComponent(self._name, self._states.copy())
+        states = self._states.copy() if self._states is not None else None
+        new = MoleculeTypeComponent(self._name, states)
         return new
 
 
@@ -55,15 +59,16 @@ class Component(MoleculeTypeComponent):
 
     def __init__(self,
                  name: str,
-                 states: set[str],
+                 states: set[str] | None,
                  state: str = '',
                  bond: str = ''
                  ) -> None:
         super().__init__(name, states)
 
-        if state and state not in self._states:
-            raise ValueError(
-                f"Reagent component {name} cannot have the state {state}, it is not in the set of allowed states ({self._states})")
+        if (self._states is not None) and state and (state not in self._states):
+            msg = ( f"Reagent component {name} cannot have the state {state}," +
+                    f"it is not in the set of allowed states ({self._states})")
+            raise ValueError(msg)
 
         self._bond = bond
         self._state = state
@@ -74,7 +79,9 @@ class Component(MoleculeTypeComponent):
 
     @state.setter
     def state(self, state: str):
-        if state in self._states:
+        if self._states is None:
+            self._state = state
+        elif state in self._states:
             self._state = state
         else:
             raise ValueError(
@@ -104,12 +111,22 @@ class Component(MoleculeTypeComponent):
         return out
 
     def copy(self):
-        new = Component(self._name, self._states.copy(),
+        states = self._states.copy() if self._states is not None else None
+        new = Component(self._name, states,
                         self._state, self._bond)
         return new
 
     def as_tuple(self):
         return (self._name, self._state, self._bond)
+
+    def matches_component(self, other: Any) -> bool:
+        matches = super().matches_component(other)
+        if not matches:
+            return False
+
+
+
+        return True
 
 
 def sort_components(components: list[Component]) -> list[Component]:
@@ -118,9 +135,7 @@ def sort_components(components: list[Component]) -> list[Component]:
 
 
 def validate_component(component: Component, component_types: list[MoleculeTypeComponent]) -> bool:
-    valid = any((component.name == comp2.name
-                 and component.states == comp2.states
-                 and (not component.state or component.state in comp2.states))
+    valid = any(component.matches_component(comp2)
                 for comp2 in component_types)
     return valid
 
@@ -133,10 +148,9 @@ def components_gen(component: MoleculeTypeComponent | Component):
         state = component.state
 
     # generate a component for each possible state and maintain the bond
-    if len(component.states) and len(state) == 0:
+    if component.states and len(state) == 0:
         for state in component.states:
-            component2 = Component(
-                component.name, component.states, state, bond)
+            component2 = Component(component.name, component.states, state, bond)
             yield component2
     else:
         yield Component(component.name, component.states, state, bond)
