@@ -71,6 +71,15 @@ class ParameterDict(TypedDict):
     comment: str
 
 
+class CompartmentDict(TypedDict):
+    """Typed dict for compartment"""
+    name: str
+    dimensions: int
+    volume: str
+    enclosing_compartment: str | None
+    comment: str
+
+
 class NetworkParameterDict(ParameterDict):
     """Typed dict for network parameter"""
     id: int
@@ -139,7 +148,8 @@ exp_part = pp.Optional(pp.CaselessLiteral(
     'e') + pp.Optional(pp.oneOf("+ -")) + pp.Word(pp.nums))
 
 # Define the complete number parser
-NUMBER_PARSER = pp.Combine(sign + integer_part + decimal_part + exp_part)
+UNSIGNED_NUMBER_PARSER = integer_part + decimal_part + exp_part
+NUMBER_PARSER = pp.Combine(sign + UNSIGNED_NUMBER_PARSER)
 
 # Operators: +, -, *, /, and ^
 PLUS_PARSER = pp.oneOf("+ -")
@@ -224,6 +234,37 @@ def parsed_parameter_to_parameter_dict(parsed: pp.ParseResults) -> ParameterDict
     result: ParameterDict = {
         'name': name,
         'expression': expression,
+        'comment': comment
+    }
+    return result
+
+
+def parsed_compartment_to_compartment_dict(parsed: pp.ParseResults) -> CompartmentDict:
+    name = parsed.name
+    if not isinstance(name, str):
+        raise ValueError("Parameter name must be a string.")
+
+    dimensions = parsed.dimensions
+    if not isinstance(dimensions, str):
+        raise ValueError("Parameter expression must be a string.")
+
+    volume = parsed.volume
+    if not isinstance(volume, str):
+        raise ValueError("Parameter volume must be a string.")
+
+    enclosing_compartment = parsed.get('enclosing_compartment', None)
+    if enclosing_compartment is not None and not isinstance(enclosing_compartment, str):
+        raise ValueError("Parameter enclosing_compartment must be a string.")
+
+    comment = parsed.get('comment', '')
+    if not isinstance(comment, str):
+        raise TypeError(f"type {comment} must be a string")
+
+    result: CompartmentDict = {
+        'name': name,
+        'dimensions': int(dimensions),
+        'volume': volume,
+        'enclosing_compartment': enclosing_compartment,
         'comment': comment
     }
     return result

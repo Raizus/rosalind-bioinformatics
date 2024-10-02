@@ -1,6 +1,6 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_observable, \
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_compartment, parse_observable, \
     parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
 
 
@@ -192,3 +192,21 @@ class TestParseObservable():
     def test_valid(self, declaration: str):
         parsed = parse_observable(declaration)
         assert parsed is not None
+
+
+class TestParseCompartment():
+    @pytest.mark.parametrize("declaration, name, dimensions, volume, enclosing_compartment", [
+        ("Ext 3 V_ext # External milieu", "Ext", 3, "V_ext", None),
+        ("Plm 2 V_plm Ext  # Plasma Membrane, enclosed by Ext", "Plm", 2, "V_plm", "Ext"),
+        ("Cyt 3 V_cyt Plm  # Cytosol, enclosed by Plm", "Cyt", 3, "V_cyt", 'Plm'),
+        ("EC  3  100  # um^3", "EC", 3, "100", None),
+        ("PM  2  1   EC  # um^2", "PM", 2, "1", "EC"),
+        ("CP  3  1   PM  # um^3", "CP", 3, "1", "PM"),
+    ])
+    def test_valid(self, declaration: str, name: str, dimensions: str,
+                   volume: str, enclosing_compartment: str|None):
+        parsed = parse_compartment(declaration)
+        assert parsed['name'] == name
+        assert parsed['dimensions'] == dimensions
+        assert parsed['volume'] == volume
+        assert parsed['enclosing_compartment'] == enclosing_compartment

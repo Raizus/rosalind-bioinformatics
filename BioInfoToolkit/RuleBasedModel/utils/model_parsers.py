@@ -1,10 +1,10 @@
 from typing import Any
 import pyparsing as pp
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeTypeComponentDict, \
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, UNSIGNED_NUMBER_PARSER, VARIABLE_PARSER, CompartmentDict, MoleculeTypeComponentDict, \
     MoleculeTypeDict, MoleculeDict, ParsingError, ReactionRuleDict, ObservableDict, \
     ParameterDict, SeedSpeciesDict, NAME_EXPRESSION, STATE, MOLECULE_PARSER, \
-    COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
+    COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_compartment_to_compartment_dict, parsed_parameter_to_parameter_dict,parsed_seed_species_to_seed_species_dict
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_dict_list
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_molecule_to_dict
 
@@ -268,4 +268,32 @@ def parse_seed_species(declaration: str) -> SeedSpeciesDict:
         return result
     except (pp.ParseException, pp.ParseBaseException) as ee:
         msg = f"Seed species {declaration} not declared correctly."
+        raise ParsingError(msg) from ee
+
+
+def parse_compartment(declaration: str) -> CompartmentDict:
+
+    name_parser = NAME_EXPRESSION('name')
+    enclosing_compartment_parser = pp.Optional(NAME_EXPRESSION('enclosing_compartment'))
+    comment_parser = pp.Optional(COMMENT_PARSER)
+
+    dimensions_parser = pp.Word('23', max=1)('dimensions')
+    number_parser = pp.Combine(UNSIGNED_NUMBER_PARSER)
+
+    volume_parser = (number_parser | VARIABLE_PARSER)('volume')
+
+    compartment_parser = (
+        name_parser +
+        dimensions_parser +
+        volume_parser +
+        enclosing_compartment_parser +
+        comment_parser
+    )
+
+    try:
+        parsed = compartment_parser.parseString(declaration)
+        result = parsed_compartment_to_compartment_dict(parsed)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        msg = f"Compartment '{declaration}' not declared correctly."
         raise ParsingError(msg) from ee
