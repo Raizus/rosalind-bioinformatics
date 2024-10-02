@@ -50,8 +50,7 @@ class Molecule:
 
     @classmethod
     def from_dict(cls, parsed: MoleculeDict,
-                  molecule_types: dict[str, MoleculeType],
-                  add_remaining: bool = True):
+                  molecule_types: dict[str, MoleculeType] | None):
         molecule_name = parsed["name"]
         parsed_components = parsed["components"]
 
@@ -60,60 +59,48 @@ class Molecule:
         components_count: defaultdict[str, int] = defaultdict(int)
 
         # match to declared molecule
-        if molecule_name not in molecule_types:
+        if molecule_types and molecule_name not in molecule_types:
             raise ValueError(
                 f"Molecule with name {molecule_name} was not declared.")
 
         # validate each component
-        molecule_type = molecule_types[molecule_name]
+        molecule_type = molecule_types[molecule_name] if molecule_types else None
         for parsed_component in parsed_components:
             comp_name = parsed_component['name']
             state = parsed_component['state']
             bond = parsed_component['bond']
 
             # check component name in molecules
-            if comp_name not in molecule_type.components:
-                raise ValueError(
-                    f"Molecule {molecule_name} does not have a component named {comp_name}.")
+            if molecule_type and comp_name not in molecule_type.components:
+                msg = f"Molecule {molecule_name} does not have a component named {comp_name}."
+                raise ValueError(msg)
 
-            type_component = molecule_type.components[comp_name]
-            states = type_component.states
+            # create component
+            if molecule_type:
+                type_component = molecule_type.components[comp_name]
+                states: set[str] | None = type_component.states
 
-            # create and validate component
-            component = Component(comp_name, states, state, bond)
-            if not component.matches_component(type_component):
-                raise ValueError(
-                    f"Component {component} is invalid, does not match component type {type_component}.")
+                # create and validate component
+                component = Component(comp_name, states, state, bond)
+                if not component.matches_component(type_component):
+                    msg = (f"Component {component} is invalid, " +
+                           f"does not match component type {type_component}.")
+                    raise ValueError(msg)
+            else:
+                states: set[str] | None = set()
+                component = Component(comp_name, states, state, bond)
 
             # check component count does not go over the maximum allowed
-            max_count = molecule_type.components_counts[comp_name]
-            if components_count[comp_name] >= max_count:
-                raise ValueError(
-                    f"Molecule {molecule_name} can only have at most {max_count} components with name {comp_name}.")
+            if molecule_type:
+                max_count = molecule_type.components_counts[comp_name]
+                if components_count[comp_name] >= max_count:
+                    msg = (f"Molecule {molecule_name} can only have at most {max_count} " +
+                        f"components with name {comp_name}.")
+                    raise ValueError(msg)
 
             components.append(component)
             all_components.append(component)
             components_count[comp_name] += 1
-
-        # add remaining components
-        if add_remaining:
-            counts_diff: defaultdict[str, int] = defaultdict(int)
-
-            for key in set(molecule_type.components_counts) | set(components_count):
-                counts_diff[key] = molecule_type.components_counts[key] - \
-                    components_count[key]
-
-            for c_name, count in counts_diff.items():
-                if count == 0:
-                    continue
-
-                states = molecule_type.components[c_name].states
-                for _ in range(count):
-                    comp = Component(c_name, states)
-                    all_components.append(comp)
-                components_count[c_name] += count
-
-            assert components_count == molecule_type.components_counts
 
         molecule = Molecule(molecule_name, components)
         return molecule
@@ -236,7 +223,7 @@ class Pattern:
     @classmethod
     def from_dict(cls,
                   parsed: list[MoleculeDict],
-                  molecule_types: dict[str, MoleculeType]):
+                  molecule_types: dict[str, MoleculeType] | None):
         parts = []
         for parsed_reagent in parsed:
             part = Molecule.from_dict(parsed_reagent, molecule_types)
