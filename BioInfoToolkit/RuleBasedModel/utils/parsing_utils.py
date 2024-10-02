@@ -129,6 +129,7 @@ LABEL_PARSER = pp.Word(pp.alphas, pp.alphanums+'_')
 sign = pp.Optional(pp.oneOf("+ -"))
 integer_part = pp.Word(pp.nums)
 decimal_part = pp.Optional(pp.Literal('.') + pp.Word(pp.nums))
+
 # Scientific notation component
 exp_part = pp.Optional(pp.CaselessLiteral(
     'e') + pp.Optional(pp.oneOf("+ -")) + pp.Word(pp.nums))
@@ -141,6 +142,8 @@ PLUS_PARSER = pp.oneOf("+ -")
 MULT_PARSER = pp.oneOf("* /")
 EXP_PARSER = pp.Literal("^")
 
+VARIABLE_PARSER = pp.Word(pp.alphas+'_', pp.alphanums+'_')
+
 # Forward declaration for handling nested parentheses
 EXPRESSION_PARSER = pp.Forward()
 
@@ -149,7 +152,7 @@ LPAREN_PARSER = pp.Suppress("(")
 RPAREN_PARSER = pp.Suppress(")")
 
 # Define an expression that can be a number, variable, or parenthesized expression
-OPERAND_PARSER = NUMBER_PARSER | LABEL_PARSER | (
+OPERAND_PARSER = NUMBER_PARSER | VARIABLE_PARSER | (
     LPAREN_PARSER + EXPRESSION_PARSER + RPAREN_PARSER)
 
 # Define the expression grammar using infix notation

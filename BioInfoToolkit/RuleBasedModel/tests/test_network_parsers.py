@@ -1,6 +1,6 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.network.parsers import parse_observables_group, parse_parameters, parse_reaction
+from BioInfoToolkit.RuleBasedModel.network.parsers import parse_observables_group, parse_parameters, parse_reaction, parse_seed_species
 
 
 class TestParseParameters():
@@ -53,3 +53,21 @@ class TestParseReactions():
         assert parsed["reactants"] == reactants
         assert parsed["products"] == products
         assert parsed["rate"] == rate
+
+
+class TestSeedSpeciesParser():
+    @pytest.mark.parametrize("declaration, sp_id, expression", [
+        ("1 L(t) L0", 1, "L0"),
+        ("2 T(Phos~U,l) _InitialConc1", 2, "_InitialConc1"),
+        ("3 T(Phos~P,l) _InitialConc2", 3, "_InitialConc2"),
+        ("4 CheY(Phos~U) _InitialConc3", 4, "_InitialConc3"),
+        ("5 CheY(Phos~P) _InitialConc4", 5, "_InitialConc4"),
+        ("6 CheZ() CheZ0", 6, "CheZ0"),
+        ("7 L(t!1).T(Phos~U,l!1) 0", 7, "0"),
+        ("8 L(t!1).T(Phos~P,l!1) 0", 8, "0"),
+    ])
+    def test_valid(self, declaration: str, sp_id: int, expression: str):
+        parsed = parse_seed_species(declaration)
+
+        assert parsed['id'] == sp_id
+        assert parsed["expression"] == expression
