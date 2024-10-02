@@ -26,9 +26,11 @@ class ParametersBlock(NetworkBlock):
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
-        data: list[tuple[str, str, str]] = []
-        for name, param in self.items.items():
-            data.append((name, param.expression, f"# {param.comment}"))
+        data: list[tuple[str, str, str, str]] = []
+        for i, (name, param) in enumerate(self.items.items()):
+            comment = f"# {param.comment}" if param.comment else ''
+            data_line = (str(i), name, param.expression, comment)
+            data.append(data_line)
 
         lines.extend(format_data_into_lines(data))
         lines.append(f"end {self.name}\n")
@@ -101,6 +103,25 @@ class ReactionsBlock(NetworkBlock):
         self.items[r_id] = reaction
         self.count_id += 1
 
+    def gen_string(self):
+        lines: list[str] = []
+        lines.append(f"\nbegin {self.name}")
+
+        data: list[tuple[str, str, str, str, str]] = []
+        for r_id, reaction in self.items.items():
+            comment = f"# {reaction.comment}" if reaction.comment else ''
+            data_line = (str(r_id),
+                         str(reaction.reactants),
+                         str(reaction.products),
+                         str(reaction.rate_expression),
+                         comment)
+            data.append(data_line)
+
+        lines.extend(format_data_into_lines(data))
+        lines.append(f"end {self.name}\n")
+
+        return '\n'.join(lines)
+
 
 class GroupsBlock(NetworkBlock):
     name = "groups"
@@ -121,7 +142,7 @@ class GroupsBlock(NetworkBlock):
 
         data: list[tuple[str, str, str]] = []
         for g_id, group in self.items.items():
-            group_str = ','.join(f'{w}*{sp_id}' for sp_id,
+            group_str = ','.join(f'{w}*{sp_id}' if w != 1 else f'{sp_id}' for sp_id,
                                  w in group.weighted_species)
             data.append((str(g_id), str(group.name), group_str))
 
