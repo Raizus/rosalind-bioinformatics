@@ -1,11 +1,14 @@
 
+from collections import defaultdict
 from itertools import product
 import networkx as nx
+import graphviz
 
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, species_match_gen
-from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock, ReactionsBlock, SpeciesBlock
+from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock, \
+    ReactionsBlock, SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
 
@@ -171,3 +174,76 @@ class ReactionNetwork:
 
             n_iter += 1
 
+    def as_string(self) -> str:
+        out = ''
+        parameters_block_str = self.parameters_block.gen_string()
+        species_block_str = self.species_block.gen_string()
+        reactions_block_str = self.reactions_block.gen_string()
+        groups_block_str = self.groups_block.gen_string()
+
+        strings = [parameters_block_str,
+                   species_block_str,
+                   reactions_block_str,
+                   groups_block_str]
+
+        for string in strings:
+            if string:
+                out += string
+
+        return out
+
+    def draw_graph(self, filename='network_graph'):
+        dot = graphviz.Digraph(comment='Reaction Network Graph', format='png')
+
+        # maps r_id to set[(r_id, sp_id)]
+        # it could be a multi digraph
+        adj_dict: defaultdict[int, set[tuple[int, int]]] = defaultdict(set)
+        input_species_reaction_dict: defaultdict[int, set[int]] = defaultdict(set)
+        output_species_reaction_dict: defaultdict[int, set[int]] = defaultdict(set)
+
+        for r_id, reaction in self.reactions_block.items.items():
+            label = str(r_id)
+            dot.node(str(r_id), label=label)
+            reactants = reaction.reactants
+            products = reaction.products
+
+            for react in reactants:
+                input_species_reaction_dict[react].add(r_id)
+            for prods in products:
+                output_species_reaction_dict[prods].add(r_id)
+        
+        # build adj_dict
+        for sp, reactions in output_species_reaction_dict.items():
+            for r_id in reactions:
+                out_reactions = input_species_reaction_dict.get(sp, set())
+                for r2_id in out_reactions:
+                    adj_dict[r_id].add((r2_id, sp))
+
+        for r_in, rs_out in adj_dict.items():
+            for r2_id, sp in rs_out:
+                # species = self.species_block.items[sp]
+                label = str(sp)
+                dot.edge(str(r_in), str(r2_id), label=label)
+
+        dot.render(filename)
+
+    def draw_hypergraph(self, filename='network_hypergraph'):
+        dot = graphviz.Digraph(comment='Reaction Network Hypergraph', format='png')
+
+        # each reaction is a hyper edge conneting species nodes
+
+        for sp_id, species in self.species_block.items.items():
+            label = str(sp_id)
+            dot.node(str(sp_id), label=label)
+
+        # build hyperedges:
+        for r_id, reaction in self.reactions_block.items.items():
+            node_id = f"he{r_id}"
+            dot.node(node_id, shape='point', width='0.08', xlabel=f"R_{r_id}")
+
+            for react in reaction.reactants:
+                dot.edge(str(react), node_id)
+            for prod in reaction.products:
+                dot.edge(node_id, str(prod))
+
+        dot.render(filename)
