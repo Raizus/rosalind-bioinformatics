@@ -1,6 +1,6 @@
 from collections import Counter
 from BioInfoToolkit.RuleBasedModel.model.Component import MoleculeTypeComponent, components_all_equal
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_molecule_type
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_molecule_type
 
 
 class MoleculeType:

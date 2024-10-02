@@ -1,5 +1,5 @@
 
-from BioInfoToolkit.RuleBasedModel.network.parsers import parse_observables_group
+from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_observables_group
 
 
 class ObservablesGroup:

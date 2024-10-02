@@ -5,7 +5,7 @@ from typing import OrderedDict
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import ReactionRule
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, species_match_gen
-from BioInfoToolkit.RuleBasedModel.network.parsers import parse_reaction
+from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_reaction
 
 
 class Reaction:

@@ -3,7 +3,7 @@ from BioInfoToolkit.RuleBasedModel.model.ModelBlocks import MoleculeTypesBlock, 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Observable import Observable
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_parameter
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_parameter
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import ReactionRule
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
 

@@ -1,6 +1,7 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.network.parsers import parse_observables_group, parse_parameters, parse_reaction, parse_seed_species
+from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_observables_group, \
+    parse_parameters, parse_reaction, parse_seed_species
 
 
 class TestParseParameters():

@@ -3,7 +3,7 @@ from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_reaction_rule
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_reaction_rule
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import BreakBondTransform, \
     ChangeStateAction, FormBondTransform, ReactionTransformation, apply_transforms

@@ -1,6 +1,7 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_observable, parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_observable, \
+    parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
 
 
 class TestParseMoleculeType():

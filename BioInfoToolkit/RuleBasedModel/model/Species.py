@@ -5,7 +5,7 @@ import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Component import components_gen
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
-from BioInfoToolkit.RuleBasedModel.model.Parsers import parse_seed_species
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_seed_species
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, \
     match_pattern_specie, node_pattern_matching_func
 
