@@ -1,37 +1,58 @@
 
 
-# from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
-# from BioInfoToolkit.RuleBasedModel.model.Species import Species
-# from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-# from BioInfoToolkit.RuleBasedModel.network.parsers import parse_parameters, parse_reaction, parse_seed_species
-# from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-# from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-
-# def parse_net_file(file):
-#     # parse file
+from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
+from BioInfoToolkit.RuleBasedModel.model.Species import Species
+from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
+from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_parameters, parse_seed_species
+from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
 
 
-# def load_network(file_path: str):
-#     network = ReactionNetwork()
+def load_network(file_path: str):
+    network = ReactionNetwork()
 
-#     # load .net file in path
+    current_block = None
+    with open(file_path, 'r', encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
 
-#     # if parameter block
-#     parsed_parameter = parse_parameters(line)
-#     name = parsed_parameter['name']
-#     expression = parsed_parameter['expression']
-#     parameter = Parameter(name, expression)
-#     network.parameters_block.add_parameter(parameter)
+            # Skip empty lines
+            if not line:
+                continue
 
-#     # if species block
-#     parsed_species = parse_seed_species(line)
-#     species = Species.
-#     network.species_block.add_species()
+            # Detect the beginning of a block
+            if line.startswith('begin'):
+                current_block = line.split()[1]
+                continue
 
-#     # if reactions block
-#     reaction = Reaction.from_declaration(line)
-#     network.reactions_block.add_reaction(reaction)
+            # Detect the end of a block
+            if line.startswith('end'):
+                current_block = None
+                continue
 
-#     # if groups block
-#     group = ObservablesGroup.from_declaration(line)
-#     network.groups_block.add_group(group)
+            # Parse lines depending on the current block
+            if current_block == 'parameters':
+                parsed_parameter = parse_parameters(line)
+                name = parsed_parameter['name']
+                expression = parsed_parameter['expression']
+                parameter = Parameter(name, expression)
+                network.parameters_block.add_parameter(parameter)
+
+            elif current_block == 'species':
+                parsed_species = parse_seed_species(line)
+                expression = parsed_species['expression']
+                parsed_pattern = parsed_species['pattern']
+                pattern = Pattern.from_dict(parsed_pattern, None)
+                species = Species(pattern, expression)
+                network.species_block.add_species(species)
+
+            elif current_block == 'reactions':
+                reaction = Reaction.from_declaration(line)
+                network.reactions_block.add_reaction(reaction)
+
+            elif current_block == 'groups':
+                group = ObservablesGroup.from_declaration(line)
+                network.groups_block.add_group(group)
+
+    return network
