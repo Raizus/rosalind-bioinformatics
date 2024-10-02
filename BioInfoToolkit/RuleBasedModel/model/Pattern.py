@@ -87,7 +87,7 @@ class Molecule:
                            f"does not match component type {type_component}.")
                     raise ValueError(msg)
             else:
-                states: set[str] | None = set()
+                states: set[str] | None = None
                 component = Component(comp_name, states, state, bond)
 
             # check component count does not go over the maximum allowed
