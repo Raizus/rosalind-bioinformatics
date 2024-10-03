@@ -226,6 +226,10 @@ class ReactionRulesBlock(ModelBlock):
                 return False
         return True
 
+    def decompose_reactions(self):
+        for _, reaction in self.items.items():
+            reaction.decompose_reaction()
+
     def gen_string(self):
         """Returns the string of this model block.
 

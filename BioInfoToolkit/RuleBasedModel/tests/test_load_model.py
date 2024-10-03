@@ -9,7 +9,7 @@ from BioInfoToolkit.RuleBasedModel.model.load_model import load_model
     './BioInfoToolkit/RuleBasedModel/assets/test.bngl',
     './BioInfoToolkit/RuleBasedModel/assets/test2.bngl'
 ])
-def test_load_network(fp: str):
+def test_load_model(fp: str):
     model = load_model(fp)
 
     assert isinstance(model, Model)

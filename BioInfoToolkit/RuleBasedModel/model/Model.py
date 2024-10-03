@@ -52,6 +52,12 @@ class Model:
         if not self.reaction_rules_block.validate_rates(variables):
             msg = "Reaction rules block is not valid, due to invalid rate expression."
             raise InvalidModelBlockError(msg)
+        try:
+            self.reaction_rules_block.decompose_reactions()
+        except ValueError as exc:
+            msg = ("Reaction rules block is not valid, could not decompose " +
+                   "all rules into simple transformations.")
+            raise InvalidModelBlockError(msg) from exc
 
         return True
 
