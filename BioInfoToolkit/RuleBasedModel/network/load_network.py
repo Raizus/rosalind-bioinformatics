@@ -1,7 +1,5 @@
 
-
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_parameters, parse_seed_species
@@ -34,17 +32,12 @@ def load_network(file_path: str):
             # Parse lines depending on the current block
             if current_block == 'parameters':
                 parsed_parameter = parse_parameters(line)
-                name = parsed_parameter['name']
-                expression = parsed_parameter['expression']
-                parameter = Parameter(name, expression)
+                parameter = Parameter.from_dict(parsed_parameter)
                 network.parameters_block.add_parameter(parameter)
 
             elif current_block == 'species':
                 parsed_species = parse_seed_species(line)
-                expression = parsed_species['expression']
-                parsed_pattern = parsed_species['pattern']
-                pattern = Pattern.from_dict(parsed_pattern, None)
-                species = Species(pattern, expression)
+                species = Species.from_dict(parsed_species, None)
                 network.species_block.add_species(species)
 
             elif current_block == 'reactions':
