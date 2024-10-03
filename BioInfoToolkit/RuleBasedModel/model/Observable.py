@@ -6,14 +6,14 @@ from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_s
 class Observable:
     type: str
     label: str
-    pattern: Pattern
+    patterns: list[Pattern]
 
-    def __init__(self, obs_type: str, label: str, pattern: Pattern) -> None:
-        if obs_type != 'Molecules' and obs_type != 'Species':
+    def __init__(self, obs_type: str, label: str, patterns: list[Pattern]) -> None:
+        if obs_type not in ('Molecules', 'Species'):
             raise ValueError(f"type must be 'Molecules' or 'Species' (found {obs_type}).")
         self.type = obs_type
         self.label = label
-        self.pattern = pattern
+        self.patterns = patterns
 
     @classmethod
     def from_declaration(cls, declaration: str, molecules: dict[str, MoleculeType]):
@@ -25,14 +25,16 @@ class Observable:
         label = parsed["label"]
         parsed_pattern = parsed["pattern"]
         pattern = Pattern.from_dict(parsed_pattern, molecules)
-        observable = Observable(obs_type, label, pattern)
+        observable = Observable(obs_type, label, [pattern])
         return observable
 
-    def match_species(self, species: Pattern):
+    def match_species(self, species: Pattern) -> int:
         count = not self.type == 'Species'
-        num_matches = match_pattern_specie(self.pattern, species, count)
+        num_matches = 0
+        for pattern in self.patterns:
+            num_matches += match_pattern_specie(pattern, species, count)
         return num_matches
 
     def __repr__(self) -> str:
-        out = f"{self.type}\t\t{self.label}\t{self.pattern})"
+        out = f"{self.type}\t\t{self.label}\t{self.patterns})"
         return out
