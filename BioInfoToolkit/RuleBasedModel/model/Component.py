@@ -30,7 +30,8 @@ class MoleculeTypeComponent:
         return self._states
 
     def is_stateless(self) -> bool:
-        out = bool(self._states) and len(self._states) == 0
+        states = self._states
+        out = states is None or len(states) == 0
         return out
 
     def matches_component(self, other: Any) -> bool:
