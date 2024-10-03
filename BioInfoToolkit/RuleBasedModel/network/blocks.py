@@ -23,6 +23,9 @@ class ParametersBlock(NetworkBlock):
         self.items[parameter.name] = parameter
 
     def gen_string(self):
+        if len(self.items) == 0:
+            return ''
+
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -76,6 +79,9 @@ class SpeciesBlock(NetworkBlock):
         return True
 
     def gen_string(self):
+        if len(self.items) == 0:
+            return ''
+
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -104,6 +110,9 @@ class ReactionsBlock(NetworkBlock):
         self.count_id += 1
 
     def gen_string(self):
+        if len(self.items) == 0:
+            return ''
+        
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -137,6 +146,9 @@ class GroupsBlock(NetworkBlock):
         self.count_id += 1
 
     def gen_string(self):
+        if len(self.items) == 0:
+            return ''
+
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
