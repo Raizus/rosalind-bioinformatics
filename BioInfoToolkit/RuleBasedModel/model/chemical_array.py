@@ -58,14 +58,20 @@ def node_matching(n1: Any, n2: Any,
 
     # when finding mappings, bond wildcards must match
     is_wildcard = comp1_bond in ('?', '+') or comp2_bond in ('?', '+')
-    bond_match = comp1_bond == comp2_bond if (is_wildcard or match_bond) else True
+    is_bonded1 = bool(comp1_bond)
+    is_bonded2 = bool(comp2_bond)
+    bond_match = True
+    if is_wildcard:
+        bond_match = comp1_bond == comp2_bond
+    elif match_bond:
+        bond_match = is_bonded1 == is_bonded2
 
     full_match = component_match and state_match and bond_match
     return full_match
 
 
 def compare_chemical_array_graphs(graph1: nx.Graph, graph2: nx.Graph) -> bool:
-    match_func = partial(node_matching, match_state=True)
+    match_func = partial(node_matching, match_state=True, match_bond=True)
     is_iso: bool = nx.isomorphism.is_isomorphic(graph1, graph2, match_func)
     return is_iso
 
