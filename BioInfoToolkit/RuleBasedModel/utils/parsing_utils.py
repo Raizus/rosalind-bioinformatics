@@ -54,7 +54,7 @@ class ObservableDict(TypedDict):
     """Typed dict for observable"""
     type: str
     label: str
-    pattern: list[MoleculeDict]
+    patterns: list[list[MoleculeDict]]
 
 
 class ObservablesGroupDict(TypedDict):

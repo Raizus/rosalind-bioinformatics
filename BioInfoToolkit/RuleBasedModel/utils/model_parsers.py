@@ -11,6 +11,26 @@ from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_molecule_to
 # Define the grammar for parsing
 pp.ParserElement.enablePackrat()
 
+def parsed_observable_to_dict(parsed: pp.ParseResults) -> ObservableDict:
+    obs_type = parsed.type
+    label = parsed.label
+
+    if not isinstance(obs_type, str):
+        raise TypeError(f"type {obs_type} must be a string")
+
+    if not isinstance(label, str):
+        raise TypeError(f"label {label} must be a string")
+
+    parsed_patterns = parsed.patterns
+    patterns = parsed_reactants_to_list(parsed_patterns)
+
+    result: ObservableDict = {
+        'type': obs_type,
+        'label': label,
+        'patterns': patterns,
+    }
+
+    return result
 
 def parse_molecule(declaration: str):
     molecule_parser = MOLECULE_PARSER.leaveWhitespace() + pp.StringEnd()
@@ -213,33 +233,21 @@ def parse_observable(declaration: str) -> ObservableDict:
     type_pattern = pp.Literal('Molecules') | pp.Literal('Species')
     label_pattern = pp.Word(pp.alphas, pp.alphanums + '_')
 
-    reactant_pattern = pp.Group(
+    pattern_parser = pp.Group(
         COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    
+    patterns_list_parser = pp.delimitedList(pattern_parser)
 
     observable_parser = type_pattern(
-        'type') + label_pattern('label') + reactant_pattern('pattern')
-    # + pp.StringEnd()
+        'type') + label_pattern('label') + patterns_list_parser('patterns')
 
-    parsed = observable_parser.parseString(declaration)
-    obs_type = parsed.type
-    label = parsed.label
-
-    if not isinstance(obs_type, str):
-        raise TypeError(f"type {obs_type} must be a string")
-
-    if not isinstance(label, str):
-        raise TypeError(f"label {label} must be a string")
-
-    parsed_reactant = parsed.pattern
-    pattern = parsed_pattern_to_dict_list(parsed_reactant)
-
-    result: ObservableDict = {
-        'type': obs_type,
-        'label': label,
-        'pattern': pattern,
-    }
-
-    return result
+    try:
+        parsed = observable_parser.parseString(declaration)
+        result = parsed_observable_to_dict(parsed)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        msg = f"Observable '{declaration}' not declared correctly."
+        raise ParsingError(msg) from ee
 
 
 def parse_parameter(declaration: str) -> ParameterDict:

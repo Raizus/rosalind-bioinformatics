@@ -23,9 +23,12 @@ class Observable:
 
         obs_type = parsed["type"]
         label = parsed["label"]
-        parsed_pattern = parsed["pattern"]
-        pattern = Pattern.from_dict(parsed_pattern, molecules)
-        observable = Observable(obs_type, label, [pattern])
+        parsed_patterns = parsed["patterns"]
+        patterns: list[Pattern] = []
+        for parsed_pattern in parsed_patterns:
+            pattern = Pattern.from_dict(parsed_pattern, molecules)
+            patterns.append(pattern)
+        observable = Observable(obs_type, label, patterns)
         return observable
 
     def match_species(self, species: Pattern) -> int:

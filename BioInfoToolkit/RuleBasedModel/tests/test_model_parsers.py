@@ -186,12 +186,16 @@ class TestParseReactants():
 
 
 class TestParseObservable():
-    @pytest.mark.parametrize("declaration", [
-        "Molecules A A(b)",
-        "Species AC A(b,c!1).C(a!0)"
+    @pytest.mark.parametrize("declaration, obs_type, label, num_patterns", [
+        ("Molecules A A(b)", 'Molecules', 'A', 1),
+        ("Species AC A(b,c!1).C(a!0)", 'Species', 'AC', 1),
+        ("Molecules A_B_C A(b), B(), C(a!0)", 'Molecules', 'A_B_C', 3),
     ])
-    def test_valid(self, declaration: str):
+    def test_valid(self, declaration: str, obs_type: str, label: str, num_patterns: int):
         parsed = parse_observable(declaration)
+        assert parsed['type'] == obs_type
+        assert parsed["label"] == label
+        assert len(parsed["patterns"]) == num_patterns
         assert parsed is not None
 
 
