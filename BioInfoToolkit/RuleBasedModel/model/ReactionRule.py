@@ -98,15 +98,18 @@ class ReactionRule:
 
     def get_forward(self) -> "ReactionRule":
         new_rule = ReactionRule(self.name, self.reactants, self.products, self.forward_rate)
+        new_rule.transformations = self.transformations
         return new_rule
     
     def get_reverse(self) -> "ReactionRule":
-        if self.reverse_rate:
-            name = f"_reverse_{self.name}"
-            new_rule = ReactionRule(name, self.products,
-                                    self.reactants, self.reverse_rate)
-            return new_rule
-        raise TypeError(f"Reaction rule must have a reverse rate ({self.reverse_rate})")
+        if not self.reverse_rate:
+            raise TypeError(f"Reaction rule must have a reverse rate ({self.reverse_rate})")
+
+        name = f"_reverse_{self.name}"
+        new_rule = ReactionRule(name, self.products,
+                                self.reactants, self.reverse_rate)
+        new_rule.decompose_reaction()
+        return new_rule
 
     def validate_reactants(self, molecule_types: dict[str, MoleculeType]) -> bool:
         for pattern in self.reactants + self.products:
