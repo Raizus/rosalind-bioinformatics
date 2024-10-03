@@ -513,7 +513,7 @@ def match_pattern_specie(pattern: Pattern, specie: Pattern, count: bool = False)
     for name, count1 in counts1.items():
         count2 = counts2.get(name, 0)
         if count2 < count1:
-            print(f"{specie} needs to have at least {count1} '{name}' molecules")
+            # print(f"{specie} needs to have at least {count1} '{name}' molecules")
             return 0
 
     # check for subgraph isomorphism
