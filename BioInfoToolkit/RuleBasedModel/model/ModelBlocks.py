@@ -104,19 +104,23 @@ class ParametersBlock(ModelBlock):
     def evaluate_parameters(self):
         evaluated_params: OrderedDict[str, float | int] = OrderedDict()
 
+        # evaluate parameters
         while len(evaluated_params) != len(self.items):
             new_eval = False
+
             for name, param in self.items.items():
                 if name in evaluated_params:
                     continue
-                value = eval_expr(param.expression, evaluated_params)
+                value, _ = eval_expr(param.expression, evaluated_params)
                 if not isinstance(value, int) and not isinstance(value, float):
                     raise TypeError(f"value '{value}' must be of type int or float.")
                 evaluated_params[name] = value
                 new_eval = True
+
             if not new_eval:
                 break
 
+        # raise error if there are parameters that could not be evaluated
         if len(evaluated_params) != len(self.items):
             names = set(self.items.keys()) - set(evaluated_params.keys())
             names_str = ', '.join(names)
@@ -169,7 +173,7 @@ class SeedSpeciesBlock(ModelBlock):
 
     def validate_expressions(self, variables: dict[str, int | float]) -> bool:
         for _, specie in self.items.items():
-            value = eval_expr(specie.expression, variables)
+            value, _ = eval_expr(specie.expression, variables)
             if not isinstance(value, int) and not isinstance(value, float):
                 return False
         return True

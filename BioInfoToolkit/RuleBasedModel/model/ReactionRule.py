@@ -120,12 +120,12 @@ class ReactionRule:
         rate_f = self.forward_rate
         rate_r = self.reverse_rate
 
-        value = eval_expr(rate_f, variables)
+        value, _ = eval_expr(rate_f, variables)
         if not isinstance(value, int) and not isinstance(value, float):
             return False
 
         if rate_r:
-            value = eval_expr(rate_r, variables)
+            value, _ = eval_expr(rate_r, variables)
             if not isinstance(value, int) and not isinstance(value, float):
                 return False
 

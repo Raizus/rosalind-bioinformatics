@@ -5,6 +5,7 @@ from typing import Any
 import graphviz
 import networkx as nx
 
+
 def draw_graph(dot: graphviz.Graph, graph: nx.Graph):
     # Add nodes for molecules and components
     for node_id, node_data in graph.nodes(data=True):
@@ -55,14 +56,14 @@ def draw_graph(dot: graphviz.Graph, graph: nx.Graph):
     return dot
 
 
-def format_data_into_lines(data: list[tuple[Any,...]]):
+def format_data_into_lines(data: list[tuple[Any, ...]]):
     lines: list[str] = []
 
     col_widths = [max(len(str(row[i])) for row in data)
-                    for i in range(len(data[0]))]
+                  for i in range(len(data[0]))]
     for row in data:
-        line = "\t".join(f"{str(item):<{col_widths[i]}}" 
-                        for i, item in enumerate(row))
+        line = "\t".join(f"{str(item):<{col_widths[i]}}"
+                         for i, item in enumerate(row))
         lines.append(f"\t{line}")
 
     return lines
@@ -92,38 +93,45 @@ ALLOWED_OPERATORS = {
 }
 
 
-def eval_expr(expr: str, variables: dict[str, Any]):
+def eval_expr(expr: str, variables: dict[str, int|float]):
     """
-    Safely evaluate an algebraic expression with variables.
-    
+    Safely evaluate an algebraic expression with variables and parentheses.
+    Also determine if the expression is a constant, single variable, or full expression.
+
     Args:
     - expr (str): The expression to evaluate.
     - variables (dict): A dictionary of variable names and their values.
-    
+
     Returns:
     - result: The evaluated result of the expression.
+    - expr_type: A string indicating if the expression is "constant", 
+        "single variable", or "expression".
     """
 
+    # Flag to track if the expression is just a single variable or constant
+    is_single_variable = True
+
     def eval_node(node):
-        if isinstance(node, ast.Constant):  # <number>
+        nonlocal is_single_variable
+
+        if isinstance(node, ast.Num):  # <number>
             return node.n
 
         if isinstance(node, ast.BinOp):  # <left> <operator> <right>
+            is_single_variable = False  # It's an expression
             left = eval_node(node.left)
             right = eval_node(node.right)
-
             op_type = type(node.op)
             if op_type in ALLOWED_OPERATORS:
                 return ALLOWED_OPERATORS[op_type](left, right)
-
             raise TypeError(f"Unsupported binary operator: {op_type}")
 
         if isinstance(node, ast.UnaryOp):  # - <operand> e.g., -1
+            is_single_variable = False  # Unary operator makes it an expression
             operand = eval_node(node.operand)
             op_type = type(node.op)
             if op_type in ALLOWED_OPERATORS:
                 return ALLOWED_OPERATORS[op_type](operand)
-
             raise TypeError(f"Unsupported unary operator: {op_type}")
 
         if isinstance(node, ast.Name):  # variable
@@ -131,10 +139,25 @@ def eval_expr(expr: str, variables: dict[str, Any]):
                 return variables[node.id]
             raise NameError(f"Use of undefined variable: {node.id}")
 
+        if isinstance(node, ast.Expr):  # Expression within parentheses
+            return eval_node(node.value)
+        if isinstance(node, ast.Call):
+            raise TypeError(
+                "Function calls are not allowed for safety reasons.")
         raise TypeError(f"Unsupported type: {type(node)}")
 
     # Parse expression
     parsed_expr = ast.parse(expr, mode='eval').body
 
     # Evaluate parsed AST
-    return eval_node(parsed_expr)
+    result = eval_node(parsed_expr)
+
+    # Determine the expression type
+    if isinstance(parsed_expr, ast.Name):
+        expr_type = "single variable"
+    elif is_single_variable and isinstance(parsed_expr, ast.Num):
+        expr_type = "constant"
+    else:
+        expr_type = "expression"
+
+    return result, expr_type
