@@ -1,3 +1,6 @@
+
+import ast
+import operator as op
 from typing import Any
 import graphviz
 import networkx as nx
@@ -75,3 +78,63 @@ def lowest_missing_positive_integer(string_list: list[str]) -> str:
         i += 1
 
     return str(i)
+
+
+# Supported operators
+ALLOWED_OPERATORS = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.Div: op.truediv,
+    ast.Pow: op.pow,
+    ast.BitXor: op.xor,
+    ast.USub: op.neg
+}
+
+
+def eval_expr(expr: str, variables: dict[str, Any]):
+    """
+    Safely evaluate an algebraic expression with variables.
+    
+    Args:
+    - expr (str): The expression to evaluate.
+    - variables (dict): A dictionary of variable names and their values.
+    
+    Returns:
+    - result: The evaluated result of the expression.
+    """
+
+    def eval_node(node):
+        if isinstance(node, ast.Constant):  # <number>
+            return node.n
+
+        if isinstance(node, ast.BinOp):  # <left> <operator> <right>
+            left = eval_node(node.left)
+            right = eval_node(node.right)
+
+            op_type = type(node.op)
+            if op_type in ALLOWED_OPERATORS:
+                return ALLOWED_OPERATORS[op_type](left, right)
+
+            raise TypeError(f"Unsupported binary operator: {op_type}")
+
+        if isinstance(node, ast.UnaryOp):  # - <operand> e.g., -1
+            operand = eval_node(node.operand)
+            op_type = type(node.op)
+            if op_type in ALLOWED_OPERATORS:
+                return ALLOWED_OPERATORS[op_type](operand)
+
+            raise TypeError(f"Unsupported unary operator: {op_type}")
+
+        if isinstance(node, ast.Name):  # variable
+            if node.id in variables:
+                return variables[node.id]
+            raise NameError(f"Use of undefined variable: {node.id}")
+
+        raise TypeError(f"Unsupported type: {type(node)}")
+
+    # Parse expression
+    parsed_expr = ast.parse(expr, mode='eval').body
+
+    # Evaluate parsed AST
+    return eval_node(parsed_expr)
