@@ -137,6 +137,27 @@ class TestReaction2:
 
 class TestReaction3:
     molecules = {
+        "Lig": MoleculeType.from_declaration("Lig(l,l)"),
+        "Lyn": MoleculeType.from_declaration("Lyn(U,SH2)"),
+        "Syk": MoleculeType.from_declaration("Syk(tSH2,l~Y~pY,a~Y~pY)"),
+        "Rec": MoleculeType.from_declaration("Rec(a,b~Y~pY,g~Y~pY)")
+    }
+
+    @pytest.mark.parametrize("declaration", [
+        "R2: Rec(a) + Lig(l,l!+) <-> Rec(a!2).Lig(l!2,l!+)  kp2, km2",
+    ])
+    def test_valid_1(self, declaration: str):
+        reaction = ReactionRule.from_declaration(declaration, self.molecules)
+        transformations = decompose_reaction(reaction)
+        reactants = reaction.reactants
+        products_res = apply_transforms(reactants, transformations)
+        g2 = build_chemical_array_graph(products_res)
+        equal = compare_chemical_array_graphs(reaction.products_graph, g2)
+        assert equal is True
+
+
+class TestReaction4:
+    molecules = {
         "L": MoleculeType.from_declaration("L(l,l)"),
         "R": MoleculeType.from_declaration("R(r,r)"),
     }

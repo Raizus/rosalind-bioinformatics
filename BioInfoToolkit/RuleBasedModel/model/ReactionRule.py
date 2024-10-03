@@ -386,7 +386,7 @@ def find_transformation(
                                                 curr_graph_r, graph_p, [n1], [n2])
         transformations.append(state_change_action)
 
-    if len(transformations) == 0:
+    if len(transformations) != 0:
         return transformations
 
     # find bond breaks
@@ -396,7 +396,7 @@ def find_transformation(
                                                bond_breaks[0], bond_breaks[1])
         transformations.append(bond_break_action)
 
-    if len(transformations) == 0:
+    if len(transformations) != 0:
         return transformations
 
     # find bond formations
@@ -421,8 +421,12 @@ def decompose_reaction(reaction: ReactionRule):
     while not compare_chemical_array_graphs(curr_graph_r, graph_p):
         node_map, node_map_reverse = reactants_to_products_node_map(curr_reactants,
                                                                     curr_graph_r, graph_p)
-        transformations2 = find_transformation(curr_reactants, curr_graph_r, graph_p,
-                                              node_map, node_map_reverse)
+        try:
+            transformations2 = find_transformation(curr_reactants, curr_graph_r, graph_p,
+                                                node_map, node_map_reverse)
+        except ValueError as exc:
+            msg = (f"Could not decompose the reaction:\n\t{reaction}")
+            raise ValueError() from exc
         if len(transformations2) == 0:
             msg = (f"Could not decompose the reaction '{reaction}' " +
                    "into basic transformations.")

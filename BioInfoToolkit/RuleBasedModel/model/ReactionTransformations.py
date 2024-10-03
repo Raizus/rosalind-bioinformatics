@@ -344,13 +344,13 @@ class ChangeStateAction(ReactionTransformation):
 
         match_func = node_pattern_matching_func
         matcher = nx.isomorphism.GraphMatcher(
-            specie.graph, self.patterns_graph, match_func)
+            specie.graph, self.patterns[i].graph, match_func)
         for mapping in matcher.subgraph_isomorphisms_iter():
             # reverse the map, we want the pattern to species map
             mapping = {n2: n1 for n1, n2 in mapping.items()}
 
             # affected node
-            node: tuple[int, int] = mapping[self.reaction_center_in[0]]
+            node: tuple[int, int] = mapping[self.reaction_center_in[0][1:]]
             j,k = node
             molecules = [mol.copy() for mol in specie.molecules]
             molecules[j].change_state(k, self.new_state)
