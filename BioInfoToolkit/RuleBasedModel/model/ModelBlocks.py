@@ -32,6 +32,11 @@ class MoleculeTypesBlock(ModelBlock):
         self.items[mol_type.name] = mol_type
 
     def gen_string(self):
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -57,12 +62,17 @@ class ObservablesBlock(ModelBlock):
         self.items[observable.label] = observable
 
     def gen_string(self):
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
         data: list[tuple[str,str,str]] = []
         for _, observable in self.items.items():
-            data.append((observable.type, observable.label, str(observable.pattern)))
+            data.append((observable.type, observable.label, str(observable.patterns)))
 
         lines.extend(format_data_into_lines(data))
         lines.append(f"end {self.name}\n")
@@ -83,6 +93,11 @@ class ParametersBlock(ModelBlock):
         # value = eval(declaration, {"__builtins__": None}, dict_aux)
 
     def gen_string(self):
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -118,6 +133,11 @@ class SeedSpeciesBlock(ModelBlock):
         return True
 
     def gen_string(self):
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -149,6 +169,11 @@ class ReactionRulesBlock(ModelBlock):
         self.count_id += 1
 
     def gen_string(self):
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -210,7 +235,7 @@ class CompartmentsBlock(ModelBlock):
                 if enclosing_compartment.dimensions != 3:
                     msg = f"The compartment '{name}' is a surface and must be enclosed by a volume."
                     raise ValueError(msg)
-                
+
             else: # this compartment is a volume
                 if enclosing_compartment.dimensions != 2:
                     msg = f"The compartment '{name}' is a volume and must be enclosed by a volume."
@@ -221,6 +246,11 @@ class CompartmentsBlock(ModelBlock):
         self.items[name] = compartment
 
     def gen_string(self) -> str:
+        """Returns the string of this model block.
+
+        Returns:
+            str: output string
+        """
         if len(self.items) == 0:
             return ''
 
@@ -232,7 +262,7 @@ class CompartmentsBlock(ModelBlock):
             name = compartment.name
             dimensions = compartment.dimensions
             volume = compartment.volume
-            enclosing_compartment = compartment.enclosing_compartment 
+            enclosing_compartment = compartment.enclosing_compartment
             enclosing_compartment = enclosing_compartment if enclosing_compartment else ''
             comment = f"# {compartment.comment}" if compartment.comment else ''
             data_line = (name, str(dimensions), volume, enclosing_compartment, comment)
