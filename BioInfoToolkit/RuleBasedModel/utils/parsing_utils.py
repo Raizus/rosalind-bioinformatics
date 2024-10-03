@@ -180,7 +180,7 @@ EXPRESSION_PARSER <<= pp.infixNotation(
 )
 
 TEXT_PARSER = pp.Combine(pp.ZeroOrMore(pp.Word(pp.printables)))
-COMMENT_PARSER = (pp.Suppress("#") + TEXT_PARSER('comment') +
+COMMENT_PARSER = (pp.Suppress("#") + pp.restOfLine('comment') +
                   (pp.LineEnd() | pp.StringEnd()))
 
 
@@ -283,3 +283,19 @@ def parsed_seed_species_to_seed_species_dict(parsed: pp.ParseResults) -> SeedSpe
         'expression': expression,
     }
     return result
+
+
+def parse_comment(line: str) -> str | None:
+    comment_parser = pp.Optional(pp.White()) + COMMENT_PARSER
+
+    try:
+        parsed = comment_parser.parseString(line)
+    except (pp.ParseException, pp.ParseBaseException):
+        return None
+        # msg = f"Comment declaration '{line}' is not in the correct format."
+        # raise ParsingError(msg) from exc
+
+    comment = parsed.get('comment', '')
+    if not isinstance(comment, str):
+        raise TypeError(f"type of {comment} must be a string.")
+    return comment

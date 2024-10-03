@@ -2,6 +2,7 @@ import pytest
 
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_compartment, parse_observable, \
     parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parse_comment
 
 
 class TestParseMoleculeType():
@@ -210,3 +211,14 @@ class TestParseCompartment():
         assert parsed['dimensions'] == dimensions
         assert parsed['volume'] == volume
         assert parsed['enclosing_compartment'] == enclosing_compartment
+
+
+class TestParseComment():
+    @pytest.mark.parametrize("comment", [
+        "#Free vs. ligand-bound receptor",
+        "# Free vs. ligand-bound receptor",
+        "     #Free vs. ligand-bound receptor",
+    ])
+    def test_valid(self, comment: str):
+        parsed = parse_comment(comment)
+        assert parsed is not None
