@@ -8,7 +8,7 @@ from BioInfoToolkit.RuleBasedModel.model.Observable import Observable
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import ReactionRule
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
-from BioInfoToolkit.RuleBasedModel.utils.utls import format_data_into_lines
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, format_data_into_lines
 
 
 class ModelBlock:
@@ -61,6 +61,12 @@ class ObservablesBlock(ModelBlock):
                 f"Observable with label '{observable.label}' already declared.")
         self.items[observable.label] = observable
 
+    def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
+        for observable in self.items.values():
+            if not observable.validate(molecule_types):
+                return False
+        return True
+
     def gen_string(self):
         """Returns the string of this model block.
 
@@ -72,7 +78,8 @@ class ObservablesBlock(ModelBlock):
 
         data: list[tuple[str,str,str]] = []
         for _, observable in self.items.items():
-            data.append((observable.type, observable.label, str(observable.patterns)))
+            patterns_str = ', '.join(str(pattern) for pattern in observable.patterns)
+            data.append((observable.type, observable.label, patterns_str))
 
         lines.extend(format_data_into_lines(data))
         lines.append(f"end {self.name}\n")
@@ -83,14 +90,42 @@ class ObservablesBlock(ModelBlock):
 class ParametersBlock(ModelBlock):
     name = 'parameters'
     items: OrderedDict[str, Parameter]
+    evaluated_params: OrderedDict[str, float|int]
 
     def __init__(self) -> None:
         super().__init__()
         self.items = OrderedDict()
+        self.evaluated_params = OrderedDict()
 
     def add_parameter(self, parameter: Parameter):
         self.items[parameter.name] = parameter
         # value = eval(declaration, {"__builtins__": None}, dict_aux)
+
+    def evaluate_parameters(self):
+        evaluated_params: OrderedDict[str, float | int] = OrderedDict()
+
+        while len(evaluated_params) != len(self.items):
+            new_eval = False
+            for name, param in self.items.items():
+                if name in evaluated_params:
+                    continue
+                value = eval_expr(param.expression, evaluated_params)
+                if not isinstance(value, int) and not isinstance(value, float):
+                    raise TypeError(f"value '{value}' must be of type int or float.")
+                evaluated_params[name] = value
+                new_eval = True
+            if not new_eval:
+                break
+
+        if len(evaluated_params) != len(self.items):
+            names = set(self.items.keys()) - set(evaluated_params.keys())
+            names_str = ', '.join(names)
+            msg = ("Could not evaluate all expressions. " +
+                   f"Specifically could not evaluate parameters: {names_str}")
+            raise ValueError(msg)
+
+        self.evaluated_params = evaluated_params
+
 
     def gen_string(self):
         """Returns the string of this model block.
@@ -132,6 +167,13 @@ class SeedSpeciesBlock(ModelBlock):
                 return False
         return True
 
+    def validate_expressions(self, variables: dict[str, int | float]) -> bool:
+        for _, specie in self.items.items():
+            value = eval_expr(specie.expression, variables)
+            if not isinstance(value, int) and not isinstance(value, float):
+                return False
+        return True
+
     def gen_string(self):
         """Returns the string of this model block.
 
@@ -167,6 +209,18 @@ class ReactionRulesBlock(ModelBlock):
         #         f"Observable with label '{observable.label}' already declared.")
         self.items[self.count_id] = rule
         self.count_id += 1
+
+    def validate_reactants(self, molecule_types: dict[str, MoleculeType]) -> bool:
+        for _, reaction in self.items.items():
+            if not reaction.validate_reactants(molecule_types):
+                return False
+        return True
+
+    def validate_rates(self, variables: dict[str, int | float]):
+        for _, reaction in self.items.items():
+            if not reaction.validate_rates(variables):
+                return False
+        return True
 
     def gen_string(self):
         """Returns the string of this model block.

@@ -13,3 +13,4 @@ def test_load_network(fp: str):
     model = load_model(fp)
 
     assert isinstance(model, Model)
+    assert model.validate() is True

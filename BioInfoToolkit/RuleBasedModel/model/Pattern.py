@@ -32,6 +32,30 @@ class Molecule:
                 "does not match other components with the same name.")
                 raise ValueError(msg)
 
+    def validate(self, molecule_types: dict[str, MoleculeType] | None) -> bool:
+        name = self.name
+        if molecule_types and name not in molecule_types:
+            return False
+
+        molecule_type = molecule_types[name] if molecule_types else None
+        if molecule_type:
+            for comp in self.components:
+                if comp.name not in molecule_type.components:
+                    return False
+
+                type_component = molecule_type.components[comp.name]
+                if not comp.matches_component(type_component):
+                    return False
+
+            molecule_comp_counts = self.components_counts
+            type_comp_counts = molecule_type.components_counts
+
+            for comp_name, count in molecule_comp_counts.items():
+                if count > type_comp_counts.get(comp_name, 0):
+                    return False
+
+        return True
+
     @property
     def name(self):
         return self._name
@@ -237,6 +261,13 @@ class Pattern:
         parsed = parse_pattern(declaration)
         reactant = cls.from_dict(parsed, molecule_types)
         return reactant
+
+    def validate(self, molecule_types: dict[str, MoleculeType] | None) -> bool:
+        for mol in self.molecules:
+            if not mol.validate(molecule_types):
+                return False
+            
+        return True
 
     @property
     def graph(self):

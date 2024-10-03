@@ -15,6 +15,13 @@ class Observable:
         self.label = label
         self.patterns = patterns
 
+    def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
+        for pattern in self.patterns:
+            if not pattern.validate(molecule_types):
+                return False
+
+        return True
+
     @classmethod
     def from_declaration(cls, declaration: str, molecules: dict[str, MoleculeType]):
         parsed = parse_observable(declaration)

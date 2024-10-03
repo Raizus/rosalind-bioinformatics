@@ -9,6 +9,7 @@ from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import BreakBon
     ChangeStateAction, FormBondTransform, ReactionTransformation, apply_transforms
 from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, \
     compare_chemical_array_graphs, node_matching
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 ChemArrayNodeId = tuple[int, int, int]
 
@@ -43,7 +44,6 @@ class ReactionRule:
         meaning if there is a bond, first we need to break the bond, 
         and only after can we destroy a molecule 
     """
-
     name: str
     reactants: list[Pattern] = []
     products: list[Pattern] = []
@@ -53,6 +53,7 @@ class ReactionRule:
     reverse_rate_value: float
     reactants_graph: nx.Graph
     products_graph: nx.Graph
+    transformations: list[ReactionTransformation]
 
     def __init__(self,
                  name: str,
@@ -67,6 +68,7 @@ class ReactionRule:
         self.forward_rate_value = 0.0
         self.reverse_rate = reverse_rate
         self.reverse_rate_value = 0.0
+        self.transformations = []
 
         self.reactants_graph = build_chemical_array_graph(reactants)
         self.products_graph = build_chemical_array_graph(products)
@@ -105,6 +107,33 @@ class ReactionRule:
                                     self.reactants, self.reverse_rate)
             return new_rule
         raise TypeError(f"Reaction rule must have a reverse rate ({self.reverse_rate})")
+
+    def validate_reactants(self, molecule_types: dict[str, MoleculeType]) -> bool:
+        for pattern in self.reactants + self.products:
+            valid = pattern.validate(molecule_types)
+            if not valid:
+                return False
+
+        return True
+
+    def validate_rates(self, variables: dict[str, int|float]) -> bool:
+        rate_f = self.forward_rate
+        rate_r = self.reverse_rate
+
+        value = eval_expr(rate_f, variables)
+        if not isinstance(value, int) and not isinstance(value, float):
+            return False
+
+        if rate_r:
+            value = eval_expr(rate_r, variables)
+            if not isinstance(value, int) and not isinstance(value, float):
+                return False
+
+        return True
+
+    def decompose_reaction(self):
+        transformations = decompose_reaction(self)
+        self.transformations = transformations
 
     def __repr__(self) -> str:
         left_side = ' + '.join(str(reagent) for reagent in self.reactants)
@@ -377,7 +406,7 @@ def find_transformation(
                                               bond_forms[0], bond_forms[1])
         transformations.append(bond_forms_action)
 
-    find_deleted_molecules(curr_graph_r, graph_p, node_map)
+    # find_deleted_molecules(curr_graph_r, graph_p, node_map)
 
     return transformations
 
@@ -395,7 +424,9 @@ def decompose_reaction(reaction: ReactionRule):
         transformations2 = find_transformation(curr_reactants, curr_graph_r, graph_p,
                                               node_map, node_map_reverse)
         if len(transformations2) == 0:
-            break
+            msg = (f"Could not decompose the reaction '{reaction}' " +
+                   "into basic transformations.")
+            raise ValueError(msg)
 
         transformations.extend(transformations2)
         curr_reactants = apply_transforms(curr_reactants, transformations2)

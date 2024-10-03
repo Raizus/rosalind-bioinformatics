@@ -2,6 +2,8 @@
 from BioInfoToolkit.RuleBasedModel.model.ModelBlocks import CompartmentsBlock, \
     MoleculeTypesBlock, ObservablesBlock, ParametersBlock, ReactionRulesBlock, SeedSpeciesBlock
 
+class InvalidModelBlockError(Exception):
+    pass
 
 class Model:
     molecule_types_block: MoleculeTypesBlock
@@ -18,6 +20,40 @@ class Model:
         self.species_block = SeedSpeciesBlock()
         self.reaction_rules_block = ReactionRulesBlock()
         self.compartments_block = CompartmentsBlock()
+
+    def validate(self) -> bool:
+        molecule_types = self.molecule_types_block.items
+
+        #validate observables
+        if not self.observables_block.validate(molecule_types):
+            msg = "Observables block is not valid."
+            raise InvalidModelBlockError(msg)
+
+        # evaluate parameters
+        try:
+            self.parameters_block.evaluate_parameters()
+        except (TypeError, ValueError) as exc:
+            msg = "Parameters block is not valid."
+            raise InvalidModelBlockError(msg) from exc
+
+        # validate species
+        variables = self.parameters_block.evaluated_params
+        if not self.species_block.validate_species(molecule_types):
+            msg = "Species block is not valid, due to invalid species."
+            raise InvalidModelBlockError(msg)
+        if not self.species_block.validate_expressions(variables):
+            msg = "Species block is not valid, due to invalid expression."
+            raise InvalidModelBlockError(msg)
+
+        # validate rules
+        if not self.reaction_rules_block.validate_reactants(molecule_types):
+            msg = "Reaction rules block is not valid, due to invalid pattern."
+            raise InvalidModelBlockError(msg)
+        if not self.reaction_rules_block.validate_rates(variables):
+            msg = "Reaction rules block is not valid, due to invalid rate expression."
+            raise InvalidModelBlockError(msg)
+
+        return True
 
     def as_string(self) -> str:
         out = ''
