@@ -1,16 +1,18 @@
 
 from collections import defaultdict
-from itertools import product
 import networkx as nx
 import graphviz
 
-from BioInfoToolkit.RuleBasedModel.model.Model import Model
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
-from BioInfoToolkit.RuleBasedModel.model.Species import Species, species_match_gen
-from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock, \
-    ReactionsBlock, SpeciesBlock
+from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
+from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, build_rules_dict
+from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
+from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
+
+
+class NetworkConstructionError(Exception):
+    pass
 
 
 class ReactionNetwork:
@@ -29,64 +31,59 @@ class ReactionNetwork:
         self.groups_block = GroupsBlock()
         self.model = model
 
-    def generate_parameters(self):
+    def build_network(self, model: Model):
+        self.model = model
+
+        try:
+            model.validate()
+        except InvalidModelBlockError as exc:
+            msg = "Could not build the reaction network. Model has invalid block(s)."
+            raise NetworkConstructionError(msg) from exc
+
+        # generate parameters
+        self.generate_parameters(model)
+
+        # generate seed species
+        self.generate_seed_species(model)
+
+        # generate reactions
+        self.generate_reactions(model)
+
+        # generate groups
+        self.populate_groups(model)
+        a = 0
+
+    def generate_parameters(self, model: Model):
         params_block = self.parameters_block
-        if self.model is None:
-            raise ValueError("Model must be defined in order to generate parameters.")
-        model_params = self.model.parameters_block.items
-        params_copy = model_params.copy()
+        model_params = model.parameters_block.items
+        evaluated_params = model.parameters_block.evaluated_params
 
-        while len(params_copy):
-            for name, param in params_copy.items():
-                if name in params_block.items:
-                    continue
-                param2 = param.copy()
-                success = param2.eval()
-                if success:
-                    params_block.add_parameter(param2)
-                # value = eval(declaration, {"__builtins__": None}, dict_aux)
+        for name in evaluated_params.keys():
+            param = model_params[name]
+            params_block.add_parameter(param)
 
-            # remove the successfuly evaluated parameters added to the parameters block
-            # from params_copy. If no param is removed stop, and there are parameters 
-            # which were not evaluated successfully.
-            stop = True
-            for name in params_block.items:
-                if name in params_copy:
-                    params_copy.pop(name)
-                    stop = False
-
-            if stop:
-                break
-
-    def generate_seed_species(self):
+    def generate_seed_species(self, model: Model):
         """Generates the initial seed species, that are used to build the
         reaction network
 
         Raises:
             ValueError: Raised if one of the species is well defined.
         """
-        if self.model is None:
-            raise ValueError(
-                "Model must be defined in order to generate seed species.")
 
-        species_dict = self.model.species_block.items
-        mol_types = dict(self.model.molecule_types_block.items)
+        species_dict = model.species_block.items
+        mol_types = dict(model.molecule_types_block.items)
 
         for _, specie in species_dict.items():
             if not specie.validate(mol_types):
                 raise ValueError(f"Specie {specie} is not correctly defined.")
-            self.species_block.add_species(specie)
+            self.species_block.add_specie(specie)
 
-    def populate_groups(self):
+    def populate_groups(self, model: Model):
         """After the reactions and species have been generated,
         call this function to populate the observables groups
         """
-        if self.model is None:
-            raise ValueError(
-                "Model must be defined in order to populate groups.")
-
         groups_block = self.groups_block
-        obs_dict = self.model.observables_block.items
+        obs_dict = model.observables_block.items
         species_dict = self.species_block.items
 
         for name, observable in obs_dict.items():
@@ -99,57 +96,7 @@ class ReactionNetwork:
             group = ObservablesGroup(name, group_list)
             groups_block.add_group(group)
 
-    def reaction_gen_iter(self, n_iter: int):
-        reactions_block = self.reactions_block
-        reactions_dict = reactions_block.items
-
-        if self.model is None:
-            raise ValueError(
-                "Model must be defined in order to generate reactions.")
-
-        species_block = self.species_block
-        species_dict = species_block.items
-
-        ni_rxs = len(reactions_dict)
-        ni_species = len(species_dict)
-
-        reaction_rules = self.model.reaction_rules_block.items
-
-        # TODO: add memoization to make it efficient
-        for rule_id, rule in reaction_rules.items():
-            name = rule.name
-            reactants = rule.reactants
-            products = rule.products
-
-            reactants_gens = [species_match_gen(patt, species_dict) for patt in reactants]
-            # TODO: Note that, to apply a transformation to a species matching the pattern
-            # we must know the node matching map, so that we can apply the transformations
-            # to the correct reaction center
-            # the reaction center in the reaction rule patterns may not match the center in the
-            # species patterns
-
-            for react_sp_ids in product(*reactants_gens):
-                react_sp_patts = [species_dict[sp_id].pattern for sp_id in react_sp_ids]
-
-                # apply rule to reactants
-                prod_sp_patts: list[Pattern] = []
-
-                # if generated products are new, then add them to species and 
-                # add reaction to the reaction block
-                prod_sp_ids: list[int] = []
-                for prod_sp in prod_sp_patts:
-                    specie = Species(prod_sp, "0")
-                    sp_id = species_block.add_species(specie)
-                    prod_sp_ids.append(sp_id)
-
-                    # if none of the species is new, we can ignore the reaction
-                    comment = f"{rule.name}"
-                    rxn = Reaction(list(react_sp_ids), prod_sp_ids, rule_id, comment)
-                    # create reaction
-
-    def generate_network(self):
-        print("Generate seed species")
-        self.generate_seed_species()
+    def generate_reactions(self, model: Model):
 
         reactions_block = self.reactions_block
         reactions_dict = reactions_block.items
@@ -157,22 +104,35 @@ class ReactionNetwork:
         species_block = self.species_block
         species_dict = species_block.items
 
-        ni_rxs = len(reactions_dict)
-        ni_species = len(species_dict)
+        reaction_rules = build_rules_dict(model.reaction_rules_block.items)
+        reaction_gen = ReactionGenerator(reaction_rules)
+
+        n_rxs_prev = len(reactions_dict)
+        n_species_prev = len(species_dict)
 
         n_iter: int = 0
+        max_iter: int = 100
 
-        while True:
-            self.reaction_gen_iter(n_iter)
+        msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
+        print(msg)
 
-            ni2_rxs = len(reactions_dict)
-            ni2_species = len(species_dict)
+        while n_iter < max_iter:
+            for reaction in reaction_gen.generate(species_block):
+                self.reactions_block.add_reaction(reaction)
 
-            # no new reactions or species this iteration
-            if ni_rxs == ni2_rxs and ni_species == ni2_species:
+            n_rxs = len(reactions_dict)
+            n_species = len(species_dict)
+
+            # no new reactions or species this iteration, stop
+            if n_rxs_prev == n_rxs and n_species_prev == n_species:
                 break
 
+            n_rxs_prev = n_rxs
+            n_species_prev = n_species
             n_iter += 1
+
+            msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
+            print(msg)
 
     def as_string(self) -> str:
         out = ''

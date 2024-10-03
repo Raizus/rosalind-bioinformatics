@@ -2,9 +2,11 @@
 
 from itertools import product
 from typing import OrderedDict
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
+
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import ReactionRule
+from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import apply_transforms
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, species_match_gen
+from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_reaction
 
 
@@ -103,8 +105,11 @@ class ReactionGenerator:
     def __init__(self, rules: OrderedDict[int, ReactionRule]) -> None:
         self.rules = rules
         self.apply_rule_cache = {}
+        self.species_match_cache = {}
 
-    def generate(self, species_dict: OrderedDict[int, Species]):
+    def generate(self, species_block: SpeciesBlock):
+        species_dict = species_block.items
+
         for rule_id, rule in self.rules.items():
             reactants = rule.reactants
             products = rule.products
@@ -124,17 +129,22 @@ class ReactionGenerator:
                     continue
 
                 # apply rule to reactants
-                prod_sp_patts: list[Pattern] = []
+                prod_sp_patts = apply_transforms(
+                    react_sp_patts, rule.transformations)
 
-                # if generated products are new, then add them to species and 
+                # if generated products are new, then add them to species and
                 # add reaction to the reaction block
                 prod_sp_ids: list[int] = []
                 for prod_sp in prod_sp_patts:
+                    # try to add specie (may not be a new specie)
                     specie = Species(prod_sp, "0")
-                    sp_id = species_block.add_species(specie)
+                    sp_id = species_block.add_specie(specie)
                     prod_sp_ids.append(sp_id)
 
-                    # if none of the species is new, we can ignore the reaction
-                    comment = f"{rule.name}"
-                    rxn = Reaction(list(react_sp_ids), prod_sp_ids, rule_id, comment)
-                    # create reaction
+                # update cache
+                self.apply_rule_cache[rule_sp_key] = prod_sp_ids
+
+                # create new reaction
+                comment = f"{rule.name}"
+                rxn = Reaction(list(react_sp_ids), prod_sp_ids, rule_id, rule.forward_rate, comment)
+                yield rxn
