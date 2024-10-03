@@ -38,7 +38,7 @@ def load_network(file_path: str):
             elif current_block == 'species':
                 parsed_species = parse_seed_species(line)
                 species = Species.from_dict(parsed_species, None)
-                network.species_block.add_species(species)
+                network.species_block.add_specie(species)
 
             elif current_block == 'reactions':
                 reaction = Reaction.from_declaration(line)
