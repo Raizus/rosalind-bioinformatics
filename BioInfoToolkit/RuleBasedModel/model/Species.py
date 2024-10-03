@@ -8,6 +8,7 @@ from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_seed_species
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, \
     match_pattern_specie, node_pattern_matching_func
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import SeedSpeciesDict
 
 class Species:
     compartment: str|None
@@ -28,17 +29,18 @@ class Species:
         self.compartment = compartment
 
     @classmethod
-    def from_declaration(cls,
-                         declaration: str,
-                         molecules: dict[str, MoleculeType]):
-        # parse string declaration
-        parsed = parse_seed_species(declaration)
-        if not parsed:
-            raise ValueError(f"Invalid reactant declaration: {declaration}")
-
+    def from_dict(cls, parsed: SeedSpeciesDict, molecules: dict[str, MoleculeType] | None) -> "Species":
         pattern = Pattern.from_dict(parsed["pattern"], molecules)
         expression = parsed["expression"]
         specie = Species(pattern, expression)
+        return specie
+
+    @classmethod
+    def from_declaration(cls,
+                         declaration: str,
+                         molecules: dict[str, MoleculeType] | None) -> "Species":
+        parsed = parse_seed_species(declaration)
+        specie = cls.from_dict(parsed, molecules)
         return specie
 
     def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
@@ -59,6 +61,8 @@ class Species:
             if mol.components_counts != mol_type.components_counts:
                 return False
             for comp in mol.components:
+                if comp.states is None:
+                    return False
                 if not comp.is_stateless() and comp.state not in comp.states:
                     return False
                 if comp.bond in ('?', '+'):
