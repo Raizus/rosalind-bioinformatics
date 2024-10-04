@@ -103,7 +103,7 @@ class ReactionNetwork:
             group = ObservablesGroup(name, group_list)
             groups_block.add_group(group)
 
-    def generate_reactions(self, model: Model):
+    def generate_reactions(self, model: Model, max_iter: int | None = None):
 
         reactions_block = self.reactions_block
         reactions_dict = reactions_block.items
@@ -118,12 +118,12 @@ class ReactionNetwork:
         n_species_prev = len(species_dict)
 
         n_iter: int = 0
-        max_iter: int = 100
+        max_stoich: int | None = None
 
         msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
         print(msg)
 
-        while n_iter < max_iter:
+        while True:
             for reaction in reaction_gen.generate(species_block):
                 self.reactions_block.add_reaction(reaction)
 
@@ -140,6 +140,9 @@ class ReactionNetwork:
 
             msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
             print(msg)
+
+            if max_iter and n_iter >= max_iter:
+                break
 
     def as_string(self) -> str:
         out = ''
@@ -215,18 +218,9 @@ class ReactionNetwork:
 
         dot.render(filename)
 
-    def gillespie_simulation(self, total_time: float):
+    def get_rate_constants_dict(self):
         evaluated_params = self.parameters_block.evaluated_params
 
-        # evaluate species expressions
-        self.species_block.validate_expressions(evaluated_params)
-
-        # initialize concentrations
-        concentrations: OrderedDict[int, int] = OrderedDict()
-        for sp_id, specie in self.species_block.items.items():
-            concentrations[sp_id] = int(specie.conc)
-
-        # maps reaction ids to reaction rates
         rate_constants: OrderedDict[int, float] = OrderedDict()
         for r_id, rxn in self.reactions_block.items.items():
             rate_expr = rxn.rate_expression
@@ -234,6 +228,20 @@ class ReactionNetwork:
             if not isinstance(rate_val, int) and not isinstance(rate_val, float):
                 raise TypeError(f"rate_val '{rate_val}' must be int or float.")
             rate_constants[r_id] = float(rate_val)
+
+        return rate_constants
+
+    def gillespie_simulation(self, total_time: float):
+        evaluated_params = self.parameters_block.evaluated_params
+
+        # evaluate species expressions and initialize concentrations
+        self.species_block.validate_expressions(evaluated_params)
+        concentrations: OrderedDict[int, int] = OrderedDict()
+        for sp_id, specie in self.species_block.items.items():
+            concentrations[sp_id] = int(specie.conc)
+
+        # maps reaction id's to reaction rate constants
+        rate_constants = self.get_rate_constants_dict()
 
         # initialize observable groups concentrations
         groups_concentration: OrderedDict[int, list[int]] = OrderedDict()
