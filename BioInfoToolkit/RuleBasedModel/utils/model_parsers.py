@@ -342,3 +342,90 @@ def parse_compartment(declaration: str) -> CompartmentDict:
     except (pp.ParseException, pp.ParseBaseException) as ee:
         msg = f"Compartment '{declaration}' not declared correctly."
         raise ParsingError(msg) from ee
+
+
+def generate_network_parsed_dict(parsed_dict: dict[Any, Any]) -> GenerateNetworkDict:
+    max_iter: int | None = parsed_dict.get('max_iter', None)
+    overwrite: bool | None = parsed_dict.get('overwrite', None)
+    text_reaction: bool | None = parsed_dict.get('text_reaction', None)
+    max_stoich: dict[str, int] | None = parsed_dict.get('max_stoich', None)
+
+    result: GenerateNetworkDict = {
+        'max_iter': max_iter,
+        'overwrite': overwrite,
+        'max_stoich': max_stoich,
+        'text_reaction': text_reaction
+    }
+
+    return result
+
+
+def parse_generate_network(declaration: str):
+    # Basic patterns
+    integer = pp.Word(pp.nums)
+    non_negative_integer = pp.Word(pp.nums)
+    zero_or_one = pp.Word('01', exact=1)
+    name = NAME_EXPRESSION
+
+    # parse_actions
+    def fn1(token: pp.ParseResults):
+        return bool(int(token.asList()[0]))
+
+    def fn2(token: pp.ParseResults):
+        return int(token.asList()[0])
+
+    def fn3(token: pp.ParseResults):
+        stoich_dict: dict[str, int] = {}
+        dict_aux = token.asDict()['max_stoich']
+        for key, val in dict_aux.items():
+            stoich_dict[key] = int(val)
+        return stoich_dict
+
+    # Define key=>value pairs for each parameter
+    overwrite_expr = (
+        pp.Literal("overwrite")
+        + pp.Suppress("=>")
+        + zero_or_one("overwrite").set_parse_action(fn1))
+
+    text_reaction_expr = (
+        pp.Literal("TextReaction")
+        + pp.Suppress("=>")
+        + zero_or_one("text_reaction").set_parse_action(fn1))
+
+    max_iter_expr = (
+        pp.Literal("max_iter")
+        + pp.Suppress("=>")
+        + integer("max_iter").set_parse_action(fn2))
+
+    # max_stoich list of {name=>value}
+    stoich_pair = pp.Group(name("name") + pp.Suppress("=>") +
+                        non_negative_integer("value"))
+    max_stoich_expr = (
+        pp.Literal("max_stoich") + pp.Suppress("=>")
+        + pp.Suppress("{")
+        + pp.Dict(pp.delimitedList(stoich_pair)
+                  )("max_stoich").set_parse_action(fn3)
+        + pp.Suppress("}")
+    )
+
+    # Combining all expressions
+    parameters_expr = pp.Optional(
+        pp.Suppress("{") +
+        pp.delimitedList(overwrite_expr | text_reaction_expr
+                         | max_iter_expr | max_stoich_expr)
+        + pp.Suppress("}"))
+
+    expr = (
+        pp.Suppress("generate_network(")
+        + parameters_expr 
+        + pp.Suppress(");")
+    )
+
+    try:
+        parsed = expr.parseString(declaration)
+        parsed_dict = parsed.asDict()
+        result = generate_network_parsed_dict(parsed_dict)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        msg = f"generate_network '{declaration}' not declared correctly."
+        raise ParsingError(msg) from ee
