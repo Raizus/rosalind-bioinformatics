@@ -87,7 +87,10 @@ class Reaction:
 def build_rules_dict(rules: OrderedDict[int, ReactionRule]) -> OrderedDict[int, ReactionRule]:
     new_rules: OrderedDict[int, ReactionRule] = OrderedDict()
     count = 1
-    for _, rule in rules.items():
+    for r_id, rule in rules.items():
+        if not rule.name:
+            rule.name = f"R{r_id}"
+
         new_rule = rule.get_forward()
         new_rules[count] = new_rule
         count += 1
