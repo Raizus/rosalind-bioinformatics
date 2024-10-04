@@ -12,9 +12,11 @@ class NetworkBlock:
 class ParametersBlock(NetworkBlock):
     name = "parameters"
     items: OrderedDict[str, Parameter]
+    evaluated_params: OrderedDict[str, float | int]
 
     def __init__(self) -> None:
         self.items = OrderedDict()
+        self.evaluated_params = OrderedDict()
 
     def add_parameter(self, parameter: Parameter):
         self.items[parameter.name] = parameter

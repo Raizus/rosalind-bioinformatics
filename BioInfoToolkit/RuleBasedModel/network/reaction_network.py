@@ -1,7 +1,11 @@
 
 from collections import defaultdict
+from functools import reduce
+from itertools import accumulate
+from typing import OrderedDict
 import networkx as nx
 import graphviz
+import numpy as np
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
@@ -9,6 +13,7 @@ from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, build_rules_dict
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 
 class NetworkConstructionError(Exception):
@@ -24,12 +29,12 @@ class ReactionNetwork:
     graph: nx.DiGraph
     model: Model | None
 
-    def __init__(self, model: Model | None = None) -> None:
+    def __init__(self) -> None:
         self.parameters_block = ParametersBlock()
         self.species_block = SpeciesBlock()
         self.reactions_block = ReactionsBlock()
         self.groups_block = GroupsBlock()
-        self.model = model
+        self.model = None
 
     def build_network(self, model: Model):
         self.model = model
@@ -61,6 +66,8 @@ class ReactionNetwork:
         for name in evaluated_params.keys():
             param = model_params[name]
             params_block.add_parameter(param)
+
+        params_block.evaluated_params = evaluated_params
 
     def generate_seed_species(self, model: Model):
         """Generates the initial seed species, that are used to build the
@@ -207,3 +214,81 @@ class ReactionNetwork:
                 dot.edge(node_id, str(prod))
 
         dot.render(filename)
+
+    def gillespie_simulation(self, total_time: float):
+        evaluated_params = self.parameters_block.evaluated_params
+
+        # evaluate species expressions
+        self.species_block.validate_expressions(evaluated_params)
+
+        # initialize concentrations
+        concentrations: OrderedDict[int, int] = OrderedDict()
+        for sp_id, specie in self.species_block.items.items():
+            concentrations[sp_id] = int(specie.conc)
+
+        # maps reaction ids to reaction rates
+        rate_constants: OrderedDict[int, float] = OrderedDict()
+        for r_id, rxn in self.reactions_block.items.items():
+            rate_expr = rxn.rate_expression
+            rate_val, _ = eval_expr(rate_expr, evaluated_params)
+            if not isinstance(rate_val, int) and not isinstance(rate_val, float):
+                raise TypeError(f"rate_val '{rate_val}' must be int or float.")
+            rate_constants[r_id] = float(rate_val)
+
+        # initialize observable groups concentrations
+        groups_concentration: OrderedDict[int, list[int]] = OrderedDict()
+        for g_id, group in self.groups_block.items.items():
+            concentration = group.compute_concentration(concentrations)
+            groups_concentration[g_id] = [int(concentration)]
+
+        # apply gillespie algorithm
+        time = 0.0
+        times: list[float] = [time]
+
+        while time < total_time:
+            rates: OrderedDict[int, float] = OrderedDict()
+            # compute the rates for each reaction
+            # the rate is equal to the product of the concentrations of the left
+            # side reagents and the reaction rate constant
+            for r_id, rxn in self.reactions_block.items.items():
+                rate_constant = rate_constants[r_id]
+                concentrations_left: list[int] = []
+                for reactant in rxn.reactants:
+                    if reactant in concentrations:
+                        concentrations_left.append(concentrations[reactant])
+                    else:
+                        raise KeyError(
+                            f"Species with id '{reactant}' not in the concentrations dictionary.")
+                rate = rate_constant * reduce(lambda x, y: x*y, concentrations_left)
+                rates[r_id] = rate
+
+            total_rate = sum(rates.values())
+            if total_rate == 0:
+                break
+
+            # Time until the next reaction
+            tau = np.random.exponential(1 / total_rate)
+            time += tau
+
+            # Determine which reaction occurs
+            reaction_choice = np.random.rand() * total_rate
+            # select the reaction by computing the comulative distribution function from the rates
+            cumulative_rates = list(accumulate(rates.values()))
+            chosen_reaction = next(i for i, rate in enumerate(
+                cumulative_rates) if rate > reaction_choice)
+
+            # Update concentrations based on the chosen reaction
+            rxn = self.reactions_block.items[chosen_reaction]
+            for reactant in rxn.reactants:
+                concentrations[reactant] -= 1
+            for prod in rxn.products:
+                concentrations[prod] += 1
+
+            times.append(time)
+
+            # update observables concentrations
+            for g_id, group in self.groups_block.items.items():
+                concentration = group.compute_concentration(concentrations)
+                groups_concentration[g_id].append(int(concentration))
+
+        return groups_concentration

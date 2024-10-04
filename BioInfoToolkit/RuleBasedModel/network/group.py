@@ -19,6 +19,11 @@ class ObservablesGroup:
         group = ObservablesGroup(label, species)
         return group
 
+    def compute_concentration(self, concentrations: dict[int, int] | dict[int, float]):
+        concentration = sum(w*concentrations[sp_id]
+                            for sp_id, w in self.weighted_species)
+        return concentration
+
     def __repr__(self) -> str:
         out = f"{self.name} {','.join(f'{w}*{sp_id}' for sp_id, w in self.weighted_species)}"
         return out

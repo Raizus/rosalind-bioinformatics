@@ -4,7 +4,7 @@ from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, find_species_match
 from BioInfoToolkit.RuleBasedModel.network.blocks import NetworkBlock
-from BioInfoToolkit.RuleBasedModel.utils.utls import format_data_into_lines
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, format_data_into_lines
 
 
 class SpeciesBlock(NetworkBlock):
@@ -55,6 +55,14 @@ class SpeciesBlock(NetworkBlock):
             valid = specie.validate(molecule_types)
             if not valid:
                 return False
+        return True
+
+    def validate_expressions(self, variables: dict[str, int | float]) -> bool:
+        for _, specie in self.items.items():
+            value, _ = eval_expr(specie.expression, variables)
+            if not isinstance(value, int) and not isinstance(value, float):
+                return False
+            specie.conc = value
         return True
 
     def gen_string(self):
