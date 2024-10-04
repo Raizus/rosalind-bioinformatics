@@ -1,8 +1,8 @@
 from typing import Any
 import pyparsing as pp
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, UNSIGNED_NUMBER_PARSER, VARIABLE_PARSER, CompartmentDict, MoleculeTypeComponentDict, \
-    MoleculeTypeDict, MoleculeDict, ParsingError, ReactionRuleDict, ObservableDict, \
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, NUMS, UNSIGNED_NUMBER_PARSER, VARIABLE_PARSER, CompartmentDict, GenerateNetworkDict, MoleculeTypeComponentDict, \
+    MoleculeTypeDict, MoleculeDict, ObservableExpressionDict, ParsingError, ReactionRuleDict, ObservableDict, \
     ParameterDict, SeedSpeciesDict, NAME_EXPRESSION, STATE, MOLECULE_PARSER, \
     COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_compartment_to_compartment_dict, parsed_parameter_to_parameter_dict,parsed_seed_species_to_seed_species_dict
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_dict_list
@@ -21,13 +21,34 @@ def parsed_observable_to_dict(parsed: pp.ParseResults) -> ObservableDict:
     if not isinstance(label, str):
         raise TypeError(f"label {label} must be a string")
 
-    parsed_patterns = parsed.patterns
-    patterns = parsed_reactants_to_list(parsed_patterns)
+    parsed_expressions = parsed.expressions
+    if not isinstance(parsed_expressions, pp.ParseResults):
+        raise TypeError(f"{parsed_expressions} must be of type ParseResults.")
+
+    expressions: list[ObservableExpressionDict] = []
+    for parsed_exp in parsed_expressions:
+        parsed_pattern = parsed_exp.pattern
+        sign: str | None = parsed_exp.get('sign', None)
+        parsed_value = parsed_exp.get('value', None)
+
+        value: int | None = None
+        if isinstance(parsed_value, str):
+            value = int(parsed_value)
+
+        pattern = parsed_pattern_to_dict_list(parsed_pattern)        
+        obs_expr: ObservableExpressionDict = {
+            'pattern': pattern,
+            'sign': sign,
+            'value': value
+        }
+
+        expressions.append(obs_expr)
+
 
     result: ObservableDict = {
         'type': obs_type,
         'label': label,
-        'patterns': patterns,
+        'expressions': expressions
     }
 
     return result
@@ -232,14 +253,30 @@ def parse_molecule_type(declaration: str):
 def parse_observable(declaration: str) -> ObservableDict:
     type_pattern = pp.Literal('Molecules') | pp.Literal('Species')
     label_pattern = pp.Word(pp.alphas, pp.alphanums + '_')
+    name_pattern = NAME_EXPRESSION('molecule_name')
 
     pattern_parser = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
-    
-    patterns_list_parser = pp.delimitedList(pattern_parser)
+        COMPLEX_PARSER
+        | pp.Group(MOLECULE_PARSER)
+        | pp.Group(name_pattern))
+
+    sign_parser = (
+        pp.Literal('==')
+        | pp.Literal('<=') | pp.Literal('<')
+        | pp.Literal('>=') | pp.Literal('>')
+    )
+
+    obs_element_parser = pp.Group(
+        pattern_parser('pattern')
+        + pp.Optional(
+            sign_parser('sign') + NUMS('value')
+        )
+    )
+
+    elements_list_parser = pp.delimitedList(obs_element_parser)
 
     observable_parser = type_pattern(
-        'type') + label_pattern('label') + patterns_list_parser('patterns')
+        'type') + label_pattern('label') + elements_list_parser('expressions')
 
     try:
         parsed = observable_parser.parseString(declaration)

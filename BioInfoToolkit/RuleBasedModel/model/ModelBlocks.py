@@ -78,7 +78,7 @@ class ObservablesBlock(ModelBlock):
 
         data: list[tuple[str,str,str]] = []
         for _, observable in self.items.items():
-            patterns_str = ', '.join(str(pattern) for pattern in observable.patterns)
+            patterns_str = ', '.join(str(pattern) for pattern in observable.elements)
             data.append((observable.type, observable.label, patterns_str))
 
         lines.extend(format_data_into_lines(data))

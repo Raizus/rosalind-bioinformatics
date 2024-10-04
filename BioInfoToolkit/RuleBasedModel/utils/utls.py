@@ -161,3 +161,18 @@ def eval_expr(expr: str, variables: dict[str, int|float]):
         expr_type = "expression"
 
     return result, expr_type
+
+def apply_inequality(val_1: int, sign: str, val_2: int) -> bool:
+    if sign == '==':
+        return val_1 == val_2
+    elif sign == '<':
+        return val_1 < val_2
+    elif sign == '<=':
+        return val_1 <= val_2
+    elif sign == '>':
+        return val_1 > val_2
+    elif sign == '>=':
+        return val_1 >= val_2
+    else:
+        raise ValueError(
+            f"Invalid sign: {sign}. Valid signs are: '==', '<', '<=', '>', '>='")

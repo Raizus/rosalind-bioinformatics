@@ -190,12 +190,15 @@ class TestParseObservable():
         ("Molecules A A(b)", 'Molecules', 'A', 1),
         ("Species AC A(b,c!1).C(a!0)", 'Species', 'AC', 1),
         ("Molecules A_B_C A(b), B(), C(a!0)", 'Molecules', 'A_B_C', 3),
+        ("Species R5_6 R==5, R==6", 'Species', 'R5_6', 2),
+        ("Species Rbig R>20", 'Species', 'Rbig', 1),
+        ("Species Rbig R<=3, A(b,c!1).C(a!0)", 'Species', 'Rbig', 2),
     ])
     def test_valid(self, declaration: str, obs_type: str, label: str, num_patterns: int):
         parsed = parse_observable(declaration)
         assert parsed['type'] == obs_type
         assert parsed["label"] == label
-        assert len(parsed["patterns"]) == num_patterns
+        assert len(parsed["expressions"]) == num_patterns
         assert parsed is not None
 
 

@@ -50,11 +50,17 @@ class ReactionDict(TypedDict):
     comment: str
 
 
+class ObservableExpressionDict(TypedDict):
+    pattern: list[MoleculeDict]
+    sign: str | None
+    value: int | None
+
+
 class ObservableDict(TypedDict):
     """Typed dict for observable"""
     type: str
     label: str
-    patterns: list[list[MoleculeDict]]
+    expressions: list[ObservableExpressionDict]
 
 
 class ObservablesGroupDict(TypedDict):
@@ -190,7 +196,7 @@ def parsed_molecule_to_dict(parsed: pp.ParseResults):
         raise ValueError("Molecule name must be a string.")
 
     components: list[ComponentDict] = []
-    parsed_components = parsed.components
+    parsed_components = parsed.get('components', None)
     if isinstance(parsed_components, pp.ParseResults):
         for parsed_comp in parsed_components:
             comp: ComponentDict = {
