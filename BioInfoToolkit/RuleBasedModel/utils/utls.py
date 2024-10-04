@@ -1,4 +1,5 @@
 
+import os
 import ast
 import operator as op
 from typing import Any
@@ -161,6 +162,45 @@ def eval_expr(expr: str, variables: dict[str, int|float]):
         expr_type = "expression"
 
     return result, expr_type
+
+
+def decompose_path(filename: str):
+    """
+    Decomposes a given filename into its path, name, and extension.
+
+    Parameters:
+        filename (str): The full path of the file.
+
+    Returns:
+        tuple: A tuple containing the path, name, and extension.
+    """
+    path, full_name = os.path.split(
+        filename)  # Split into path and name with extension
+    name, extension = os.path.splitext(
+        full_name)  # Split into name and extension
+
+    # If no path is given, use the current working directory
+    if not path:
+        path = os.getcwd()
+
+    return path, name, extension
+
+
+def compose_path(path: str, name: str, extension: str):
+    """
+    Composes a full filename from the given path, name, and extension.
+
+    Parameters:
+        path (str): The directory path.
+        name (str): The file name without the extension.
+        extension (str): The file extension.
+
+    Returns:
+        str: The full path of the file.
+    """
+    full_name = name + extension  # Concatenate name and extension
+    return os.path.join(path, full_name)  # Join with the path
+
 
 def apply_inequality(val_1: int, sign: str, val_2: int) -> bool:
     if sign == '==':

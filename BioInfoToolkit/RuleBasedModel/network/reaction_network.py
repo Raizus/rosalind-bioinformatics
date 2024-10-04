@@ -1,11 +1,8 @@
 
 from collections import defaultdict
-from functools import reduce
-from itertools import accumulate
 from typing import OrderedDict
 import networkx as nx
 import graphviz
-import numpy as np
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
@@ -14,7 +11,7 @@ from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, bu
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
-from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
 
 
 class NetworkConstructionError(Exception):
@@ -256,3 +253,13 @@ class ReactionNetwork:
                                                    concentrations, groups)
 
         return times, groups_concent
+
+    def save_network(self, fp: str):
+        ext = '.net'
+        path, name, _ = decompose_path(fp)
+
+        fp = compose_path(path, name, ext)
+
+        with open(fp, 'w', encoding='utf-8') as net_file:
+            out = self.as_string()
+            net_file.write(out)
