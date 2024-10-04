@@ -3,6 +3,7 @@
 from itertools import product
 from typing import OrderedDict
 
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.ReactionRule import ReactionRule
 from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import apply_transforms
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, species_match_gen
@@ -97,6 +98,15 @@ def build_rules_dict(rules: OrderedDict[int, ReactionRule]) -> OrderedDict[int, 
     return new_rules
 
 
+def breaks_stoich(pattern: Pattern, max_stoich: dict[str, int]):
+    mol_counts = pattern.molecule_counts()
+    for mol_name, max_count in max_stoich.items():
+        count = mol_counts.get(mol_name, 0)
+        if count > max_count:
+            return True
+    return False
+
+
 class ReactionGenerator:
     rules: OrderedDict[int, ReactionRule]
     apply_rule_cache: dict[str, list[int]]
@@ -107,7 +117,7 @@ class ReactionGenerator:
         self.apply_rule_cache = {}
         self.species_match_cache = {}
 
-    def generate(self, species_block: SpeciesBlock):
+    def generate(self, species_block: SpeciesBlock, max_stoich: dict[str, int]):
         species_dict = species_block.items
 
         for rule_id, rule in self.rules.items():
@@ -131,6 +141,16 @@ class ReactionGenerator:
                 # apply rule to reactants
                 prod_sp_patts = apply_transforms(
                     react_sp_patts, rule.transformations)
+
+                # check max stoichiometry
+                stop = False
+                if len(max_stoich):
+                    for specie in prod_sp_patts:
+                        if breaks_stoich(specie, max_stoich):
+                            stop = True
+                            break
+                if stop:
+                    continue
 
                 # if generated products are new, then add them to species and
                 # add reaction to the reaction block

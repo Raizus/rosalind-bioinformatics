@@ -118,7 +118,7 @@ class ReactionNetwork:
         n_species_prev = len(species_dict)
 
         n_iter: int = 0
-        max_stoich: int | None = None
+        max_stoich: dict[str, int] = {}
 
         msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
         print(msg)
@@ -202,7 +202,7 @@ class ReactionNetwork:
 
         # each reaction is a hyper edge conneting species nodes
 
-        for sp_id, species in self.species_block.items.items():
+        for sp_id, _ in self.species_block.items.items():
             label = str(sp_id)
             dot.node(str(sp_id), label=label)
 
