@@ -197,6 +197,14 @@ class Molecule:
         return False
 
 
+def sort_molecules(molecules: list[Molecule]) -> list[Molecule]:
+    def sort_fun(x: Molecule):
+        comps_str = ','.join(str(comp) for comp in x.components)
+        return (x.name, comps_str)
+
+    sorted_mol = sorted(molecules, key=sort_fun)
+    return sorted_mol
+
 def generate_species(molecule: MoleculeType):
     name = molecule.name
 
@@ -216,7 +224,7 @@ class Pattern:
     _graph: nx.Graph
 
     def __init__(self, molecules: list[Molecule]) -> None:
-        self.molecules = molecules
+        self.molecules = sort_molecules(molecules)
         self._bonds = defaultdict(list)
 
         graph = nx.Graph()
