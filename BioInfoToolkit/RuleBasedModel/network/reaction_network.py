@@ -124,7 +124,7 @@ class ReactionNetwork:
         print(msg)
 
         while True:
-            for reaction in reaction_gen.generate(species_block):
+            for reaction in reaction_gen.generate(species_block, max_stoich):
                 self.reactions_block.add_reaction(reaction)
 
             n_rxs = len(reactions_dict)
