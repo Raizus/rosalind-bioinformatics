@@ -56,7 +56,6 @@ class ReactionNetwork:
 
         # generate groups
         self.populate_groups(model)
-        a = 0
 
     def generate_parameters(self, model: Model):
         params_block = self.parameters_block
@@ -103,7 +102,7 @@ class ReactionNetwork:
             group = ObservablesGroup(name, group_list)
             groups_block.add_group(group)
 
-    def generate_reactions(self, model: Model, 
+    def generate_reactions(self, model: Model,
                            max_iter: int | None = None,
                            max_stoich: dict[str, int] | None = None):
 
@@ -123,7 +122,7 @@ class ReactionNetwork:
         if max_stoich is None:
             max_stoich = {}
 
-        msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
+        msg = f"Iteration {n_iter}:\t{n_species_prev} species\t{n_rxs_prev} rxns"
         print(msg)
 
         while True:
@@ -141,7 +140,7 @@ class ReactionNetwork:
             n_species_prev = n_species
             n_iter += 1
 
-            msg = f"Iteration {n_iter}: \t {n_species_prev} species \t {n_rxs_prev} rxns"
+            msg = f"Iteration {n_iter}:\t{n_species_prev} species\t{n_rxs_prev} rxns"
             print(msg)
 
             if max_iter and n_iter >= max_iter:
@@ -184,7 +183,7 @@ class ReactionNetwork:
                 input_species_reaction_dict[react].add(r_id)
             for prods in products:
                 output_species_reaction_dict[prods].add(r_id)
-        
+
         # build adj_dict
         for sp, reactions in output_species_reaction_dict.items():
             for r_id in reactions:

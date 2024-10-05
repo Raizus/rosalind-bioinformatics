@@ -61,11 +61,12 @@ def format_data_into_lines(data: list[tuple[Any, ...]]):
     lines: list[str] = []
 
     col_widths = [max(len(str(row[i])) for row in data)
-                  for i in range(len(data[0]))]
+                  for i in range(len(data[0]) - 1)]
     for row in data:
-        line = "\t".join(f"{str(item):<{col_widths[i]}}"
-                         for i, item in enumerate(row))
-        lines.append(f"\t{line}")
+        padded_row = "  ".join(f"{str(item):<{col_widths[i]}}" 
+                              for i, item in enumerate(row[:-1]))
+        padded_row = padded_row + f" {row[-1]}"
+        lines.append(f"\t{padded_row}")
 
     return lines
 
