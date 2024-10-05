@@ -102,20 +102,6 @@ class NetworkSeedSpeciesDict(SeedSpeciesDict):
     id: int
 
 
-class GenerateNetworkDict(TypedDict):
-    overwrite: bool | None
-    text_reaction: bool | None
-    max_stoich: dict[str, int] | None
-    max_iter: int | None
-
-
-class SimulateDict(TypedDict):
-    method: str
-    t_start: float
-    t_end: float
-    n_steps: int | None
-
-
 # Define the grammar for parsing
 pp.ParserElement.enablePackrat()
 
