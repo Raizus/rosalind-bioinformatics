@@ -1,5 +1,6 @@
 
 
+from collections import defaultdict
 from itertools import product
 from typing import OrderedDict
 
@@ -110,6 +111,58 @@ def breaks_stoich(pattern: Pattern, max_stoich: dict[str, int]):
     return False
 
 
+def breaks_stoich_multiple(species: list[Pattern], max_stoich: dict[str, int]) -> bool:
+    if len(max_stoich) == 0:
+        return False
+
+    for specie in species:
+        if breaks_stoich(specie, max_stoich):
+            return True
+
+    return False
+
+
+def count_generated_rules(
+    react_species_ids: list[int],
+    rule_id: int,
+    rule: ReactionRule,
+    species_block: SpeciesBlock,
+    max_stoich: dict[str, int]
+):
+    species_dict = species_block.items
+    react_species = [
+        species_dict[sp_id].pattern for sp_id in react_species_ids]
+
+    reaction_counter: defaultdict[
+        tuple[int, tuple[int, ...], tuple[int, ...]],
+        int
+    ] = defaultdict(int)
+
+    products_gen = apply_transforms(react_species, rule.transformations)
+    for prod_sp_patts in products_gen:
+        # check max stoichiometry
+        if breaks_stoich_multiple(prod_sp_patts, max_stoich):
+            continue
+
+        # if generated products are new, then add them to species and
+        # add reaction to the reaction block
+        prod_sp_ids: list[int] = []
+        for prod_sp in prod_sp_patts:
+            # try to add specie (may not be a new specie)
+            specie = Species(prod_sp, "0")
+            sp_id = species_block.add_specie(specie)
+            prod_sp_ids.append(sp_id)
+
+        reaction_key = (
+            rule_id,
+            tuple(react_species_ids),
+            tuple(sorted(prod_sp_ids))
+        )
+        reaction_counter[reaction_key]+=1
+
+    return reaction_counter
+
+
 class ReactionGenerator:
     rules: OrderedDict[int, ReactionRule]
     apply_rule_cache: dict[str, list[int]]
@@ -132,9 +185,8 @@ class ReactionGenerator:
                               for patt in reactants]
 
             for react_sp_ids in product(*reactants_gens):
-                react_sp_patts = [species_dict[sp_id].pattern for sp_id in react_sp_ids]
                 rule_sp_key = (f"({rule_id},"
-                               + ','.join(str(sp_id) for sp_id in react_sp_ids)
+                               + str(tuple(sorted(react_sp_ids)))
                                + ')')
 
                 # check if we already applied this rule to this combination of reactants
@@ -142,32 +194,24 @@ class ReactionGenerator:
                     continue
 
                 # apply rule to reactants
-                prod_sp_patts = apply_transforms(
-                    react_sp_patts, rule.transformations)
+                # (id, react_sps, prod_sps)
+                reaction_counter = count_generated_rules(
+                    list(react_sp_ids), rule_id, rule,
+                    species_block, max_stoich
+                )
 
-                # check max stoichiometry
-                stop = False
-                if len(max_stoich):
-                    for specie in prod_sp_patts:
-                        if breaks_stoich(specie, max_stoich):
-                            stop = True
-                            break
-                if stop:
-                    continue
+                for react_key, count in reaction_counter.items():
+                    _, react_sp_ids, prod_sp_ids = react_key
 
-                # if generated products are new, then add them to species and
-                # add reaction to the reaction block
-                prod_sp_ids: list[int] = []
-                for prod_sp in prod_sp_patts:
-                    # try to add specie (may not be a new specie)
-                    specie = Species(prod_sp, "0")
-                    sp_id = species_block.add_specie(specie)
-                    prod_sp_ids.append(sp_id)
+                    # update cache
+                    self.apply_rule_cache[rule_sp_key] = list(prod_sp_ids)
 
-                # update cache
-                self.apply_rule_cache[rule_sp_key] = prod_sp_ids
+                    # create new reaction
+                    rate_expr = rule.forward_rate
+                    if count != 1:
+                        rate_expr = f"{count}*{rate_expr}"
 
-                # create new reaction
-                comment = f"{rule.name}"
-                rxn = Reaction(list(react_sp_ids), prod_sp_ids, rule_id, rule.forward_rate, comment)
-                yield rxn
+                    comment = f"{rule.name}"
+                    rxn = Reaction(list(react_sp_ids), list(prod_sp_ids),
+                                rule_id, rate_expr, comment)
+                    yield rxn

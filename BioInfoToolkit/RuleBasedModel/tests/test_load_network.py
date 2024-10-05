@@ -18,7 +18,7 @@ def test_load_network(fp: str):
 
 @pytest.mark.parametrize("fp", [
     # './BioInfoToolkit/RuleBasedModel/assets/chemotaxis1.bngl',
-    # './BioInfoToolkit/RuleBasedModel/assets/chemotaxis2.bngl'
+    # './BioInfoToolkit/RuleBasedModel/assets/chemotaxis2.bngl',
     './BioInfoToolkit/RuleBasedModel/assets/BLBR.bngl',
 ])
 def test_build_network(fp: str):
@@ -29,6 +29,9 @@ def test_build_network(fp: str):
         'L': 5
     }
     network.build_network(model, max_stoich=max_stoich)
+    path, name, ext = decompose_path(fp)
+    net_path = compose_path(path, f"{name}_gen", ext)
+    network.save_network(net_path)
     a = 0
 
 

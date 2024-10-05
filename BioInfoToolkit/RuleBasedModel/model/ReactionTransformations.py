@@ -1,12 +1,10 @@
 import abc
 from enum import Enum
-from functools import partial, reduce
+from typing import Any, Generator
 import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Component import Component
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, node_pattern_matching_func
-from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, node_matching
-
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, \
+    node_pattern_matching_func
 
 def idxs_from_reactants(reactants: list[Pattern]):
     idxs: list[tuple[int, int, int]] = []
@@ -55,7 +53,7 @@ class ReactionTransformation(abc.ABC):
         self.patterns_graph = graph
 
     @abc.abstractmethod
-    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
         pass
 
 
@@ -136,16 +134,16 @@ class FormBondTransform(ReactionTransformation):
 
         self.bond = comp1_out_bond
 
-    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
-        products = [reactant.copy() for reactant in reactants]
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+        reactants = [reactant.copy() for reactant in reactants]
 
         center1 = self.reaction_center_in[0]
         center2 = self.reaction_center_in[1]
         i1 = center1[0]
         i2 = center2[0]
 
-        specie1 = products[i1]
-        specie2 = products[i2]
+        specie1 = reactants[i1]
+        specie2 = reactants[i2]
 
         match_func = node_pattern_matching_func
         matcher1 = nx.isomorphism.GraphMatcher(
@@ -153,19 +151,20 @@ class FormBondTransform(ReactionTransformation):
         matcher2 = nx.isomorphism.GraphMatcher(
             specie2.graph, self.patterns[i2].graph, match_func)
 
-        map1 = next(matcher1.subgraph_isomorphisms_iter())
-        map2 = next(matcher2.subgraph_isomorphisms_iter())
-        map1 = {n2: n1 for n1, n2 in map1.items()}
-        map2 = {n2: n1 for n1, n2 in map2.items()}
-        n1 = map1[center1[1:]]
-        n2 = map2[center2[1:]]
+        for map1 in matcher1.subgraph_isomorphisms_iter():
+            map1 = {n2: n1 for n1, n2 in map1.items()}
+            for map2 in matcher2.subgraph_isomorphisms_iter():
+                map2 = {n2: n1 for n1, n2 in map2.items()}
+                n1 = map1[center1[1:]]
+                n2 = map2[center2[1:]]
 
-        new_species = form_bond(specie1, specie2, n1, n2)
+                new_species = form_bond(specie1, specie2, n1, n2)
 
-        products[i1] = new_species
-        products.pop(i2)
+                products = reactants.copy()
+                products[i1] = new_species
+                products.pop(i2)
 
-        return products
+                yield products
 
     def __repr__(self) -> str:
         out = f"{self.transformation.value}: "
@@ -248,26 +247,26 @@ class BreakBondTransform(ReactionTransformation):
 
         self.bond = comp1_in_bond
 
-    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
-        products = [reactant.copy() for reactant in reactants]
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+        reactants = [reactant.copy() for reactant in reactants]
 
         center1 = self.reaction_center_in[0]
         i = center1[0]
-        specie = products[i]
+        specie = reactants[i]
         match_func = node_pattern_matching_func
         matcher = nx.isomorphism.GraphMatcher(
             specie.graph, self.patterns_graph, match_func)
+        
         for mapping in matcher.subgraph_isomorphisms_iter():
             mapping = {n2: n1 for n1, n2 in mapping.items()}
             n1 = mapping[center1]
             bond_id: str = specie.graph.nodes[n1]['bond']
 
             new_species = specie.break_bond(bond_id)
-            products = products[:i] + list(new_species) + products[i+1:]
+            products = reactants[:i] + list(new_species) + reactants[i+1:]
 
-            return products
+            yield products
 
-        return products
 
     def __repr__(self) -> str:
         out = f"{self.transformation.value}:"
@@ -331,7 +330,7 @@ class ChangeStateAction(ReactionTransformation):
                f" -> {self.reaction_center_out[0]} ({comp2_str})")
         return out
 
-    def __call__(self, reactants: list[Pattern]) -> list[Pattern]:
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
         # find affected reactant
         products = [reactant.copy() for reactant in reactants]
         # reactants_g = build_chemical_array_graph(products)
@@ -356,10 +355,21 @@ class ChangeStateAction(ReactionTransformation):
             molecules[j].change_state(k, self.new_state)
             new_specie = Pattern(molecules)
             products[i] = new_specie
-            return products
-        return products
+            yield products
+            break
 
 
-def apply_transforms(reactants: list[Pattern], actions: list[ReactionTransformation]) -> list[Pattern]:
-    products = reduce(lambda x, y: y(x), actions, reactants)
-    return products
+def apply_transforms(
+    reactants: list[Pattern],
+    actions: list[ReactionTransformation]
+) -> Generator[list[Pattern], Any, None]:
+    # Start with the initial list of reactants as the first generator
+    def generator_chain(reactants: list[Pattern], actions: list[ReactionTransformation]):
+        # Convert initial reactants into a generator
+        gen = (r for r in [reactants])
+        for action in actions:
+            # Apply each action generator
+            gen = (product for r in gen for product in action.apply(r))
+        yield from gen
+
+    return generator_chain(reactants, actions)

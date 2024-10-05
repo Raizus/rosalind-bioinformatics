@@ -165,7 +165,7 @@ def verify_transformations(reactants: list[Pattern],
     Returns:
         _type_: _description_
     """
-    products_res = apply_transforms(reactants, transformations)
+    products_res = next(apply_transforms(reactants, transformations))
     prods2_g = build_chemical_array_graph(products_res)
     g_equal = compare_chemical_array_graphs(products_g, prods2_g)
     return g_equal
@@ -436,7 +436,7 @@ def decompose_reaction(reaction: ReactionRule):
             raise ValueError(msg)
 
         transformations.extend(transformations2)
-        curr_reactants = apply_transforms(curr_reactants, transformations2)
+        curr_reactants = next(apply_transforms(curr_reactants, transformations2))
         curr_graph_r = build_chemical_array_graph(curr_reactants)
 
     return transformations
