@@ -178,7 +178,6 @@ class ReactionGenerator:
 
         for rule_id, rule in self.rules.items():
             reactants = rule.reactants
-            products = rule.products
 
             reactants_gens = [species_match_gen(patt, species_dict,
                                                 self.species_match_cache)
