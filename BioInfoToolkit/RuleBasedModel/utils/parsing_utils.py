@@ -109,6 +109,13 @@ class GenerateNetworkDict(TypedDict):
     max_iter: int | None
 
 
+class SimulateDict(TypedDict):
+    method: str
+    t_start: float
+    t_end: float
+    n_steps: int | None
+
+
 # Define the grammar for parsing
 pp.ParserElement.enablePackrat()
 

@@ -1,6 +1,6 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_compartment, parse_generate_network, parse_observable, \
+from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_compartment, parse_observable, \
     parse_pattern, parse_reactants_sum, parse_reaction_rule, parse_molecule, parse_molecule_type
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parse_comment
 
@@ -228,16 +228,4 @@ class TestParseComment():
     ])
     def test_valid(self, comment: str):
         parsed = parse_comment(comment)
-        assert parsed is not None
-
-
-class TestParseGenerateNetwork():
-    @pytest.mark.parametrize("declaration", [
-        "generate_network({overwrite=>1,max_stoich=>{R=>5,L=>5},max_iter=>20,TextReaction=>1});",
-        "generate_network({max_iter=>20,TextReaction=>1,overwrite=>1,max_stoich=>{R=>5,L=>5}});",
-        "generate_network({TextReaction=>1,max_stoich=>{R=>5}});",
-        "generate_network();",
-    ])
-    def test_valid(self, declaration: str):
-        parsed = parse_generate_network(declaration)
         assert parsed is not None
