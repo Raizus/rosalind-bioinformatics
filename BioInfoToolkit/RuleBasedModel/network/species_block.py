@@ -15,7 +15,7 @@ class SpeciesBlock(NetworkBlock):
     def __init__(self) -> None:
         super().__init__()
         self.items = OrderedDict()
-        self.id_count = 1
+        self.id_count = 0
 
     def get_species_id(self, species_pattern: Pattern) -> int:
         """Returns the id of the species in the species dictionary that matches the 

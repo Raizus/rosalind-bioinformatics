@@ -47,7 +47,7 @@ class GroupsBlock(NetworkBlock):
 
     def __init__(self) -> None:
         self.items = OrderedDict()
-        self.count_id = 1
+        self.count_id = 0
 
     def add_group(self, group: ObservablesGroup):
         self.items[self.count_id] = group

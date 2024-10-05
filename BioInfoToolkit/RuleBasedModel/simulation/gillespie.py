@@ -123,7 +123,7 @@ class GillespieSimulator:
             reaction_choice = np.random.rand() * total_rate
             # select the reaction by computing the cumulative distribution function from the rates
             cumulative_rates = list(accumulate(rates.values()))
-            chosen_reaction = next(i+1 for i, rate in enumerate(
+            chosen_reaction = next(i for i, rate in enumerate(
                 cumulative_rates) if rate > reaction_choice)
 
             # Update concentrations based on the chosen reaction

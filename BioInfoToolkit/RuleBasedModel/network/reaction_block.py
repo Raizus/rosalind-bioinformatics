@@ -12,7 +12,7 @@ class ReactionsBlock(NetworkBlock):
     count_id: int
 
     def __init__(self) -> None:
-        self.count_id = 1
+        self.count_id = 0
         self.items = OrderedDict()
 
     def add_reaction(self, reaction: Reaction):
