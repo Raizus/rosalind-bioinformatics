@@ -12,6 +12,7 @@ class Model:
     observables_block: ObservablesBlock
     compartments_block: CompartmentsBlock
     species_block: SeedSpeciesBlock
+    filename: str
 
     def __init__(self) -> None:
         self.parameters_block = ParametersBlock()
@@ -20,6 +21,7 @@ class Model:
         self.species_block = SeedSpeciesBlock()
         self.reaction_rules_block = ReactionRulesBlock()
         self.compartments_block = CompartmentsBlock()
+        self.filename = "model.bngl"
 
     def validate(self) -> bool:
         molecule_types = self.molecule_types_block.items

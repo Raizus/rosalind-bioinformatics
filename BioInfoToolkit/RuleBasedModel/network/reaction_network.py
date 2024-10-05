@@ -26,6 +26,7 @@ class ReactionNetwork:
 
     graph: nx.DiGraph
     model: Model | None
+    filename: str
 
     def __init__(self) -> None:
         self.parameters_block = ParametersBlock()
@@ -33,6 +34,7 @@ class ReactionNetwork:
         self.reactions_block = ReactionsBlock()
         self.groups_block = GroupsBlock()
         self.model = None
+        self.filename = 'model.net'
 
     def build_network(self, model: Model,
                       max_iter: int | None = None,
@@ -56,6 +58,10 @@ class ReactionNetwork:
 
         # generate groups
         self.populate_groups(model)
+
+        path, name, _ = decompose_path(model.filename)
+        net_path = compose_path(path, f"{name}", ".net")
+        self.filename = net_path
 
     def generate_parameters(self, model: Model):
         params_block = self.parameters_block
@@ -253,7 +259,10 @@ class ReactionNetwork:
 
         return times, groups_concent
 
-    def save_network(self, fp: str):
+    def save_network(self, fp: str | None = None):
+        if fp is None:
+            fp = self.filename
+
         ext = '.net'
         path, name, _ = decompose_path(fp)
 
