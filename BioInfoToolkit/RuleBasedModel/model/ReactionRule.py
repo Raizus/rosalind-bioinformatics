@@ -294,6 +294,7 @@ def find_state_changes(
 
         if comp1_state != comp2_state:
             state_changes[n1] = n2
+            break
 
     return state_changes
 

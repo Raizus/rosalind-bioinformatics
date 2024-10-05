@@ -1,6 +1,6 @@
 import abc
 from enum import Enum
-from typing import Any, Generator
+from typing import Any, Callable, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, \
@@ -332,14 +332,14 @@ class ChangeStateAction(ReactionTransformation):
 
     def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
         # find affected reactant
-        products = [reactant.copy() for reactant in reactants]
+        reactants = [reactant.copy() for reactant in reactants]
         # reactants_g = build_chemical_array_graph(products)
         # find map from reactant rules patterns graph to species reactants graph
         # note the reactant rules patterns graph is a isomorphic to a subgraph of
         # the species reactants graph
         center = self.reaction_center_in[0]
         i,j,k = center
-        specie = products[i]
+        specie = reactants[i]
 
         match_func = node_pattern_matching_func
         matcher = nx.isomorphism.GraphMatcher(
@@ -351,12 +351,16 @@ class ChangeStateAction(ReactionTransformation):
             # affected node
             node: tuple[int, int] = mapping[self.reaction_center_in[0][1:]]
             j,k = node
+
+            # change state and create new species
             molecules = [mol.copy() for mol in specie.molecules]
             molecules[j].change_state(k, self.new_state)
             new_specie = Pattern(molecules)
+
+            products = reactants.copy()
             products[i] = new_specie
             yield products
-            break
+            return
 
 
 def apply_transforms(
@@ -364,12 +368,16 @@ def apply_transforms(
     actions: list[ReactionTransformation]
 ) -> Generator[list[Pattern], Any, None]:
     # Start with the initial list of reactants as the first generator
-    def generator_chain(reactants: list[Pattern], actions: list[ReactionTransformation]):
-        # Convert initial reactants into a generator
-        gen = (r for r in [reactants])
+    def generator_chain(reactants: list[Pattern], actions: list[ReactionTransformation]) -> Generator[list[Pattern], Any, None]:
+        # Initial generator yields the initial reactants
+        res = [reactants]
+
+        # Apply each action to the results of the previous action
         for action in actions:
-            # Apply each action generator
-            gen = (product for r in gen for product in action.apply(r))
-        yield from gen
+            # Apply the current action to each result from the previous step
+            res = [p for r in res for p in action.apply(r)]
+
+        # Yield the final results after all actions have been applied
+        yield from res
 
     return generator_chain(reactants, actions)

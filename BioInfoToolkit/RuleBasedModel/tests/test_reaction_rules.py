@@ -129,7 +129,7 @@ class TestReaction2:
         reaction = ReactionRule.from_declaration(declaration, self.molecules)
         transformations = decompose_reaction(reaction)
         reactants = reaction.reactants
-        products_res = apply_transforms(reactants, transformations)
+        products_res = next(apply_transforms(reactants, transformations))
         g2 = build_chemical_array_graph(products_res)
         equal = compare_chemical_array_graphs(reaction.products_graph, g2)
         assert equal is True
@@ -150,7 +150,7 @@ class TestReaction3:
         reaction = ReactionRule.from_declaration(declaration, self.molecules)
         transformations = decompose_reaction(reaction)
         reactants = reaction.reactants
-        products_res = apply_transforms(reactants, transformations)
+        products_res = next(apply_transforms(reactants, transformations))
         g2 = build_chemical_array_graph(products_res)
         equal = compare_chemical_array_graphs(reaction.products_graph, g2)
         assert equal is True
@@ -221,7 +221,7 @@ class TestReaction4:
         for sp, react in zip(selected_species, reaction.reactants):
             assert match_pattern_specie(react, sp) is 1
 
-        products_species = apply_transforms(selected_species, transformations)
+        products_species = next(apply_transforms(selected_species, transformations))
         assert len(products_species) == len(prod_sp)
         expected_products = [species[i] for i in prod_sp]
 
