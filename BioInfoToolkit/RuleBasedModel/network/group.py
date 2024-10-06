@@ -1,6 +1,7 @@
 
 from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_observables_group
 
+import numpy as np
 
 class ObservablesGroup:
     name: str
@@ -27,3 +28,11 @@ class ObservablesGroup:
     def __repr__(self) -> str:
         out = f"{self.name} {','.join(f'{w}*{sp_id}' for sp_id, w in self.weighted_species)}"
         return out
+
+    def get_weights_array(self, n: int):
+        weights = np.zeros(n, dtype=np.int64)
+
+        for sp_id, w in self.weighted_species:
+            weights[sp_id] = w
+
+        return weights
