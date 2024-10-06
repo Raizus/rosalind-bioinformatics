@@ -1,6 +1,6 @@
 import abc
 from enum import Enum
-from typing import Any, Callable, Generator
+from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, \
