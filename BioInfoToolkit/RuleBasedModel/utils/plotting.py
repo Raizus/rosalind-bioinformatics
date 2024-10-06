@@ -1,27 +1,21 @@
 
-from typing import OrderedDict
 import matplotlib.pyplot as plt
-from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 
-def plot_concentrations(times: list[float],
-                        groups_concentration: OrderedDict[int, list[int]],
-                        observables_groups: OrderedDict[int, ObservablesGroup]):
-    """Creates a plot of the evolution of the concentrations of different reactants along time
+
+def plot_concentrations(times: list[float], concentrations: dict[str, list[float]]):
+    """
+    Creates a plot of the evolution of the concentrations of different reactants along time.
 
     Args:
-        times (list[float]): list of time points
-        groups_concentration (OrderedDict[int, list[int]]): dictionary where each element 
-        corresponds to a group of reactants and their respective concentration across time
-        observables_groups (OrderedDict[int, ObservablesGroup]): dictionary mapping observables 
-        index to the object representing the group. Needed for labeling the plot
+        times (list[float]): list of time points.
+        concentrations (dict[str, list[float]]): dictionary where the keys are the labels for each reactant and the values are lists of concentrations over time.
     """
 
     plt.figure(figsize=(10, 6))  # Create a figure with a specific size
 
-    for i, concentrations in groups_concentration.items():
-        label_i = observables_groups[i].name  # Get the name for labeling
-        # Plot each concentration over time
-        plt.plot(times, concentrations, label=label_i)
+    for label, conc_values in concentrations.items():
+        # Plot each concentration over time with label as the legend
+        plt.plot(times, conc_values, label=label)
 
     # Adding title, labels, and legend
     plt.title('Concentration of Reactants Over Time')
