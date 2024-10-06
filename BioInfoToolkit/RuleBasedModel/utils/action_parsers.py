@@ -117,9 +117,9 @@ def parse_simulate(declaration: str) -> SimulateDict:
     # parse_actions
     def parse_method_action(token: pp.ParseResults):
         method = token[0]
-        if method != "ssa":
+        if method not in ("ssa", "ode"):
             raise ValueError(
-                f"Invalid method '{method}'. Only 'ssa' is supported.")
+                f"Invalid method '{method}'. Only 'ssa' and 'ode' is supported.")
         return method
 
     def parse_01_action(token: pp.ParseResults):

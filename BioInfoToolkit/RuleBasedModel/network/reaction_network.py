@@ -13,6 +13,7 @@ from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, bu
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
+from BioInfoToolkit.RuleBasedModel.simulation.ode_sim import ODESimulator
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
 
@@ -72,8 +73,14 @@ class ReactionNetwork:
         self.set_output_filepaths(net_path)
 
     def set_output_filepaths(self, net_filename: str):
-        path, name, _ = decompose_path(net_filename)
-        net_path = compose_path(path, name, ".net")
+        """Given the filepath of the net file, sets the net_filename, cdat_filename 
+        and gdat_filename, with the same path and name as the net file
+
+        Args:
+            net_filename (str): _description_
+        """
+        path, name, ext = decompose_path(net_filename)
+        net_path = compose_path(path, name, ext)
         self.net_filename = net_path
         cdat_path = compose_path(path, name, ".cdat")
         self.cdat_filename = cdat_path
@@ -265,11 +272,22 @@ class ReactionNetwork:
             n_steps = params['n_steps']
             self.gillespie_simulation(params)
         elif method == 'ode':
-            t_start = params['t_end']
+            t_start = params['t_start']
             t_end = params['t_end']
             n_steps = params['n_steps']
             n_steps = n_steps if n_steps is not None else 100
             t_span = np.linspace(t_start, t_end, n_steps)
+
+            # evaluate species expressions and initialize concentrations
+            concentrations = np.array(list(self.initialise_concentrations().values()), dtype=np.float64)
+
+            # maps reaction id's to reaction rate constants
+            rate_constants = self.get_rate_constants()
+            groups = self.groups_block.items
+            reactions = self.reactions_block.items
+
+            simulator = ODESimulator(self.cdat_filename, self.gdat_filename)
+            simulator.solve(concentrations, t_span, reactions, rate_constants, groups)
         else:
             raise ValueError(f"Simulation method '{method}' is not valid.")
 
