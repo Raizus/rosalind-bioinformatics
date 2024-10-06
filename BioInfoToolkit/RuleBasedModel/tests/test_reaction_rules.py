@@ -219,7 +219,7 @@ class TestReaction4:
         selected_species = [species[i] for i in sel_sp]
         assert len(selected_species) == len(reaction.reactants)
         for sp, react in zip(selected_species, reaction.reactants):
-            assert match_pattern_specie(react, sp) is 1
+            assert match_pattern_specie(react, sp) == 1
 
         products_species = next(apply_transforms(selected_species, transformations))
         assert len(products_species) == len(prod_sp)
