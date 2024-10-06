@@ -48,4 +48,7 @@ def load_network(file_path: str):
                 group = ObservablesGroup.from_declaration(line)
                 network.groups_block.add_group(group)
 
+    # set filepaths for output files
+    network.set_output_filepaths(file_path)
+
     return network
