@@ -1,6 +1,6 @@
 import pytest
 
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import parse_generate_network, parse_simulate
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import parse_generate_network, parse_set_concentration, parse_simulate
 
 
 class TestParseGenerateNetwork:
@@ -29,3 +29,12 @@ class TestParseSimulate:
         assert parsed["t_start"] == t_start
         assert parsed["t_end"] == t_end
         assert parsed["n_steps"] == n_steps
+
+
+class TestParseSetConcentration:
+    @pytest.mark.parametrize("declaration, expression", [
+        ('setConcentration("Lig(l,l)", "Lig_tot")', "Lig_tot"),
+    ])
+    def test_valid(self, declaration: str, expression: str):
+        parsed = parse_set_concentration(declaration)
+        assert parsed["expression"] == expression

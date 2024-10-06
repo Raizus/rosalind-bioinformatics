@@ -1,7 +1,7 @@
 import pyparsing as pp
 from typing import Any, TypedDict
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import NAME_EXPRESSION, UNSIGNED_NUMBER_PARSER, ParsingError
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMPLEX_PARSER, EXPRESSION_PARSER, MOLECULE_PARSER, NAME_EXPRESSION, UNSIGNED_NUMBER_PARSER, MoleculeDict, ParsingError, parsed_pattern_to_dict_list
 
 
 class GenerateNetworkDict(TypedDict):
@@ -9,8 +9,6 @@ class GenerateNetworkDict(TypedDict):
     text_reaction: bool | None
     max_stoich: dict[str, int] | None
     max_iter: int | None
-
-
 
 
 def generate_network_parsed_dict(parsed_dict: dict[Any, Any]) -> GenerateNetworkDict:
@@ -200,4 +198,57 @@ def parse_simulate(declaration: str) -> SimulateDict:
 
     except (pp.ParseException, pp.ParseBaseException) as ee:
         msg = f"simulate '{declaration}' not declared correctly."
+        raise ParsingError(msg) from ee
+
+
+class SetConcentrationDict(TypedDict):
+    pattern: list[MoleculeDict]
+    expression: str
+
+
+def parsed_set_concentration_to_dict(parsed: pp.ParseResults) -> SetConcentrationDict:
+    parsed_pattern = parsed.species
+    pattern = parsed_pattern_to_dict_list(parsed_pattern)
+
+    expression = parsed.expression
+    if not isinstance(expression, str):
+        raise ValueError("See species expression must be a string.")
+
+    result: SetConcentrationDict = {
+        'pattern': pattern,
+        'expression': expression,
+    }
+    return result
+
+
+def parse_set_concentration(declaration: str) -> SetConcentrationDict:
+    # Basic patterns
+    expression_parser = pp.Combine(EXPRESSION_PARSER)
+    reagent_parser = pp.Group(
+        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+
+    # Define key=>value pairs for each parameter
+    species_parser = (
+        pp.Suppress('"') + reagent_parser('species') + pp.Suppress('"')
+    )
+
+    concentration_parser = (
+        pp.Suppress('"') + expression_parser('expression') + pp.Suppress('"')
+    )
+
+    # Combining all expressions
+    set_conc_parser = (
+        pp.Suppress("setConcentration(")
+        + species_parser
+        + pp.Suppress(',')
+        + concentration_parser
+        + pp.Suppress(')')
+    )
+
+    try:
+        parsed = set_conc_parser.parseString(declaration)
+        result = parsed_set_concentration_to_dict(parsed)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        msg = f"setConcentration '{declaration}' not declared correctly."
         raise ParsingError(msg) from ee
