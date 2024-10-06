@@ -253,6 +253,6 @@ def read_simulation_data(filename: str):
             times.append(float(row[0]))  # First entry is the time
             for i, col in enumerate(header[1:], start=1):
                 # Remaining entries are concentrations
-                concentrations[col].append(int(row[i]))
+                concentrations[col].append(float(row[i]))
 
     return times, concentrations
