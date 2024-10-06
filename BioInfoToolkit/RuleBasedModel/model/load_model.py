@@ -1,5 +1,5 @@
 
-from BioInfoToolkit.RuleBasedModel.actions.actions import BNGLACtion, GenerateNetworkAction, SimulateAction
+from BioInfoToolkit.RuleBasedModel.actions.actions import BNGLACtion, GenerateNetworkAction, ResetConcentrationsAction, SaveConcentrationsAction, SetConcentrationAction, SimulateAction
 from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
@@ -36,6 +36,27 @@ def parse_block_lines(current_line: str,
         observable = Observable.from_declaration(
             current_line, molecule_types)
         model.observables_block.add_observable(observable)
+
+
+def parse_actions(current_line: str):
+    action: BNGLACtion | None = None
+    if current_line.startswith('generate_network'):
+        action = GenerateNetworkAction.from_declaration(
+            current_line)
+
+    elif current_line.startswith('simulate'):
+        action = SimulateAction.from_declaration(current_line)
+
+    elif current_line == 'saveConcentrations();':
+        action = SaveConcentrationsAction()
+
+    elif current_line == 'resetConcentrations();':
+        action = ResetConcentrationsAction()
+
+    elif current_line.startswith('setConcentration'):
+        action = SetConcentrationAction.from_declaration(current_line)
+
+    return action
 
 
 def load_bngl(file_path: str):
@@ -104,12 +125,8 @@ def load_bngl(file_path: str):
 
             # parse actions
             if parsed_model:
-                if current_line.startswith('generate_network'):
-                    action = GenerateNetworkAction.from_declaration(current_line)
-                    actions.append(action)
-
-                elif current_line.startswith('simulate'):
-                    action = SimulateAction.from_declaration(current_line)
+                action = parse_actions(current_line)
+                if action:
                     actions.append(action)
 
             # Reset current_line after processing

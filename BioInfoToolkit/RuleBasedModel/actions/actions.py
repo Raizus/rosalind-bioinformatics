@@ -1,7 +1,8 @@
 
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict, parse_generate_network, parse_simulate
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict, parse_generate_network, parse_set_concentration, parse_simulate
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import GenerateNetworkDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import compose_path, decompose_path
 import abc
@@ -48,7 +49,7 @@ class SimulateAction(BNGLACtion):
         parsed = parse_simulate(declaration)
         action = SimulateAction(parsed)
         return action
-    
+
     def as_dict(self) -> SimulateDict:
         params: SimulateDict = {
             'method': self.method,
@@ -59,6 +60,34 @@ class SimulateAction(BNGLACtion):
         }
         return params
 
+
+class SaveConcentrationsAction(BNGLACtion):
+    pass
+
+
+class ResetConcentrationsAction(BNGLACtion):
+    pass
+
+
+class SetConcentrationAction(BNGLACtion):
+    pattern: Pattern
+    expression: str
+
+    def __init__(self,
+                 pattern: Pattern,
+                 expression: str) -> None:
+        super().__init__()
+        self.pattern = pattern
+        self.expression = expression
+
+    @classmethod
+    def from_declaration(cls, declaration: str) -> "SetConcentrationAction":
+        parsed = parse_set_concentration(declaration)
+        expression = parsed['expression']
+        parsed_pattern = parsed['pattern']
+        pattern = Pattern.from_dict(parsed_pattern, None)
+        action = SetConcentrationAction(pattern, expression)
+        return action
 
 
 def apply_actions(model: Model, actions: list[BNGLACtion]):
@@ -72,5 +101,8 @@ def apply_actions(model: Model, actions: list[BNGLACtion]):
         elif isinstance(action, SimulateAction) and network:
             params = action.as_dict()
             network.simulate(params)
+
+        else:
+            raise NotImplementedError("Action not implemented.")
 
     return network
