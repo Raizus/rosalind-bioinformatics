@@ -2,10 +2,10 @@
 import os
 import ast
 import operator as op
-from typing import Any
+from typing import Any, Iterable
 import graphviz
 import networkx as nx
-
+import csv
 
 def draw_graph(dot: graphviz.Graph, graph: nx.Graph):
     # Add nodes for molecules and components
@@ -206,14 +206,53 @@ def compose_path(path: str, name: str, extension: str):
 def apply_inequality(val_1: int, sign: str, val_2: int) -> bool:
     if sign == '==':
         return val_1 == val_2
-    elif sign == '<':
+    if sign == '<':
         return val_1 < val_2
-    elif sign == '<=':
+    if sign == '<=':
         return val_1 <= val_2
-    elif sign == '>':
+    if sign == '>':
         return val_1 > val_2
-    elif sign == '>=':
+    if sign == '>=':
         return val_1 >= val_2
-    else:
-        raise ValueError(
-            f"Invalid sign: {sign}. Valid signs are: '==', '<', '<=', '>', '>='")
+    
+    raise ValueError(f"Invalid sign: {sign}. Valid signs are: '==', '<', '<=', '>', '>='")
+
+def write_to_csv(filename: str, mode: str, rows: Iterable[Iterable[Any]]):
+    with open(filename, mode=mode, encoding='utf-8') as cvs_file:
+        csv_writer = csv.writer(cvs_file)
+        csv_writer.writerows(rows)
+
+
+def read_simulation_data(filename: str):
+    """
+    Reads simulation data from a .cdat or .gdat file.
+    
+    Parameters:
+        filename (str): The path to the .cdat or .gdat file.
+        
+    Returns:
+        times (list[float]): A list of time points.
+        concentrations (dict[str, list[int]]): A dictionary where each key is a reactant or group name,
+                                               and the value is a list of concentrations over time.
+    """
+    times = []
+    concentrations: dict[str, list[float]] = {}
+
+    with open(filename, mode='r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+
+        # Read the header (first row) to get the column names (e.g., Time, Reactants, Groups)
+        header = next(reader)
+
+        # Initialize a dictionary for concentrations with reactants/groups as keys
+        for col in header[1:]:
+            concentrations[col] = []
+
+        # Read each subsequent row: the first entry is the time, and the rest are concentrations
+        for row in reader:
+            times.append(float(row[0]))  # First entry is the time
+            for i, col in enumerate(header[1:], start=1):
+                # Remaining entries are concentrations
+                concentrations[col].append(int(row[i]))
+
+    return times, concentrations
