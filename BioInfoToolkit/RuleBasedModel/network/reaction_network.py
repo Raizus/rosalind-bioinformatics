@@ -3,6 +3,8 @@ from collections import defaultdict
 from typing import OrderedDict
 import networkx as nx
 import graphviz
+import numpy as np
+import os
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
@@ -11,6 +13,7 @@ from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, bu
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
 
 
@@ -26,7 +29,9 @@ class ReactionNetwork:
 
     graph: nx.DiGraph
     model: Model | None
-    filename: str
+    net_filename: str
+    cdat_filename: str
+    gdat_filename: str
 
     def __init__(self) -> None:
         self.parameters_block = ParametersBlock()
@@ -34,7 +39,10 @@ class ReactionNetwork:
         self.reactions_block = ReactionsBlock()
         self.groups_block = GroupsBlock()
         self.model = None
-        self.filename = 'model.net'
+
+        self.net_filename = 'model.net'
+        self.cdat_filename = 'model.cdat'
+        self.gdat_filename = 'model.gdat'
 
     def build_network(self, model: Model,
                       max_iter: int | None = None,
@@ -60,8 +68,17 @@ class ReactionNetwork:
         self.populate_groups(model)
 
         path, name, _ = decompose_path(model.filename)
-        net_path = compose_path(path, f"{name}", ".net")
-        self.filename = net_path
+        net_path = compose_path(path, name, ".net")
+        self.set_output_filepaths(net_path)
+
+    def set_output_filepaths(self, net_filename: str):
+        path, name, _ = decompose_path(net_filename)
+        net_path = compose_path(path, name, ".net")
+        self.net_filename = net_path
+        cdat_path = compose_path(path, name, ".cdat")
+        self.cdat_filename = cdat_path
+        gdat_path = compose_path(path, name, ".gdat")
+        self.gdat_filename = gdat_path
 
     def generate_parameters(self, model: Model):
         params_block = self.parameters_block
@@ -239,34 +256,74 @@ class ReactionNetwork:
 
         return rate_constants
 
-    def gillespie_simulation(self, total_time: float, n_steps: int | None = None):
-        evaluated_params = self.parameters_block.evaluated_params
+    def simulate(self, params: SimulateDict):
+        method = params['method']
 
+        if method == 'ssa':
+            # t_start = params['t_end']
+            t_end = params['t_end']
+            n_steps = params['n_steps']
+            self.gillespie_simulation(params)
+        elif method == 'ode':
+            t_start = params['t_end']
+            t_end = params['t_end']
+            n_steps = params['n_steps']
+            n_steps = n_steps if n_steps is not None else 100
+            t_span = np.linspace(t_start, t_end, n_steps)
+        else:
+            raise ValueError(f"Simulation method '{method}' is not valid.")
+
+    def initialise_concentrations(self):
         # evaluate species expressions and initialize concentrations
+        evaluated_params = self.parameters_block.evaluated_params
         self.species_block.validate_expressions(evaluated_params)
         concentrations: OrderedDict[int, int] = OrderedDict()
         for sp_id, specie in self.species_block.items.items():
             concentrations[sp_id] = int(specie.conc)
+        
+        return concentrations
+
+    # def set_concentration(self, specie_q: int | Pattern, value: str):
+    #     if isinstance(specie_q, int):
+    #         specie = self.species_block.get_specie(specie_q)
+    #         if specie:
+    #             specie.expression = value
+    #     else:
+    #         pass
+
+    def gillespie_simulation(self, params: SimulateDict):
+
+        # evaluate species expressions and initialize concentrations
+        concentrations = self.initialise_concentrations()
 
         # maps reaction id's to reaction rate constants
         rate_constants = self.get_rate_constants()
 
         reactions = self.reactions_block.items
         groups = self.groups_block.items
-        simulator = GillespieSimulator(total_time, n_steps)
+
+        t_end = params['t_end']
+        n_steps = params['n_steps']
+
+        simulator = GillespieSimulator(t_end, n_steps, self.cdat_filename, self.gdat_filename)
         times, groups_concent = simulator.simulate(reactions, rate_constants,
                                                    concentrations, groups)
 
         return times, groups_concent
 
-    def save_network(self, fp: str | None = None):
+    def save_network(self, fp: str | None = None, overwrite: bool | None = None):
         if fp is None:
-            fp = self.filename
+            fp = self.net_filename
 
-        ext = '.net'
-        path, name, _ = decompose_path(fp)
+        # ext = '.net'
+        # path, name, _ = decompose_path(fp)
+        # fp = compose_path(path, name, ext)
 
-        fp = compose_path(path, name, ext)
+        # Check if the file exists and raise an error if overwrite is False or None
+        if not overwrite and os.path.exists(fp):
+            msg = (f"A file already exists at '{fp}'. To overwrite, set 'overwrite' to True "
+                   + "or pass overwrite=>1 to the generate_network action.")
+            raise FileExistsError(msg)
 
         with open(fp, 'w', encoding='utf-8') as net_file:
             out = self.as_string()
