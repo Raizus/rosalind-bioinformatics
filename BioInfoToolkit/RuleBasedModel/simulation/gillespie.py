@@ -1,9 +1,9 @@
 from functools import reduce
-from itertools import accumulate
 from typing import OrderedDict
+import random
+
 import csv
 import numpy as np
-import random
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
@@ -96,6 +96,7 @@ class GillespieSimulator:
         header = ['Time'] + list(concentrations.keys())
         row = [time] + list(concentrations.values())
         write_to_csv(self.cdat_filename, 'w', [header, row])
+        r_keys = list(reactions.keys())
 
         while time < total_time:
             rates = compute_reaction_rates(
@@ -109,12 +110,8 @@ class GillespieSimulator:
             time += tau
 
             # Determine which reaction occurs
-            reaction_choice = np.random.rand() * total_rate
-
-            # select the reaction by computing the cumulative distribution function from the rates
-            cumulative_rates = list(accumulate(rates.values()))
-            chosen_reaction = next(i for i, rate in enumerate(
-                cumulative_rates) if rate > reaction_choice)
+            chosen_reaction = random.choices(
+                r_keys, weights=list(rates.values()), k=1)[0]
 
             # Update concentrations based on the chosen reaction
             rxn = reactions[chosen_reaction]
