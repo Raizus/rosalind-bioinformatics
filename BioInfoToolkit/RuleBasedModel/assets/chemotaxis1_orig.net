@@ -1,0 +1,22 @@
+# Created by BioNetGen 2.9.2
+begin parameters
+    1 NaV2           6.02e8  # Constant
+    2 L0             1e4  # Constant
+    3 T0             7000  # Constant
+    4 k_lr_bind      8.8e6/NaV2  # ConstantExpression
+    5 k_lr_dis       35  # Constant
+end parameters
+begin species
+    1 L(t) L0
+    2 T(l) T0
+    3 L(t!1).T(l!1) 0
+end species
+begin reactions
+    1 1,2 3 k_lr_bind #LR
+    2 3 1,2 k_lr_dis #_reverse_LR
+end reactions
+begin groups
+    1 free_ligand          1
+    2 bound_ligand         3
+    3 free_receptor        2
+end groups

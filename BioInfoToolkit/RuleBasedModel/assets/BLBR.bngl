@@ -50,6 +50,6 @@ end reaction rules
 
 # Do partial network expansion and simulate the ODE's corresponding to the limited network.
 generate_network({max_stoich=>{R=>5,L=>5}})
-simulate({method=>"ode",t_end=>10,n_steps=>1000})
+simulate({method=>"ode",t_end=>0.03,n_steps=>1000})
  
 # simulate({method=>"nf",t_end=>10,n_steps=>1000,get_final_state=>1})
