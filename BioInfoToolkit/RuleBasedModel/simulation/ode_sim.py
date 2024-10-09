@@ -11,7 +11,7 @@ from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 
 def reaction_system(
-    y,
+    y: npt.NDArray[np.float_],
     t: float,
     reactions: OrderedDict[int, Reaction],
     rate_constants: OrderedDict[int, float]
@@ -27,15 +27,15 @@ def reaction_system(
         rate = rate_constant
         for reactant in reaction.reactants:
             # Multiply by the concentration of each reactant
-            rate *= y[reactant]
+            rate *= y[reactant-1]
 
         # Update the rate of change for reactants (decrease in concentration)
         for reactant in reaction.reactants:
-            dydt[reactant] -= rate
+            dydt[reactant-1] -= rate
 
         # Update the rate of change for products (increase in concentration)
         for product in reaction.products:
-            dydt[product] += rate
+            dydt[product-1] += rate
 
     return dydt
 
@@ -88,7 +88,7 @@ class ODESimulator:
 
         n = concentrations.size
         # write cdat file
-        header = ['Time'] + [f"S{i}" for i in range(n)]
+        header = ['Time'] + [f"S{i+1}" for i in range(n)]
         write_to_csv(self.cdat_filename, 'w', [header])
         aux = np.hstack((t_span.reshape((t_span.size, 1)), sol))
         write_to_csv(self.cdat_filename, 'a', aux)

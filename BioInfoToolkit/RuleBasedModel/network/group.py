@@ -33,6 +33,6 @@ class ObservablesGroup:
         weights = np.zeros(n, dtype=np.int64)
 
         for sp_id, w in self.weighted_species:
-            weights[sp_id] = w
+            weights[sp_id-1] = w
 
         return weights
