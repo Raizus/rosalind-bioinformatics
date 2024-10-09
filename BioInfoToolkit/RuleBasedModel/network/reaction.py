@@ -1,6 +1,6 @@
 
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from itertools import product
 from typing import OrderedDict
 
@@ -21,15 +21,15 @@ class Reaction:
     """
     reactants: list[int]
     products: list[int]
-    rule_id: int
     rate_expression: str
+    rule_id: int
     comment: str
 
     def __init__(self,
                  reactants: list[int],
                  products: list[int],
-                 rule_id: int,
                  rate_expression: str,
+                 rule_id: int,
                  comment: str = "") -> None:
         """Reaction class for the reaction network
 
@@ -54,7 +54,7 @@ class Reaction:
         rate = parsed_reaction['rate']
         comment = parsed_reaction['comment']
 
-        reaction = Reaction(reactants, products, -1, rate, comment)
+        reaction = Reaction(reactants, products, rate, -1, comment)
         return reaction
 
     def __repr__(self) -> str:
@@ -77,8 +77,7 @@ class Reaction:
         r_ids_other = other.reactants
         p_ids_other = other.products
 
-        match = (self.rule_id == other.rule_id and
-                 set(r_ids) == set(r_ids_other)
+        match = (set(r_ids) == set(r_ids_other)
                  and set(p_ids) == set(p_ids_other) and
                  self.rate_expression == other.rate_expression)
 
@@ -155,7 +154,7 @@ def count_generated_rules(
 
         reaction_key = (
             rule_id,
-            tuple(react_species_ids),
+            tuple(sorted(react_species_ids)),
             tuple(sorted(prod_sp_ids))
         )
         reaction_counter[reaction_key]+=1
@@ -183,6 +182,9 @@ class ReactionGenerator:
                                                 self.species_match_cache)
                               for patt in reactants]
 
+            reaction_counter: Counter[tuple[int,
+                                            tuple[int, ...], tuple[int, ...]]] = Counter()
+
             for react_sp_ids in product(*reactants_gens):
                 rule_sp_key = (f"({rule_id},"
                                + str(tuple(sorted(react_sp_ids)))
@@ -194,23 +196,29 @@ class ReactionGenerator:
 
                 # apply rule to reactants
                 # (id, react_sps, prod_sps)
-                reaction_counter = count_generated_rules(
+                counter2 = count_generated_rules(
                     list(react_sp_ids), rule_id, rule,
                     species_block, max_stoich
                 )
 
-                for react_key, count in reaction_counter.items():
-                    _, react_sp_ids, prod_sp_ids = react_key
+                reaction_counter.update(counter2)
 
-                    # update cache
-                    self.apply_rule_cache[rule_sp_key] = list(prod_sp_ids)
+            for react_key, count in reaction_counter.items():
+                _, react_sp_ids, prod_sp_ids = react_key
 
-                    # create new reaction
-                    rate_expr = rule.forward_rate
-                    if count != 1:
-                        rate_expr = f"{count}*{rate_expr}"
+                rule_sp_key = (f"({rule_id},"
+                               + str(tuple(sorted(react_sp_ids)))
+                               + ')')
 
-                    comment = f"{rule.name}"
-                    rxn = Reaction(list(react_sp_ids), list(prod_sp_ids),
-                                rule_id, rate_expr, comment)
-                    yield rxn
+                # update cache
+                self.apply_rule_cache[rule_sp_key] = list(prod_sp_ids)
+
+                # create new reaction
+                rate_expr = rule.forward_rate
+                if count != 1:
+                    rate_expr = f"{count}*{rate_expr}"
+
+                comment = f"{rule.name}"
+                rxn = Reaction(list(react_sp_ids), list(prod_sp_ids),
+                            rate_expr, rule_id, comment)
+                yield rxn

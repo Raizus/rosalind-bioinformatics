@@ -360,7 +360,6 @@ class ChangeStateAction(ReactionTransformation):
             products = reactants.copy()
             products[i] = new_specie
             yield products
-            return
 
 
 def apply_transforms(

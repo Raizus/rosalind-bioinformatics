@@ -7,6 +7,7 @@ import numpy as np
 import os
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
+from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, build_rules_dict
@@ -96,8 +97,6 @@ class ReactionNetwork:
             param = model_params[name]
             params_block.add_parameter(param)
 
-        params_block.evaluated_params = evaluated_params
-
     def generate_seed_species(self, model: Model):
         """Generates the initial seed species, that are used to build the
         reaction network
@@ -143,6 +142,23 @@ class ReactionNetwork:
         species_dict = species_block.items
 
         reaction_rules = build_rules_dict(model.reaction_rules_block.items)
+        # substitute reaction expression if they're not variables
+        r_law_id = 1
+        for r_id, reaction in reaction_rules.items():
+            expr = reaction.forward_rate
+            if expr in self.parameters_block.items:
+                continue
+
+            while True:
+                var_name = f"_rateLaw{r_law_id}"
+                if var_name not in self.parameters_block.items:
+                    break
+                r_law_id += 1
+            new_param = Parameter(var_name, expr)
+            self.parameters_block.add_parameter(new_param)
+            reaction.forward_rate = var_name
+            r_law_id += 1
+
         reaction_gen = ReactionGenerator(reaction_rules)
 
         n_rxs_prev = len(reactions_dict)
@@ -175,6 +191,9 @@ class ReactionNetwork:
 
             if max_iter and n_iter >= max_iter:
                 break
+
+        msg = f"TOTAL {n_iter}:\t{n_species_prev} species\t{n_rxs_prev} rxns"
+        print(msg)
 
     def as_string(self) -> str:
         out = ''
@@ -266,6 +285,8 @@ class ReactionNetwork:
     def simulate(self, params: SimulateDict):
         method = params['method']
 
+        self.parameters_block.evaluate_parameters()
+
         if method == 'ssa':
             # t_start = params['t_end']
             t_end = params['t_end']
@@ -279,7 +300,8 @@ class ReactionNetwork:
             t_span = np.linspace(t_start, t_end, n_steps)
 
             # evaluate species expressions and initialize concentrations
-            concentrations = np.array(list(self.initialise_concentrations().values()), dtype=np.float64)
+            concentrations = np.array(list(self.initialise_concentrations().values()),
+                                      dtype=np.float64)
 
             # maps reaction id's to reaction rate constants
             rate_constants = self.get_rate_constants()
