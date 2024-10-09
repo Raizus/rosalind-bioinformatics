@@ -28,6 +28,7 @@ def parsed_obs_group_to_dict(parsed: pp.ParseResults | Any) -> ObservablesGroupD
         sp_id = parsed_specie.sp_id
         if not isinstance(sp_id, str):
             raise TypeError(f"type {sp_id} must be a string")
+        
         weight = parsed_specie.get('weight', "1")
         if not isinstance(weight, str):
             raise TypeError(f"type {weight} must be a string")
@@ -127,7 +128,7 @@ def parse_observables_group(declaration: str) -> ObservablesGroupDict:
         NUMS('weight') + pp.Suppress('*')) + NUMS('sp_id')
     elements_parser = pp.delimited_list(pp.Group(element_parser))
 
-    obs_group_parser = id_parser + name_parser + elements_parser('species')
+    obs_group_parser = id_parser + name_parser + pp.Optional(elements_parser('species'))
 
     try:
         parsed = obs_group_parser.parseString(declaration)
