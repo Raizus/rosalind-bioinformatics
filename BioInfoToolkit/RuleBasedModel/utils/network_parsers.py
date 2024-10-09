@@ -58,6 +58,8 @@ def parsed_reaction_to_dict(parsed: pp.ParseResults | Any) -> ReactionDict:
 
     reactants: list[int] = []
     for val in parsed_reactants.as_list():
+        if int(val) == 0:
+            continue
         reactants.append(int(val))
 
     parsed_products = parsed.products
@@ -66,6 +68,8 @@ def parsed_reaction_to_dict(parsed: pp.ParseResults | Any) -> ReactionDict:
 
     products: list[int] = []
     for val in parsed_products.as_list():
+        if int(val) == 0:
+            continue
         products.append(int(val))
 
     rate = parsed.rate

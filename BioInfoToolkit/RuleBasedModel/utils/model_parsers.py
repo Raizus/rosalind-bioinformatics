@@ -90,10 +90,13 @@ def parsed_reactants_to_list(parsed: pp.ParseResults | Any) -> list[list[Molecul
 
         parts: list[MoleculeDict] = []
         for parsed_molecule in parsed_pattern:
+            if parsed_molecule == '0':
+                continue
             reactant = parsed_molecule_to_dict(parsed_molecule)
             parts.append(reactant)
 
-        patterns.append(parts)
+        if len(parts):
+            patterns.append(parts)
 
     return patterns
 
@@ -148,7 +151,8 @@ def parse_reaction_rule(reaction_str: str):
 
     reagent_pattern = pp.Group(
         COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
-    reagents_pattern = pp.delimitedList(reagent_pattern, '+')
+    reagents_pattern = (pp.delimitedList(reagent_pattern, '+')
+                        | pp.Group(pp.Literal('0')))
 
     left_side_reactants = reagents_pattern('left_side_reactants')
     right_side_reactants = reagents_pattern('right_side_reactants')

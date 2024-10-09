@@ -184,6 +184,8 @@ class SeedSpeciesBlock(ModelBlock):
         Returns:
             str: output string
         """
+        if len(self.items) == 0:
+            return ''
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
@@ -244,8 +246,10 @@ class ReactionRulesBlock(ModelBlock):
             name = f"{reaction.name}:" if reaction.name else ''
             reactants = reaction.reactants
             products = reaction.products
-            reactants_str = ' + '.join(str(reagent) for reagent in reactants)
-            products_str = ' + '.join(str(reagent) for reagent in products)
+            reactants_str = (' + '.join(str(reagent) for reagent in reactants)
+                             if len(reactants) else '0')
+            products_str = (' + '.join(str(reagent) for reagent in products)
+                            if len(products) else '0')
             arrow = '<->' if reaction.is_bidirectional() else '->'
             reaction_str = f"{reactants_str} {arrow} {products_str}"
 
