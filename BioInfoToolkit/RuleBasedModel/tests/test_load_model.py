@@ -11,7 +11,7 @@ from BioInfoToolkit.RuleBasedModel.model.load_model import load_bngl
     './BioInfoToolkit/RuleBasedModel/assets/test2.bngl',
 ])
 def test_load_model(fp: str):
-    model = load_bngl(fp)
+    model, actions = load_bngl(fp)
 
     assert isinstance(model, Model)
     assert model.validate() is True
