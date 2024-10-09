@@ -103,13 +103,27 @@ class SimulateDict(TypedDict):
     t_end: float
     n_steps: int | None
     continue_: bool | None
+    atol: float | None
+    rtol: float | None
 
+
+def float_action_param_parser(param_name: str, parsed_name: str):
+    float_number = pp.Combine(UNSIGNED_NUMBER_PARSER)
+
+    def parse_float_action(token: pp.ParseResults):
+        return float(token.asList()[0])
+
+    expr = (
+        pp.Literal(param_name)
+        + pp.Suppress("=>")
+        + float_number(parsed_name).set_parse_action(parse_float_action))
+
+    return expr
 
 def parse_simulate(declaration: str) -> SimulateDict:
     # Basic patterns
     integer = pp.Word(pp.nums)
     zero_or_one = pp.Word('01', exact=1)
-    float_number = pp.Combine(UNSIGNED_NUMBER_PARSER)
     method_string = pp.Suppress('"') + pp.Word(pp.alphas) + pp.Suppress('"')
 
     # parse_actions
@@ -123,9 +137,6 @@ def parse_simulate(declaration: str) -> SimulateDict:
     def parse_01_action(token: pp.ParseResults):
         return bool(int(token.asList()[0]))
 
-    def parse_float_action(token: pp.ParseResults):
-        return float(token.asList()[0])
-
     def parse_int_action(token: pp.ParseResults):
         return int(token.asList()[0])
 
@@ -135,21 +146,16 @@ def parse_simulate(declaration: str) -> SimulateDict:
         + pp.Suppress("=>")
         + method_string("method").set_parse_action(parse_method_action))
 
-    t_end_expr = (
-        pp.Literal("t_end")
-        + pp.Suppress("=>")
-        + float_number("t_end").set_parse_action(parse_float_action))
-
-    t_start_expr = (
-        pp.Literal("t_start")
-        + pp.Suppress("=>")
-        + float_number("t_start").set_parse_action(parse_float_action))
+    t_end_expr = float_action_param_parser("t_end", "t_end")
+    t_start_expr = float_action_param_parser("t_start", "t_start")
+    atol_expr = float_action_param_parser("atol", "atol")
+    rtol_expr = float_action_param_parser("rtol", "rtol")
 
     n_steps_expr = (
         pp.Literal("n_steps")
         + pp.Suppress("=>")
         + integer("n_steps").set_parse_action(parse_int_action))
-    
+
     continue_expr = (
         pp.Literal("continue")
         + pp.Suppress("=>")
@@ -157,7 +163,8 @@ def parse_simulate(declaration: str) -> SimulateDict:
 
     # Combining all expressions
     parameters_expr = pp.Optional(
-        pp.delimitedList(t_end_expr | t_start_expr | n_steps_expr | continue_expr)
+        pp.delimitedList(t_end_expr | t_start_expr | n_steps_expr 
+                         | continue_expr | atol_expr | rtol_expr)
     )
 
     expr = (
@@ -181,6 +188,8 @@ def parse_simulate(declaration: str) -> SimulateDict:
         t_start = parsed_dict.get("t_start", 0.0)  # default is 0
         n_steps = parsed_dict.get("n_steps", None)  # default is None
         continue_val = parsed_dict.get("continue_", None)  # default is None
+        atol = parsed_dict.get("atol", None)
+        rtol = parsed_dict.get("rtol", None)
 
         # Ensure required parameters are present
         t_end = parsed_dict["t_end"]  # t_end is mandatory
@@ -192,6 +201,8 @@ def parse_simulate(declaration: str) -> SimulateDict:
             "t_end": t_end,
             "n_steps": n_steps,
             "continue_": continue_val,
+            "atol": atol,
+            "rtol": rtol,
         }
 
         return result
