@@ -2,7 +2,7 @@
 
 from typing import OrderedDict
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
-from BioInfoToolkit.RuleBasedModel.utils.utls import format_data_into_lines
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, format_data_into_lines
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 
 
@@ -20,6 +20,36 @@ class ParametersBlock(NetworkBlock):
 
     def add_parameter(self, parameter: Parameter):
         self.items[parameter.name] = parameter
+
+    def evaluate_parameters(self):
+        evaluated_params: OrderedDict[str, float | int] = OrderedDict()
+
+        # evaluate parameters
+        while len(evaluated_params) != len(self.items):
+            new_eval = False
+
+            for name, param in self.items.items():
+                if name in evaluated_params:
+                    continue
+                value, _ = eval_expr(param.expression, evaluated_params)
+                if not isinstance(value, int) and not isinstance(value, float):
+                    raise TypeError(
+                        f"value '{value}' must be of type int or float.")
+                evaluated_params[name] = value
+                new_eval = True
+
+            if not new_eval:
+                break
+
+        # raise error if there are parameters that could not be evaluated
+        if len(evaluated_params) != len(self.items):
+            names = set(self.items.keys()) - set(evaluated_params.keys())
+            names_str = ', '.join(names)
+            msg = ("Could not evaluate all expressions. " +
+                   f"Specifically could not evaluate parameters: {names_str}")
+            raise ValueError(msg)
+
+        self.evaluated_params = evaluated_params
 
     def gen_string(self):
         if len(self.items) == 0:
