@@ -22,7 +22,7 @@ def parse_block_lines(current_line: str,
         compartment = Compartment.from_declaration(current_line)
         model.compartments_block.add_compartment(compartment)
 
-    elif current_block == 'species':
+    elif current_block in ('species', 'seed_species'):
         species = Species.from_declaration(
             current_line, molecule_types)
         model.species_block.add_species(species)
@@ -74,7 +74,7 @@ def load_bngl(file_path: str):
             line = line.strip()
 
             # Skip empty lines and comments
-            if not line or parse_comment(line):
+            if not line or parse_comment(line) is not None:
                 continue
 
             # Handle line continuation (if line ends with a backslash '\')
@@ -124,7 +124,7 @@ def load_bngl(file_path: str):
             parse_block_lines(current_line, current_block, model)
 
             # parse actions
-            if parsed_model:
+            if current_block is None:
                 action = parse_actions(current_line)
                 if action:
                     actions.append(action)
