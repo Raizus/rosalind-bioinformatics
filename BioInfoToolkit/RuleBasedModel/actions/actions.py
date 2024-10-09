@@ -1,11 +1,12 @@
 
+import abc
+
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict, parse_generate_network, parse_set_concentration, parse_simulate
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict, \
+    parse_generate_network, parse_set_concentration, parse_simulate
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import GenerateNetworkDict
-from BioInfoToolkit.RuleBasedModel.utils.utls import compose_path, decompose_path
-import abc
 
 
 class BNGLACtion(abc.ABC):
@@ -36,6 +37,8 @@ class SimulateAction(BNGLACtion):
     t_end: float
     n_steps: int | None
     continue_: bool | None
+    atol: float | None
+    rtol: float | None
 
     def __init__(self, simulate_dict: SimulateDict) -> None:
         self.method = simulate_dict['method']
@@ -43,6 +46,8 @@ class SimulateAction(BNGLACtion):
         self.t_end = simulate_dict['t_end']
         self.n_steps = simulate_dict['n_steps']
         self.continue_ = simulate_dict['continue_']
+        self.atol = simulate_dict['atol']
+        self.rtol = simulate_dict['rtol']
 
     @classmethod
     def from_declaration(cls, declaration: str) -> "SimulateAction":
@@ -56,7 +61,9 @@ class SimulateAction(BNGLACtion):
             't_start': self.t_start,
             't_end': self.t_end,
             'n_steps': self.n_steps,
-            'continue_': self.continue_
+            'continue_': self.continue_,
+            'atol': self.atol,
+            'rtol': self.rtol,
         }
         return params
 
