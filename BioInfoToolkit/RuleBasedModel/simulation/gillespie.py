@@ -29,7 +29,7 @@ def compute_reaction_rates(
                 raise KeyError(
                     f"Species with id '{reactant}' not in the concentrations dictionary.")
         rate = rate_constant * \
-            reduce(lambda x, y: x*y, concent_reactants)
+            reduce(lambda x, y: x*y, concent_reactants, 1.0)
         rates[r_id] = rate
 
     return rates
@@ -139,7 +139,6 @@ class GillespieSimulator:
                 # Record time and concentrations for all reactions
                 times.append(time)
 
-                # Record concentrations of reactants
                 row = [time] + list(concentrations.values())
                 write_to_csv(self.cdat_filename, 'a', [row])
 
