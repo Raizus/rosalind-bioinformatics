@@ -164,12 +164,14 @@ def count_generated_rules(
 
 class ReactionGenerator:
     rules: OrderedDict[int, ReactionRule]
-    apply_rule_cache: dict[str, list[int]]
+    # stores with combinations of rule_ids and sorted reactants have already been computed
+    apply_rule_cache: set[tuple[int, tuple[int,...]]]
+    # this maps str(pattern): sp_id
     species_match_cache: dict[tuple[str,int], int]
 
     def __init__(self, rules: OrderedDict[int, ReactionRule]) -> None:
         self.rules = rules
-        self.apply_rule_cache = {}
+        self.apply_rule_cache = set()
         self.species_match_cache = {}
 
     def generate(self, species_block: SpeciesBlock, max_stoich: dict[str, int]):
@@ -186,9 +188,7 @@ class ReactionGenerator:
                                             tuple[int, ...], tuple[int, ...]]] = Counter()
 
             for react_sp_ids in product(*reactants_gens):
-                rule_sp_key = (f"({rule_id},"
-                               + str(tuple(sorted(react_sp_ids)))
-                               + ')')
+                rule_sp_key = (rule_id, tuple(sorted(react_sp_ids)))
 
                 # check if we already applied this rule to this combination of reactants
                 if rule_sp_key in self.apply_rule_cache:
@@ -206,12 +206,10 @@ class ReactionGenerator:
             for react_key, count in reaction_counter.items():
                 _, react_sp_ids, prod_sp_ids = react_key
 
-                rule_sp_key = (f"({rule_id},"
-                               + str(tuple(sorted(react_sp_ids)))
-                               + ')')
+                rule_sp_key = (rule_id, tuple(sorted(react_sp_ids)))
 
                 # update cache
-                self.apply_rule_cache[rule_sp_key] = list(prod_sp_ids)
+                self.apply_rule_cache.add(rule_sp_key)
 
                 # create new reaction
                 rate_expr = rule.forward_rate
