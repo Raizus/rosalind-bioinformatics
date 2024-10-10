@@ -2,6 +2,7 @@ import pyparsing as pp
 from typing import Any, TypedDict
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMPLEX_PARSER, EXPRESSION_PARSER, MOLECULE_PARSER, NAME_EXPRESSION, UNSIGNED_NUMBER_PARSER, MoleculeDict, ParsingError, parsed_pattern_to_dict_list
+from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 
 class GenerateNetworkDict(TypedDict):
@@ -103,42 +104,63 @@ class SimulateDict(TypedDict):
     t_end: float
     n_steps: int | None
     continue_: bool | None
+    verbose: bool | None
     atol: float | None
     rtol: float | None
+    tau: float | None
 
 
-def float_action_param_parser(param_name: str, parsed_name: str):
+def action_float_param_parser(param_name: str, parsed_name: str):
     float_number = pp.Combine(UNSIGNED_NUMBER_PARSER)
 
-    def parse_float_action(token: pp.ParseResults):
+    def parse_float_param(token: pp.ParseResults):
         return float(token.asList()[0])
 
     expr = (
         pp.Literal(param_name)
         + pp.Suppress("=>")
-        + float_number(parsed_name).set_parse_action(parse_float_action))
+        + float_number(parsed_name).set_parse_action(parse_float_param))
 
     return expr
+
+
+def action_01_param_parser(param_name: str, parsed_name: str):
+    zero_or_one = pp.Word('01', exact=1)
+
+    def parse_01_param(token: pp.ParseResults):
+        return bool(int(token.asList()[0]))
+
+    expr = (
+        pp.Literal(param_name)
+        + pp.Suppress("=>")
+        + zero_or_one(parsed_name).set_parse_action(parse_01_param))
+
+    return expr
+
 
 def parse_simulate(declaration: str) -> SimulateDict:
     # Basic patterns
     integer = pp.Word(pp.nums)
-    zero_or_one = pp.Word('01', exact=1)
-    method_string = pp.Suppress('"') + pp.Word(pp.alphas) + pp.Suppress('"')
+    exp_part = pp.Optional(pp.CaselessLiteral(
+        'e') + pp.Word(pp.nums))
+    num_expr = pp.Combine(integer + exp_part)
+    method_string = pp.Suppress('"') + pp.Word(pp.alphas, pp.alphas+'-') + pp.Suppress('"')
 
     # parse_actions
     def parse_method_action(token: pp.ParseResults):
         method = token[0]
-        if method not in ("ssa", "ode"):
+        if method not in ("ssa", "ode", "tau-leap"):
             raise ValueError(
-                f"Invalid method '{method}'. Only 'ssa' and 'ode' is supported.")
+                f"Invalid method '{method}'. Only 'ssa', 'ode' and 'tau-leap' is supported.")
         return method
 
-    def parse_01_action(token: pp.ParseResults):
-        return bool(int(token.asList()[0]))
-
     def parse_int_action(token: pp.ParseResults):
-        return int(token.asList()[0])
+        string: str = token.asList()[0]
+        _dict: dict[str, int|float] = {}
+        res, _ = eval_expr(string, _dict)
+        if isinstance(res, (int, float)):
+            return int(res)
+        raise ValueError(f"Parameter with value '{string}' must evaluate to integer.")
 
     # Define key=>value pairs for each parameter
     method_expr = (
@@ -146,25 +168,25 @@ def parse_simulate(declaration: str) -> SimulateDict:
         + pp.Suppress("=>")
         + method_string("method").set_parse_action(parse_method_action))
 
-    t_end_expr = float_action_param_parser("t_end", "t_end")
-    t_start_expr = float_action_param_parser("t_start", "t_start")
-    atol_expr = float_action_param_parser("atol", "atol")
-    rtol_expr = float_action_param_parser("rtol", "rtol")
+    t_end_expr = action_float_param_parser("t_end", "t_end")
+    t_start_expr = action_float_param_parser("t_start", "t_start")
+    atol_expr = action_float_param_parser("atol", "atol")
+    rtol_expr = action_float_param_parser("rtol", "rtol")
+    tau_expr = action_float_param_parser("tau", "tau")
+    
+    continue_expr = action_01_param_parser("continue", "continue_")
+    verbose_expr = action_01_param_parser("verbose", "verbose")
 
     n_steps_expr = (
         pp.Literal("n_steps")
         + pp.Suppress("=>")
-        + integer("n_steps").set_parse_action(parse_int_action))
-
-    continue_expr = (
-        pp.Literal("continue")
-        + pp.Suppress("=>")
-        + zero_or_one("continue_").set_parse_action(parse_01_action))
+        + num_expr("n_steps").set_parse_action(parse_int_action))
 
     # Combining all expressions
     parameters_expr = pp.Optional(
-        pp.delimitedList(t_end_expr | t_start_expr | n_steps_expr 
-                         | continue_expr | atol_expr | rtol_expr)
+        pp.delimitedList(t_end_expr | t_start_expr | n_steps_expr
+                         | continue_expr | atol_expr | rtol_expr
+                         | tau_expr | verbose_expr)
     )
 
     expr = (
@@ -190,6 +212,8 @@ def parse_simulate(declaration: str) -> SimulateDict:
         continue_val = parsed_dict.get("continue_", None)  # default is None
         atol = parsed_dict.get("atol", None)
         rtol = parsed_dict.get("rtol", None)
+        tau = parsed_dict.get("tau", None)
+        verbose = parsed_dict.get("verbose", None)
 
         # Ensure required parameters are present
         t_end = parsed_dict["t_end"]  # t_end is mandatory
@@ -203,6 +227,8 @@ def parse_simulate(declaration: str) -> SimulateDict:
             "continue_": continue_val,
             "atol": atol,
             "rtol": rtol,
+            "tau": tau,
+            "verbose": verbose,
         }
 
         return result

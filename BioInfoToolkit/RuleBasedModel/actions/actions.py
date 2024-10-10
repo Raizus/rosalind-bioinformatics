@@ -39,6 +39,8 @@ class SimulateAction(BNGLACtion):
     continue_: bool | None
     atol: float | None
     rtol: float | None
+    verbose: bool | None
+    tau: float | None
 
     def __init__(self, simulate_dict: SimulateDict) -> None:
         self.method = simulate_dict['method']
@@ -48,6 +50,8 @@ class SimulateAction(BNGLACtion):
         self.continue_ = simulate_dict['continue_']
         self.atol = simulate_dict['atol']
         self.rtol = simulate_dict['rtol']
+        self.verbose = simulate_dict['verbose']
+        self.tau = simulate_dict['tau']
 
     @classmethod
     def from_declaration(cls, declaration: str) -> "SimulateAction":
@@ -64,6 +68,8 @@ class SimulateAction(BNGLACtion):
             'continue_': self.continue_,
             'atol': self.atol,
             'rtol': self.rtol,
+            'tau': self.tau,
+            'verbose': self.verbose,
         }
         return params
 

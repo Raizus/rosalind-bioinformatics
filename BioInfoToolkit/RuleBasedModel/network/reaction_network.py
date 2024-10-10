@@ -15,6 +15,7 @@ from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
 from BioInfoToolkit.RuleBasedModel.simulation.ode_sim import ODESimulator
+from BioInfoToolkit.RuleBasedModel.simulation.tau_leaping import TauLeapingSimulator
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
 
@@ -287,6 +288,11 @@ class ReactionNetwork:
 
         self.parameters_block.evaluate_parameters()
 
+        # maps reaction id's to reaction rate constants
+        rate_constants = self.get_rate_constants()
+        groups = self.groups_block.items
+        reactions = self.reactions_block.items
+
         if method == 'ssa':
             # t_start = params['t_end']
             t_end = params['t_end']
@@ -303,13 +309,12 @@ class ReactionNetwork:
             concentrations = np.array(list(self.initialise_concentrations().values()),
                                       dtype=np.float64)
 
-            # maps reaction id's to reaction rate constants
-            rate_constants = self.get_rate_constants()
-            groups = self.groups_block.items
-            reactions = self.reactions_block.items
-
             simulator = ODESimulator(self.cdat_filename, self.gdat_filename)
             simulator.solve(concentrations, t_span, reactions, rate_constants, groups)
+        elif method == 'tau-leap':
+            simulator = TauLeapingSimulator(params, self.cdat_filename, self.gdat_filename)
+            concentrations = self.initialise_concentrations()
+            simulator.solve(concentrations, reactions, rate_constants, groups)
         else:
             raise ValueError(f"Simulation method '{method}' is not valid.")
 
