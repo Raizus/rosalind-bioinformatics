@@ -4,9 +4,9 @@ import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_reaction_rule
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern
 from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import BreakBondTransform, \
-    ChangeStateAction, FormBondTransform, ReactionTransformation, apply_transforms
+    ChangeStateAction, CreateMoleculeAction, DestroyMoleculeAction, FormBondTransform, ReactionTransformation, apply_transforms
 from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, \
     compare_chemical_array_graphs, node_matching
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
@@ -354,8 +354,8 @@ def find_bond_formations(
 
 
 def find_deleted_molecules(
+    reactants: list[Pattern],
     graph_r: nx.Graph,
-    graph_p: nx.Graph,
     node_map: dict[tuple[int, int, int], tuple[int, int, int]]
 ):
     nodes1_g = set(node_map.keys())
@@ -367,13 +367,50 @@ def find_deleted_molecules(
     subgraph = graph_r.subgraph(missing_n1).copy()
     for c in nx.connected_components(subgraph):
         # molecule nodes
+        # crete a new pattern from each molecule and subcomponents in the connected components
+        # some bonds might need to be broken
+        # each connected component belongs to the same reactant
+        react_idxs: set[int] = set(i for i,_,_ in c)
+        assert len(react_idxs) == 1
         mol_nodes = [n1 for n1 in c if n1[2] == -1]
-        for n1 in mol_nodes:
-            subgraph.nodes[n1]['label']
+        molecules: list[Molecule] = [reactants[i].molecules[j].copy() for i, j, _ in mol_nodes]
+        # TODO: ASSUMING THAT NO BONDS WERE BROKEN
+        idx = next(iter(react_idxs))
+        new_pattern = Pattern(molecules)
+        if len(molecules) > 0:
+            return idx, new_pattern
+
+
+def find_created_molecules(
+    products: list[Pattern],
+    graph_p: nx.Graph,
+    node_map: dict[tuple[int, int, int], tuple[int, int, int]]
+):
+    nodes2_g = set(node_map.values())
+    # find nodes in graph_p that are not in nodes2_g
+    # these will correspond to molecules in graph_p that don't map to graph_r
+    # i.e., created molecules
+    missing_n2 = [n2 for n2 in graph_p.nodes if n2 not in nodes2_g]
+
+    subgraph = graph_p.subgraph(missing_n2).copy()
+    for c in nx.connected_components(subgraph):
+        # crete a new pattern from each molecule and subcomponents in the connected components
+        # some bonds might need to be broken
+        # each connected component belongs to the same reactant
+        react_idxs: set[int] = set(i for i, _, _ in c)
+        assert len(react_idxs) == 1
+        mol_nodes = [n1 for n1 in c if n1[2] == -1]
+        molecules: list[Molecule] = [products[i].molecules[j].copy()
+                                     for i, j, _ in mol_nodes]
+        # TODO: ASSUMING THAT NO BONDS WERE BROKEN
+        new_pattern = Pattern(molecules)
+        if len(molecules) > 0:
+            return new_pattern
 
 
 def find_transformation(
     curr_reactants: list[Pattern],
+    products: list[Pattern],
     curr_graph_r: nx.Graph,
     graph_p: nx.Graph,
     node_map: dict[ChemArrayNodeId, ChemArrayNodeId],
@@ -410,7 +447,18 @@ def find_transformation(
                                               bond_forms[0], bond_forms[1])
         transformations.append(bond_forms_action)
 
-    # find_deleted_molecules(curr_graph_r, graph_p, node_map)
+    res = find_deleted_molecules(curr_reactants, curr_graph_r, node_map)
+    if res:
+        idx, deleted_pattern = res
+        delete_molecule_action = DestroyMoleculeAction(
+            curr_reactants, curr_graph_r, idx)
+        transformations.append(delete_molecule_action)
+
+    created_pattern = find_created_molecules(products, graph_p, node_map)
+    if created_pattern:
+        create_molecule_action = CreateMoleculeAction(
+            curr_reactants, curr_graph_r, created_pattern)
+        transformations.append(create_molecule_action)
 
     return transformations
 
@@ -419,6 +467,7 @@ def decompose_reaction(reaction: ReactionRule):
     curr_graph_r = reaction.reactants_graph
     graph_p = reaction.products_graph
     curr_reactants = reaction.reactants
+    products = reaction.products
 
     transformations: list[ReactionTransformation] = []
 
@@ -426,8 +475,9 @@ def decompose_reaction(reaction: ReactionRule):
         node_map, node_map_reverse = reactants_to_products_node_map(curr_reactants,
                                                                     curr_graph_r, graph_p)
         try:
-            transformations2 = find_transformation(curr_reactants, curr_graph_r, graph_p,
-                                                node_map, node_map_reverse)
+            transformations2 = find_transformation(curr_reactants, products, 
+                                                   curr_graph_r, graph_p,
+                                                   node_map, node_map_reverse)
         except ValueError as exc:
             msg = (f"Could not decompose the reaction:\n\t{reaction}")
             raise ValueError() from exc

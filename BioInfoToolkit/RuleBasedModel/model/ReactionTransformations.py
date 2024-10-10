@@ -362,6 +362,60 @@ class ChangeStateAction(ReactionTransformation):
             yield products
 
 
+class DestroyMoleculeAction(ReactionTransformation):
+    transformation = TransformationType.DESTROY_MOLECULE
+    patterns: list[Pattern]
+    react_idx: int
+
+    def __init__(self,
+                 reactants: list[Pattern],
+                 graph_r: nx.Graph,
+                 react_idx: int) -> None:
+        super().__init__(graph_r)
+        self.patterns = reactants
+        self.react_idx = react_idx
+
+    def __repr__(self) -> str:
+        out = f"{self.transformation.value}: "
+        return out
+
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+        # find affected reactant
+        reactants = [reactant.copy() for reactant in reactants]
+
+        idx = self.react_idx
+        products = reactants.copy()
+        products.pop(idx)
+        yield products
+
+
+class CreateMoleculeAction(ReactionTransformation):
+    transformation = TransformationType.CREATE_MOLECULE
+    patterns: list[Pattern]
+    created_pattern: Pattern
+
+    def __init__(self,
+                 reactants: list[Pattern],
+                 graph_r: nx.Graph,
+                 created_pattern: Pattern) -> None:
+        super().__init__(graph_r)
+        self.patterns = reactants
+        self.created_pattern = created_pattern
+
+    def __repr__(self) -> str:
+        out = f"{self.transformation.value}: "
+        return out
+
+    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+        # find affected reactant
+        reactants = [reactant.copy() for reactant in reactants]
+
+        products = reactants.copy()
+        products.append(self.created_pattern.copy())
+        yield products
+
+
+
 def apply_transforms(
     reactants: list[Pattern],
     actions: list[ReactionTransformation]

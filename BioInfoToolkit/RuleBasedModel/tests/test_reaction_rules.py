@@ -195,7 +195,7 @@ class TestReaction4:
         ]
         return out
 
-    @pytest.mark.parametrize("sel_r, sel_sp, prod_sp", [
+    @pytest.mark.parametrize("sel_r, sel_sp, expected_prod_sp", [
         (0, [0, 1], [2]),
         (0, [2, 1], [3]),
         (1, [2], [0, 1]),
@@ -212,7 +212,7 @@ class TestReaction4:
         (2, [4, 2], [7]),
         (2, [4, 3], [8]),
     ])
-    def test_valid(self, species, reactions, sel_r: int, sel_sp: list[int], prod_sp: list[int]):
+    def test_valid(self, species, reactions, sel_r: int, sel_sp: list[int], expected_prod_sp: list[int]):
         reaction = reactions[sel_r]
         transformations = decompose_reaction(reaction)
         # reactants = reaction.reactants
@@ -222,6 +222,53 @@ class TestReaction4:
             assert match_pattern_specie(react, sp) == 1
 
         products_species = next(apply_transforms(selected_species, transformations))
-        assert len(products_species) == len(prod_sp)
-        expected_products = [species[i] for i in prod_sp]
+        assert len(products_species) == len(expected_prod_sp)
+        prod_sp_ids: list[int] = []
+        for prod in products_species:
+            matches: list[int] = [
+                i for i, specie in enumerate(species) if specie == prod]
+            prod_sp_ids.append(matches[0])
+        assert set(expected_prod_sp) == set(prod_sp_ids)
 
+
+class TestReaction5:
+    molecules = {
+        "gTetR": MoleculeType.from_declaration("gTetR(lac,lac)"),
+        "gCI": MoleculeType.from_declaration("gCI(tet,tet)"),
+        "gLacI": MoleculeType.from_declaration("gLacI(cI,cI)"),
+        "mTetR": MoleculeType.from_declaration("mTetR()"),
+        "mCI": MoleculeType.from_declaration("mCI()"),
+        "mLacI": MoleculeType.from_declaration("mLacI()"),
+        "pTetR": MoleculeType.from_declaration("pTetR(cI)"),
+        "pCI": MoleculeType.from_declaration("pCI(lac)"),
+        "pLacI": MoleculeType.from_declaration("pLacI(tet)"),
+    }
+
+    # @pytest.fixture
+    # def species(self):
+    #     out = [
+    #         Pattern.from_declaration("L(t)", self.molecules),
+    #         Pattern.from_declaration("T(l,Phos~U)", self.molecules),
+    #         Pattern.from_declaration("T(l,Phos~P)", self.molecules),
+    #         Pattern.from_declaration("CheY(Phos~U)", self.molecules),
+    #         Pattern.from_declaration("CheY(Phos~P)", self.molecules),
+    #         Pattern.from_declaration("CheZ()", self.molecules),
+    #         Pattern.from_declaration("L(t!1).T(l!1,Phos~U)", self.molecules),
+    #         Pattern.from_declaration("L(t!1).T(l!1,Phos~P)", self.molecules),
+    #     ]
+    #     return out
+
+    @pytest.mark.parametrize("declaration", [
+        "R18: gLacI(cI!+) -> gLacI(cI!+) + mLacI() c4*rF",
+        "R19: mLacI() -> mLacI() + pLacI(tet) c5/rF*pF",
+        "R20: mLacI() -> 0 c6",
+        "R21: pLacI(tet) -> 0  c7",
+    ])
+    def test_valid_1(self, declaration: str):
+        reaction = ReactionRule.from_declaration(declaration, self.molecules)
+        transformations = decompose_reaction(reaction)
+        reactants = reaction.reactants
+        products_res = next(apply_transforms(reactants, transformations))
+        g2 = build_chemical_array_graph(products_res)
+        equal = compare_chemical_array_graphs(reaction.products_graph, g2)
+        assert equal is True
