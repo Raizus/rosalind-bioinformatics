@@ -22,7 +22,7 @@ def parse_block_lines(current_line: str,
         compartment = Compartment.from_declaration(current_line)
         model.compartments_block.add_compartment(compartment)
 
-    elif current_block in ('species', 'seed_species'):
+    elif current_block in ('species', 'seed species'):
         species = Species.from_declaration(
             current_line, molecule_types)
         model.species_block.add_species(species)
