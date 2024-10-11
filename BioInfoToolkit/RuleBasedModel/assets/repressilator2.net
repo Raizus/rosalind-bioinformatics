@@ -1,0 +1,94 @@
+
+begin parameters
+	0   Na          6.022e23      
+	1   V           1.4e-15       
+	2   c0          1e9           
+	3   c1          224           
+	4   c2          9             
+	5   c3          0.5           
+	6   c4          5e-4          
+	7   c5          0.167         
+	8   c6          0.693/120     
+	9   c7          0.693/600     
+	10  tF          1e-4          
+	11  rF          1000          
+	12  pF          1000          
+	13  _rateLaw1   c0/Na/V*tF/pF 
+	14  _rateLaw2   c1*tF         
+	15  _rateLaw3   c0/Na/V*tF/pF 
+	16  _rateLaw4   c2*tF         
+	17  _rateLaw5   c3*rF         
+	18  _rateLaw6   c4*rF         
+	19  _rateLaw7   c5/rF*pF      
+	20  _rateLaw8   c0/Na/V*tF/pF 
+	21  _rateLaw9   c1*tF         
+	22  _rateLaw10  c0/Na/V*tF/pF 
+	23  _rateLaw11  c2*tF         
+	24  _rateLaw12  c3*rF         
+	25  _rateLaw13  c4*rF         
+	26  _rateLaw14  c5/rF*pF      
+	27  _rateLaw15  c0/Na/V*tF/pF 
+	28  _rateLaw16  c1*tF         
+	29  _rateLaw17  c0/Na/V*tF/pF 
+	30  _rateLaw18  c2*tF         
+	31  _rateLaw19  c3*rF         
+	32  _rateLaw20  c4*rF         
+	33  _rateLaw21  c5/rF*pF      
+end parameters
+
+begin species
+	1   gTetR(lac!1,lac!2).pLacI(tet!1).pLacI(tet!2) 1
+	2   gCI(tet!1,tet!2).pTetR(cI!1).pTetR(cI!2)     1
+	3   gLacI(cI!1,cI!2).pCI(lac!1).pCI(lac!2)       1
+	4   mTetR()                                      3163
+	5   mCI()                                        6819
+	6   mLacI()                                      129
+	7   pTetR(cI)                                    183453
+	8   pCI(lac)                                     2006198
+	9   pLacI(tet)                                   165670
+	10  gTetR(lac,lac!2).pLacI(tet!2)                0
+	11  gCI(tet,tet!2).pTetR(cI!2)                   0
+	12  gLacI(cI,cI!2).pCI(lac!2)                    0
+	13  gTetR(lac,lac)                               0
+	14  gCI(tet,tet)                                 0
+	15  gLacI(cI,cI)                                 0
+end species
+
+begin reactions
+	0   1     9,10  2*_rateLaw4  # _reverse_R2
+	1   1     1,4   _rateLaw6    # R4
+	2   10    4,10  _rateLaw6    # R4
+	3   4     4,7   _rateLaw7    # R5
+	4   4     0     c6           # R6
+	5   7     0     c7           # R7
+	6   2     7,11  2*_rateLaw11 # _reverse_R9
+	7   2     2,5   _rateLaw13   # R11
+	8   11    5,11  _rateLaw13   # R11
+	9   5     5,8   _rateLaw14   # R12
+	10  5     0     c6           # R13
+	11  8     0     c7           # R14
+	12  3     8,12  2*_rateLaw18 # _reverse_R16
+	13  3     3,6   _rateLaw20   # R18
+	14  12    6,12  _rateLaw20   # R18
+	15  6     6,9   _rateLaw21   # R19
+	16  6     0     c6           # R20
+	17  9     0     c7           # R21
+	18  10    9,13  _rateLaw2    # _reverse_R1
+	19  9,10  1     _rateLaw3    # R2
+	20  13    4,13  _rateLaw5    # R3
+	21  11    7,14  _rateLaw9    # _reverse_R8
+	22  7,11  2     _rateLaw10   # R9
+	23  14    5,14  _rateLaw12   # R10
+	24  12    8,15  _rateLaw16   # _reverse_R15
+	25  8,12  3     _rateLaw17   # R16
+	26  15    6,15  _rateLaw19   # R17
+	27  9,13  10    2*_rateLaw1  # R1
+	28  7,14  11    2*_rateLaw8  # R8
+	29  8,15  12    2*_rateLaw15 # R15
+end reactions
+
+begin groups
+	0  pTetR 7
+	1  pCI   8
+	2  pLacI 9
+end groups
