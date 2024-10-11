@@ -61,6 +61,13 @@ class Model:
                    "all rules into simple transformations.")
             raise InvalidModelBlockError(msg) from exc
 
+        # validate compartments
+        try:
+            self.compartments_block.validate()
+        except (TypeError, ValueError) as exc:
+            msg = "Compartments block is not valid."
+            raise InvalidModelBlockError(msg) from exc
+
         return True
 
     def as_string(self) -> str:

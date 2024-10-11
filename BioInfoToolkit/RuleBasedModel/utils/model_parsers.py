@@ -1,11 +1,13 @@
 from typing import Any
 import pyparsing as pp
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, NUMS, UNSIGNED_NUMBER_PARSER, VARIABLE_PARSER, CompartmentDict, MoleculeTypeComponentDict, \
-    MoleculeTypeDict, MoleculeDict, ObservableExpressionDict, ParsingError, ReactionRuleDict, ObservableDict, \
-    ParameterDict, SeedSpeciesDict, NAME_EXPRESSION, STATE, MOLECULE_PARSER, \
-    COMPLEX_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, parsed_compartment_to_compartment_dict, parsed_parameter_to_parameter_dict,parsed_seed_species_to_seed_species_dict
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_dict_list
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, NUMS, UNSIGNED_NUMBER_PARSER, \
+    VARIABLE_PARSER, NAME_EXPRESSION, STATE, MOLECULE_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, \
+    CompartmentDict, MoleculeTypeComponentDict, MoleculeTypeDict, MoleculeDict, \
+    ObservableExpressionDict, ParsingError, PatternDict, ReactionRuleDict, ObservableDict, \
+    ParameterDict, SeedSpeciesDict, parsed_compartment_to_compartment_dict, \
+    parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_pattern_to_pattern_dict
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import parsed_molecule_to_dict
 
 # Define the grammar for parsing
@@ -35,7 +37,7 @@ def parsed_observable_to_dict(parsed: pp.ParseResults) -> ObservableDict:
         if isinstance(parsed_value, str):
             value = int(parsed_value)
 
-        pattern = parsed_pattern_to_dict_list(parsed_pattern)        
+        pattern = parsed_pattern_to_pattern_dict(parsed_pattern)        
         obs_expr: ObservableExpressionDict = {
             'pattern': pattern,
             'sign': sign,
@@ -66,7 +68,7 @@ def parse_molecule(declaration: str):
     return result
 
 
-def parse_pattern(declaration: str) -> list[MoleculeDict]:
+def parse_pattern(declaration: str) -> PatternDict:
     try:
         parsed = PATTERN_PARSER.parseString(declaration)
     except pp.ParseException as ee:
@@ -75,15 +77,15 @@ def parse_pattern(declaration: str) -> list[MoleculeDict]:
     if not isinstance(parsed, pp.ParseResults):
         raise TypeError(f"{parsed} must be of type ParseResults.")
 
-    molecules = parsed_pattern_to_dict_list(parsed)
-    return molecules
+    pattern = parsed_pattern_to_pattern_dict(parsed)
+    return pattern
 
 
-def parsed_reactants_to_list(parsed: pp.ParseResults | Any) -> list[list[MoleculeDict]]:
+def parsed_patterns_to_list(parsed: pp.ParseResults | Any) -> list[PatternDict]:
     if not isinstance(parsed, pp.ParseResults):
         raise TypeError(f"{parsed} must be of type ParseResults.")
 
-    patterns: list[list[MoleculeDict]] = []
+    patterns: list[PatternDict] = []
     for parsed_pattern in parsed:
         if not isinstance(parsed_pattern, pp.ParseResults):
             raise TypeError(f"{parsed_pattern} must be of type ParseResults.")
@@ -92,25 +94,27 @@ def parsed_reactants_to_list(parsed: pp.ParseResults | Any) -> list[list[Molecul
         for parsed_molecule in parsed_pattern:
             if parsed_molecule == '0':
                 continue
-            reactant = parsed_molecule_to_dict(parsed_molecule)
-            parts.append(reactant)
+            molecule = parsed_molecule_to_dict(parsed_molecule)
+            parts.append(molecule)
 
-        if len(parts):
-            patterns.append(parts)
+        if len(parts) > 0:
+            pattern: PatternDict = {
+                'molecules': parts,
+                'aggregate_compartment': None
+            }
+            patterns.append(pattern)
 
     return patterns
 
 
 def parse_reactants_sum(string: str):
-    reagent_pattern = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    reagent_pattern = pp.Group(PATTERN_PARSER)
     reagents_pattern = pp.delimitedList(reagent_pattern, '+')
 
     left_side_reactants = reagents_pattern('reactants')
     parsed = left_side_reactants.parseString(string)
 
-    reactants: list[list[MoleculeDict]
-                    ] = parsed_reactants_to_list(parsed.reactants)
+    reactants: list[PatternDict] = parsed_patterns_to_list(parsed.reactants)
 
     return reactants
 
@@ -132,8 +136,8 @@ def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
     left_side = parsed.left_side_reactants
     right_side = parsed.right_side_reactants
 
-    left_reactants = parsed_reactants_to_list(left_side)
-    right_reactants = parsed_reactants_to_list(right_side)
+    left_reactants = parsed_patterns_to_list(left_side)
+    right_reactants = parsed_patterns_to_list(right_side)
 
     result: ReactionRuleDict = {
         "name": name,
@@ -149,8 +153,7 @@ def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
 def parse_reaction_rule(reaction_str: str):
     """Parses a biochemical reaction and verifies the correctness of complexes and bonds."""
 
-    reagent_pattern = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    reagent_pattern = pp.Group(PATTERN_PARSER)
     reagents_pattern = (pp.delimitedList(reagent_pattern, '+')
                         | pp.Group(pp.Literal('0')))
 
@@ -258,8 +261,7 @@ def parse_observable(declaration: str) -> ObservableDict:
     name_pattern = NAME_EXPRESSION('molecule_name')
 
     pattern_parser = pp.Group(
-        COMPLEX_PARSER
-        | pp.Group(MOLECULE_PARSER)
+        PATTERN_PARSER
         | pp.Group(name_pattern))
 
     sign_parser = (
@@ -304,10 +306,9 @@ def parse_parameter(declaration: str) -> ParameterDict:
 
 def parse_seed_species(declaration: str) -> SeedSpeciesDict:
     expression_parser = pp.Combine(EXPRESSION_PARSER)
-    reagent_parser = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    pattern_parser = pp.Group(PATTERN_PARSER)
 
-    seed_species_parser = reagent_parser('pattern') + expression_parser('expression')
+    seed_species_parser = pattern_parser('pattern') + expression_parser('expression')
 
     try:
         parsed = seed_species_parser.parseString(declaration)

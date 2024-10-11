@@ -1,10 +1,10 @@
 from typing import Any
 import pyparsing as pp
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, \
-    COMPLEX_PARSER, EXPRESSION_PARSER, LABEL_PARSER, MOLECULE_PARSER, \
-    NUMS, VARIABLE_PARSER, NetworkParameterDict, NetworkSeedSpeciesDict, ObservablesGroupDict, ParsingError, \
-    ReactionDict, parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, EXPRESSION_PARSER, \
+    LABEL_PARSER, NUMS, PATTERN_PARSER, VARIABLE_PARSER, NetworkParameterDict, \
+    NetworkSeedSpeciesDict, ObservablesGroupDict, ParsingError, ReactionDict, \
+    parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
 
 
 def parsed_obs_group_to_dict(parsed: pp.ParseResults | Any) -> ObservablesGroupDict:
@@ -175,8 +175,7 @@ def parse_parameters(declaration: str) -> NetworkParameterDict:
 
 def parse_seed_species(declaration: str) -> NetworkSeedSpeciesDict:
     expression_parser = pp.Combine(EXPRESSION_PARSER)
-    reagent_parser = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    reagent_parser = pp.Group(PATTERN_PARSER)
     id_parser = NUMS('sp_id')
 
     seed_species_parser = (id_parser +

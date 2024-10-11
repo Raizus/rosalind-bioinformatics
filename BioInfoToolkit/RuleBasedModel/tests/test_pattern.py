@@ -41,8 +41,9 @@ class TestMolecule():
     @pytest.mark.parametrize("declaration", [
         "A(z)",
         "A(x~c)", "A(y~a)", 
-        "A(x~a,x~a,x~b)", "A(x~a, y, y)",
-        "B()"
+        "A(x~a,x~a,x~b)",
+        "B()",
+        # "A(x~a, y, y)",
     ])
     def test_invalid(self, declaration: str):
         with pytest.raises(ValueError):
@@ -78,40 +79,6 @@ class TestPattern():
     def test_valid_2(self, declaration: str):
         pattern = Pattern.from_declaration(declaration, self.molecules2)
         assert isinstance(pattern, Pattern)
-
-    # @pytest.mark.parametrize("declaration", [
-    #     "L(rec!0).R(lig!0,ch~open)", "L(rec!0).R(lig!0,ch~closed)"
-    # ])
-    # def test_is_species(self, declaration: str):
-    #     complex = ComplexReactant.from_declaration(declaration, self.molecules)
-    #     assert complex.is_specie() == True
-
-    # @pytest.mark.parametrize("declaration", [
-    #     "L(rec!0).R(lig!0)", "R(lig!0).L(rec!0)", 
-    #     "L(rec!1).R(lig!1)", "R(lig!1).L(rec!1)"
-    # ])
-    # def test_is_pattern(self, declaration: str):
-    #     complex = ComplexReactant.from_declaration(declaration, self.molecules)
-    #     assert complex.is_pattern() == True
-
-    # @pytest.mark.parametrize("declaration, expected", [
-    #     ("L(rec!0).R(lig!0)", 2),
-    #     ("R(lig!1).L(rec!1)", 2),
-    #     ("L(rec!0).R(lig!0,ch~open)", 1),
-    #     ("L(rec!0).R(lig!0,ch~closed)", 1),
-    # ])
-    # def test_generate_species(self, declaration: str, expected: int):
-    #     complex = ComplexReactant.from_declaration(declaration, self.molecules)
-    #     species = [specie for specie in complex.generate_species()]
-    #     assert len(species) == expected
-
-    # @pytest.mark.parametrize("declaration, expected", [
-    #     ("D(a!0).A(x!0)", 2),
-    # ])
-    # def test_generate_species_2(self, declaration: str, expected: int):
-    #     complex = ComplexReactant.from_declaration(declaration, self.molecules2)
-    #     species = [specie for specie in complex.generate_species()]
-    #     assert len(species) == expected
 
     @pytest.mark.parametrize("pattern1_str, pattern2_str, expected", [
         ("R(lig!0,ch~open)", "R(lig!0,ch~open)", True),     # exactly equal

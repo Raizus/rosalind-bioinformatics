@@ -1,5 +1,5 @@
 
-
+import networkx as nx
 from typing import OrderedDict
 
 from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment
@@ -270,23 +270,24 @@ class ReactionRulesBlock(ModelBlock):
 class CompartmentsBlock(ModelBlock):
     name = 'compartments'
     items: OrderedDict[str, Compartment]
+    compartment_graph: nx.DiGraph
+    root: str | None
 
     def __init__(self) -> None:
         super().__init__()
         self.items = OrderedDict()
+        self.compartment_graph = nx.DiGraph()
+        self.root = None
 
-    def add_compartment(self, compartment: Compartment):
+    def validate_new_compartment(self, compartment: Compartment):
         name = compartment.name
         dimensions = compartment.dimensions
         enclosing_compartment_name = compartment.enclosing_compartment
 
-        if name in self.items:
-            raise ValueError(f"Compartment with {name} already declared.")
-
         if len(self.items) == 0:
             if compartment.is_enclosed():
-                msg = ( "The first compartment must be the external one, " +
-                        "enclosing_compartment must be None.")
+                msg = ("The first compartment must be the external one, " +
+                       "enclosing_compartment must be None.")
                 raise TypeError(msg)
         else:
             if not compartment.is_enclosed() or (enclosing_compartment_name not in self.items):
@@ -302,14 +303,43 @@ class CompartmentsBlock(ModelBlock):
                     msg = f"The compartment '{name}' is a surface and must be enclosed by a volume."
                     raise ValueError(msg)
 
-            else: # this compartment is a volume
+            else:  # this compartment is a volume
                 if enclosing_compartment.dimensions != 2:
                     msg = f"The compartment '{name}' is a volume and must be enclosed by a volume."
                     raise ValueError(msg)
 
-        # TODO build compartment tree, and check that every surface encloses exactly one volume
+    def add_compartment(self, compartment: Compartment):
+        name = compartment.name
+        enclosing_compartment_name = compartment.enclosing_compartment
+
+        if name in self.items:
+            raise ValueError(f"Compartment with {name} already declared.")
+
+        self.validate_new_compartment(compartment)
+
+        if compartment.enclosing_compartment is None:
+            self.root = compartment.name
+        self.compartment_graph.add_node(name)
+
+        if enclosing_compartment_name:
+            # if parent is surface it can only have 1 child. A surface has to enclose 1 volume
+            children = self.compartment_graph.adj[enclosing_compartment_name]
+            if self.items[enclosing_compartment_name].dimensions == 2 and len(children) >= 1:
+                msg = (f"Compartment {enclosing_compartment_name} is a surface "
+                       + "and can only enclose at most 1 volume.")
+                raise ValueError(msg)
+            self.compartment_graph.add_edge(enclosing_compartment_name, name)
 
         self.items[name] = compartment
+
+    def validate(self) -> bool:
+        if len(self.items) == 0:
+            return True
+
+        for node in nx.traversal.dfs_preorder_nodes(self.compartment_graph, self.root):
+            a = 0
+
+        raise NotImplementedError()
 
     def gen_string(self) -> str:
         """Returns the string of this model block.

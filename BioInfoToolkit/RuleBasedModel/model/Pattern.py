@@ -6,7 +6,7 @@ import graphviz
 from BioInfoToolkit.RuleBasedModel.model.Component import Component, components_all_equal, components_gen, sort_components
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_pattern, parse_molecule
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeDict
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import MoleculeDict, PatternDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import apply_inequality
 
 
@@ -17,13 +17,14 @@ class Molecule:
     _compartment: str | None = None
 
     def __init__(self, name: str,
-                 components: list[Component]) -> None:
+                 components: list[Component],
+                 compartment: str | None = None) -> None:
         self._name = name
-        self._components_counts = Counter(
-            [component._name for component in components])
-        self._compartment = None
         sorted_comps = sort_components(components)
         self._components = sorted_comps
+        self._components_counts = Counter(
+            [component._name for component in sorted_comps])
+        self._compartment = compartment
 
         for comp_name in self._components_counts.keys():
             comps = [comp for comp in self._components if comp._name == comp_name]
@@ -78,6 +79,7 @@ class Molecule:
                   molecule_types: dict[str, MoleculeType] | None):
         molecule_name = parsed["name"]
         parsed_components = parsed["components"]
+        compartment = parsed['compartment']
 
         components: list[Component] = []
         all_components: list[Component] = []
@@ -127,7 +129,7 @@ class Molecule:
             all_components.append(component)
             components_count[comp_name] += 1
 
-        molecule = Molecule(molecule_name, components)
+        molecule = Molecule(molecule_name, components, compartment)
         return molecule
 
     @classmethod
@@ -146,6 +148,8 @@ class Molecule:
         component_str = ','.join(str(component)
                                  for component in sorted_components)
         out = f"{self._name}({component_str})"
+        if self.compartment:
+            out += f"@{self.compartment}"
         return out
 
     def is_bonded(self) -> bool:
@@ -220,12 +224,15 @@ def generate_species(molecule: MoleculeType):
 
 class Pattern:
     molecules: list[Molecule]
+    aggregate_compartment: str | None
     _bonds: defaultdict[str, list[tuple[int, int]]]
     _graph: nx.Graph
 
-    def __init__(self, molecules: list[Molecule]) -> None:
+    def __init__(self, molecules: list[Molecule],
+                 aggregate_compartment: str | None = None) -> None:
         self.molecules = sort_molecules(molecules)
         self._bonds = defaultdict(list)
+        self.aggregate_compartment = aggregate_compartment
 
         graph = nx.Graph()
         self._graph = graph
@@ -255,13 +262,14 @@ class Pattern:
 
     @classmethod
     def from_dict(cls,
-                  parsed: list[MoleculeDict],
+                  parsed: PatternDict,
                   molecule_types: dict[str, MoleculeType] | None):
         parts = []
-        for parsed_reagent in parsed:
-            part = Molecule.from_dict(parsed_reagent, molecule_types)
-            parts.append(part)
-        return Pattern(parts)
+        for parsed_mol in parsed['molecules']:
+            molecule = Molecule.from_dict(parsed_mol, molecule_types)
+            parts.append(molecule)
+        aggregate_compartment = parsed['aggregate_compartment']
+        return Pattern(parts, aggregate_compartment)
 
     @classmethod
     def from_declaration(cls,
@@ -355,6 +363,8 @@ class Pattern:
 
     def __repr__(self) -> str:
         out = '.'.join(str(part) for part in self.molecules)
+        if self.aggregate_compartment:
+            out = f"{self.aggregate_compartment}:" + out
         return out
 
     def copy(self) -> "Pattern":

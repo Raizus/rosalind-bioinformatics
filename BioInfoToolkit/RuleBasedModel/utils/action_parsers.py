@@ -1,7 +1,8 @@
-import pyparsing as pp
 from typing import Any, TypedDict
+import pyparsing as pp
 
-from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMPLEX_PARSER, EXPRESSION_PARSER, MOLECULE_PARSER, NAME_EXPRESSION, UNSIGNED_NUMBER_PARSER, MoleculeDict, ParsingError, parsed_pattern_to_dict_list
+from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import EXPRESSION_PARSER, NAME_EXPRESSION, \
+    PATTERN_PARSER, UNSIGNED_NUMBER_PARSER, ParsingError, PatternDict, parsed_pattern_to_pattern_dict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 
@@ -239,13 +240,13 @@ def parse_simulate(declaration: str) -> SimulateDict:
 
 
 class SetConcentrationDict(TypedDict):
-    pattern: list[MoleculeDict]
+    pattern: PatternDict
     expression: str
 
 
 def parsed_set_concentration_to_dict(parsed: pp.ParseResults) -> SetConcentrationDict:
     parsed_pattern = parsed.species
-    pattern = parsed_pattern_to_dict_list(parsed_pattern)
+    pattern = parsed_pattern_to_pattern_dict(parsed_pattern)
 
     expression = parsed.expression
     if not isinstance(expression, str):
@@ -261,8 +262,7 @@ def parsed_set_concentration_to_dict(parsed: pp.ParseResults) -> SetConcentratio
 def parse_set_concentration(declaration: str) -> SetConcentrationDict:
     # Basic patterns
     expression_parser = pp.Combine(EXPRESSION_PARSER)
-    reagent_parser = pp.Group(
-        COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))
+    reagent_parser = pp.Group(PATTERN_PARSER)
 
     # Define key=>value pairs for each parameter
     species_parser = (

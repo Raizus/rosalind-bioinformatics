@@ -30,13 +30,19 @@ class MoleculeDict(TypedDict):
     """Typed dict for molecule"""
     name: str
     components: list[ComponentDict]
+    compartment: str | None
+
+
+class PatternDict(TypedDict):
+    molecules: list[MoleculeDict]
+    aggregate_compartment: str | None
 
 
 class ReactionRuleDict(TypedDict):
     """Typed dict for reaction rule"""
     name: str
-    reactants: list[list[MoleculeDict]]
-    products: list[list[MoleculeDict]]
+    reactants: list[PatternDict]
+    products: list[PatternDict]
     forward_rate: str
     reverse_rate: str | None
 
@@ -51,7 +57,7 @@ class ReactionDict(TypedDict):
 
 
 class ObservableExpressionDict(TypedDict):
-    pattern: list[MoleculeDict]
+    pattern: PatternDict
     sign: str | None
     value: int | None
 
@@ -93,7 +99,7 @@ class NetworkParameterDict(ParameterDict):
 
 class SeedSpeciesDict(TypedDict):
     """Typed dict for seed species"""
-    pattern: list[MoleculeDict]
+    pattern: PatternDict
     expression: str
 
 
@@ -124,10 +130,13 @@ COMPONENTS_PARSER = pp.delimitedList(COMPONENT_PARSER, ',').leaveWhitespace()
 COMBINED_COMPONENTS_PARSER = pp.delimitedList(
     COMPONENT_PARSER, ',', True).leaveWhitespace()
 # Define the overall expression format
+COMPARTMENT_LOC_PARSER = pp.Suppress('@') + NAME_EXPRESSION('compartment')
 MOLECULE_PARSER = (NAME_EXPRESSION('molecule_name') +
                    pp.Literal('(').leaveWhitespace() +
                    pp.Optional(COMPONENTS_PARSER)('components') +
-                   pp.Literal(')').leaveWhitespace())
+                   pp.Literal(')').leaveWhitespace() +
+                   pp.Optional(COMPARTMENT_LOC_PARSER)
+                   )
 COMBINED_MOLECULE_PARSER = pp.Combine(
     NAME_EXPRESSION('molecule_name') +
     pp.Literal('(').leaveWhitespace() +
@@ -135,13 +144,15 @@ COMBINED_MOLECULE_PARSER = pp.Combine(
     pp.Literal(')').leaveWhitespace()
 )
 COMPLEX_PARSER = pp.delimitedList(pp.Group(MOLECULE_PARSER), '.', min=2)
+
 COMBINED_COMPLEX_PARSER = pp.delimitedList(
     pp.Group(COMBINED_MOLECULE_PARSER), '.', True, min=2)
 # COMPLEX_PARSER = pp.Group(MOLECULE_PARSER) + \
 #     pp.OneOrMore(pp.Suppress('.').leaveWhitespace() + \
 #     pp.Group(MOLECULE_PARSER).leaveWhitespace())
 
-PATTERN_PARSER = COMPLEX_PARSER | pp.Group(MOLECULE_PARSER)
+PATTERN_PARSER = (pp.Optional(COMPARTMENT_LOC_PARSER + pp.Suppress(':')) +
+                  (COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))('molecules'))
 LABEL_PARSER = pp.Word(pp.alphas, pp.alphanums+'_')
 
 # Define numeric literals
@@ -190,7 +201,7 @@ COMMENT_PARSER = (pp.Suppress("#") + pp.restOfLine('comment') +
                   (pp.LineEnd() | pp.StringEnd()))
 
 
-def parsed_molecule_to_dict(parsed: pp.ParseResults):
+def parsed_molecule_to_dict(parsed: pp.ParseResults) -> MoleculeDict:
     name = parsed.molecule_name
     if not isinstance(name, str):
         raise ValueError("Molecule name must be a string.")
@@ -206,32 +217,49 @@ def parsed_molecule_to_dict(parsed: pp.ParseResults):
             }
             components.append(comp)
 
+    compartment = parsed.get('compartment', None)
+    if compartment is not None and not isinstance(compartment, str):
+        raise ValueError("compartment must be a string or None.")
+
     result: MoleculeDict = {
         'name': name,
-        'components': components
+        'components': components,
+        'compartment': compartment,
     }
     return result
 
 
-def parsed_pattern_to_dict_list(parsed: pp.ParseResults | Any):
+def parsed_pattern_to_pattern_dict(parsed: pp.ParseResults | Any) -> PatternDict:
     if not isinstance(parsed, pp.ParseResults):
         raise TypeError(f"{parsed} must be of type ParseResults.")
 
     parts: list[MoleculeDict] = []
-    for parsed_molecule in parsed:
-        reactant = parsed_molecule_to_dict(parsed_molecule)
-        parts.append(reactant)
-    return parts
+    parsed_molecules = parsed.molecules
+    for parsed_molecule in parsed_molecules:
+        if not isinstance(parsed_molecule, pp.ParseResults):
+            raise TypeError("parsed_molecule must be of type ParseResults.")
+        molecule = parsed_molecule_to_dict(parsed_molecule)
+        parts.append(molecule)
+
+    compartment = parsed.get('compartment', None)
+    if compartment is not None and not isinstance(compartment, str):
+        raise TypeError("compartment must be a string or None.")
+
+    pattern: PatternDict = {
+        'molecules': parts,
+        'aggregate_compartment': compartment
+    }
+    return pattern
 
 
 def parsed_parameter_to_parameter_dict(parsed: pp.ParseResults) -> ParameterDict:
     name = parsed.name
     if not isinstance(name, str):
-        raise ValueError("Parameter name must be a string.")
+        raise TypeError("Parameter name must be a string.")
 
     expression = parsed.expression
     if not isinstance(expression, str):
-        raise ValueError("Parameter expression must be a string.")
+        raise TypeError("Parameter expression must be a string.")
 
     comment = parsed.get('comment', '')
     if not isinstance(comment, str):
@@ -278,7 +306,7 @@ def parsed_compartment_to_compartment_dict(parsed: pp.ParseResults) -> Compartme
 
 def parsed_seed_species_to_seed_species_dict(parsed: pp.ParseResults) -> SeedSpeciesDict:
     parsed_pattern = parsed.pattern
-    pattern = parsed_pattern_to_dict_list(parsed_pattern)
+    pattern = parsed_pattern_to_pattern_dict(parsed_pattern)
 
     expression = parsed.expression
     if not isinstance(expression, str):
