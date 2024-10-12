@@ -1,4 +1,3 @@
-from functools import reduce
 from typing import OrderedDict
 import random
 
@@ -7,32 +6,8 @@ import numpy as np
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_reaction_rates
 from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
-
-
-def compute_reaction_rates(
-    rate_constants: OrderedDict[int, float],
-    concentrations: OrderedDict[int, int],
-    reactions: OrderedDict[int, Reaction]
-):
-    rates: OrderedDict[int, float] = OrderedDict()
-    # compute the rates for each reaction
-    # the rate is equal to the product of the concentrations of the left
-    # side reagents and the reaction rate constant
-    for r_id, rxn in reactions.items():
-        rate_constant = rate_constants[r_id]
-        concent_reactants: list[int] = []
-        for reactant in rxn.reactants:
-            if reactant in concentrations:
-                concent_reactants.append(concentrations[reactant])
-            else:
-                raise KeyError(
-                    f"Species with id '{reactant}' not in the concentrations dictionary.")
-        rate = rate_constant * \
-            reduce(lambda x, y: x*y, concent_reactants, 1.0)
-        rates[r_id] = rate
-
-    return rates
 
 
 class GillespieSimulator:
@@ -98,6 +73,9 @@ class GillespieSimulator:
         write_to_csv(self.cdat_filename, 'w', [header, row])
         r_keys = list(reactions.keys())
 
+        print("Starting simulation with Gillespie algorithm...")
+        print(f"\tt = {time}")
+
         while time < total_time:
             rates = compute_reaction_rates(
                 rate_constants, concentrations, reactions)
@@ -129,6 +107,8 @@ class GillespieSimulator:
                     row = [time] + list(concentrations.values())
                     write_to_csv(self.cdat_filename, 'a', [row])
 
+                    print(f"\tt = {time}")
+
                     # Update observables concentrations
                     for g_id, group in groups.items():
                         concentration = group.compute_concentration(concentrations)
@@ -141,6 +121,8 @@ class GillespieSimulator:
 
                 row = [time] + list(concentrations.values())
                 write_to_csv(self.cdat_filename, 'a', [row])
+
+                print(f"\tt = {time}")
 
                 # Update observables concentrations
                 for g_id, group in groups.items():
