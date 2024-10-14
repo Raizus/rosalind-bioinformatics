@@ -27,5 +27,5 @@ def plot_concentrations(times: list[float], concentrations: dict[str, list[float
     plt.tight_layout()  # Adjust layout to fit everything neatly
 
     # Show the plot
-    plt.show()
     plt.savefig('plot.png')
+    plt.show()
