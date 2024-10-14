@@ -133,15 +133,15 @@ class NextReactionMethod:
 
             # Update taus: only those reactions affected by the change need updates
             for r_id, reaction in reactions.items():
-                if r_id not in affected_rxns:
-                    continue
-                
-                ratio = propensities[r_id] / new_propensities[r_id] if new_propensities[r_id] != 0 else np.inf
-                taus[r_id] = (ratio*(taus[r_id] - tau_min)
-                                if taus[r_id] > tau_min else 0)
-                if taus[r_id] == 0:
-                    rate = new_propensities[r_id]
-                    taus[r_id] = -np.log(np.random.rand()) / rate if rate != 0 else np.inf
+                new_rate = new_propensities[r_id]
+                old_rate = propensities[r_id]
+                if new_rate == 0:
+                    taus[r_id] = np.inf
+                elif old_rate == 0 or r_id == next_reaction_index:
+                    taus[r_id] = -np.log(np.random.rand()) / new_rate
+                else:
+                    ratio = old_rate / new_rate
+                    taus[r_id] = ratio * (taus[r_id] - tau_min)
 
             propensities = new_propensities
 
