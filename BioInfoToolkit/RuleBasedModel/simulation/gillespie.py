@@ -1,85 +1,66 @@
 from typing import OrderedDict
 import random
 
-import csv
 import numpy as np
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_reaction_rates
-from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
+    create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 
 
 class GillespieSimulator:
-    total_time: float
-    n_steps: int | None
+    sim_params: SimulateDict
     cdat_filename: str = 'output.cdat'
     gdat_filename: str = 'output.gdat'
 
     def __init__(self,
-                 total_time: float,
-                 n_steps: int | None,
+                 sim_params: SimulateDict,
                  cdat_filename: str = 'output.cdat',
                  gdat_filename: str = 'output.gdat'
                 ) -> None:
-        self.total_time = total_time
-        self.n_steps = n_steps
+        self.sim_params = sim_params
         self.cdat_filename = cdat_filename
         self.gdat_filename = gdat_filename
-
-    def create_gdat_file(self,
-                         groups_concentration: OrderedDict[int, list[int]],
-                         groups: OrderedDict[int, ObservablesGroup],
-                         times: list[float]):
-        gdat_filename = self.gdat_filename
-        with open(gdat_filename, mode='w', newline='', encoding='utf-8') as gdat_file:
-            gdat_writer = csv.writer(gdat_file)
-
-            # Write the header: Time and all observable group IDs
-            gdat_writer.writerow(['Time'] +  [groups[key].name for key in groups_concentration.keys()])
-
-            # Write data rows
-            for i, t in enumerate(times):
-                row = [t] + [groups_concentration[g][i]
-                            for g in groups_concentration.keys()]
-                gdat_writer.writerow(row)
 
     def simulate(self,
                  reactions: OrderedDict[int, Reaction],
                  rate_constants: OrderedDict[int, float],
                  concentrations: OrderedDict[int, int],
                  groups: OrderedDict[int, ObservablesGroup]):
-        n_steps = self.n_steps
-        total_time = self.total_time
+        t_start = self.sim_params['t_start']
+        t_end = self.sim_params['t_end']
+        time = t_start
+        times: list[float] = [t_start]
+        n_steps = self.sim_params['n_steps']
 
         # Initialize observable groups concentrations
-        groups_concentration: OrderedDict[int, list[int]] = OrderedDict()
-        for g_id, group in groups.items():
-            concentration = group.compute_concentration(concentrations)
-            groups_concentration[g_id] = [int(concentration)]
-
-        # Apply Gillespie algorithm
-        time = 0.0
-        times: list[float] = [time]
+        y = np.array(list(concentrations.values()), dtype=np.float64)
+        num_species = len(concentrations)
+        weights = get_groups_weight_matrix(groups, num_species)
 
         # If n_steps is provided, generate time points at which to record data
         if n_steps is not None:
-            recording_times = np.linspace(0, total_time, n_steps)
+            recording_times = np.linspace(t_start, t_end, n_steps)
             next_recording_idx = 1  # to track the next recording time index
 
         # Write the header and first row of .cdat file
-        header = ['Time'] + list(concentrations.keys())
-        row = [time] + list(concentrations.values())
-        write_to_csv(self.cdat_filename, 'w', [header, row])
-        r_keys = list(reactions.keys())
+        create_cdat(self.cdat_filename, num_species)
+        write_data_row(self.cdat_filename, time, y)
+
+        # write to gdat file
+        groups_conc = y @ weights
+        create_gdat(self.gdat_filename, groups)
+        write_data_row(self.gdat_filename, time, groups_conc)
 
         print("Starting simulation with Gillespie algorithm...")
         print(f"\tt = {time}")
+        r_keys = list(reactions.keys())
 
-        while time < total_time:
-            rates = compute_reaction_rates(
-                rate_constants, concentrations, reactions)
-            total_rate = sum(rates.values())
+        while time < t_end:
+            propensities = compute_propensities(y, reactions, rate_constants)
+            total_rate = float(np.sum(propensities))
             if total_rate == 0:
                 break
 
@@ -89,47 +70,40 @@ class GillespieSimulator:
 
             # Determine which reaction occurs
             chosen_reaction = random.choices(
-                r_keys, weights=list(rates.values()), k=1)[0]
+                r_keys, weights=propensities.tolist(), k=1)[0]
 
             # Update concentrations based on the chosen reaction
             rxn = reactions[chosen_reaction]
             for reactant in rxn.reactants:
-                concentrations[reactant] -= 1
+                y[reactant-1] -= 1
             for prod in rxn.products:
-                concentrations[prod] += 1
+                y[prod-1] += 1
 
             # If n_steps is provided, only record concentrations at predefined time points
             if n_steps is not None:
                 while next_recording_idx < n_steps and time >= recording_times[next_recording_idx]:
                     times.append(recording_times[next_recording_idx])
 
+                    groups_conc = y @ weights
+
                     # Record concentrations of reactants
-                    row = [time] + list(concentrations.values())
-                    write_to_csv(self.cdat_filename, 'a', [row])
+                    write_data_row(self.cdat_filename, time, y)
+
+                    # Record concentrations of observables
+                    write_data_row(self.gdat_filename, time, groups_conc)
 
                     print(f"\tt = {time}")
-
-                    # Update observables concentrations
-                    for g_id, group in groups.items():
-                        concentration = group.compute_concentration(concentrations)
-                        groups_concentration[g_id].append(int(concentration))
 
                     next_recording_idx += 1
             else:
                 # Record time and concentrations for all reactions
                 times.append(time)
+                groups_conc = y @ weights
 
-                row = [time] + list(concentrations.values())
-                write_to_csv(self.cdat_filename, 'a', [row])
+                # Record concentrations of reactants
+                write_data_row(self.cdat_filename, time, y)
 
-                print(f"\tt = {time}")
+                # Record concentrations of observables
+                write_data_row(self.gdat_filename, time, groups_conc)
 
-                # Update observables concentrations
-                for g_id, group in groups.items():
-                    concentration = group.compute_concentration(concentrations)
-                    groups_concentration[g_id].append(int(concentration))
-
-        # Write to .gdat file (observable group concentrations)
-        self.create_gdat_file(groups_concentration, groups, times)
-
-        return times, groups_concentration
+        return times, groups_conc

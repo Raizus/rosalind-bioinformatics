@@ -3,11 +3,12 @@ from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 
 
 import numpy as np
-
+import numpy.typing as npt
 
 from typing import OrderedDict
 
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 
 def get_groups_weight_matrix(groups: OrderedDict[int, 'ObservablesGroup'], n: int):
@@ -58,3 +59,48 @@ def compute_reaction_rates(
         rates[r_id] = rate
 
     return rates
+
+
+def create_cdat(cdat_filename: str, n_species: int):
+    """Creates a new cdat file and writes the header
+
+    Args:
+        cdat_filename (str): _description_
+        n_species (int): _description_
+    """
+    header = ['Time'] + [f"S{i+1}" for i in range(n_species)]
+    write_to_csv(cdat_filename, 'w', [header])
+
+
+def create_gdat(gdat_filename: str, groups: OrderedDict[int, ObservablesGroup]):
+    header = ['Time'] + [group.name for group in groups.values()]
+    write_to_csv(gdat_filename, 'w', [header])
+
+
+def write_data_row(filename: str, time: float, y: npt.NDArray[np.float_]):
+    row = [time] + list(y)
+    write_to_csv(filename, 'a', [row])
+
+
+def compute_propensities(
+    concentrations: npt.NDArray[np.float_],
+    reactions: OrderedDict[int, Reaction],
+    rate_constants: OrderedDict[int, float],
+):
+    propensities = np.zeros(len(reactions))
+
+    # Calculate the propensity for each reaction
+    for reaction_id, reaction in reactions.items():
+        rate_constant = rate_constants[reaction_id]
+        propensity = rate_constant
+
+        # Multiply by the concentration of each reactant
+        for reactant in reaction.reactants:
+            if concentrations[reactant-1] <= 0:
+                propensity = 0  # If any reactant's population is zero, propensity is zero
+                break
+            propensity *= concentrations[reactant-1]
+
+        propensities[reaction_id] = propensity
+
+    return propensities

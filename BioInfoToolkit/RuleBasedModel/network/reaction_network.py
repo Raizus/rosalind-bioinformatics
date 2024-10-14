@@ -14,6 +14,7 @@ from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, bu
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
+from BioInfoToolkit.RuleBasedModel.simulation.next_reaction_method import NextReactionMethod
 from BioInfoToolkit.RuleBasedModel.simulation.ode_sim import ODESimulator
 from BioInfoToolkit.RuleBasedModel.simulation.tau_leaping import TauLeapingSimulator
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
@@ -292,29 +293,23 @@ class ReactionNetwork:
         rate_constants = self.get_rate_constants()
         groups = self.groups_block.items
         reactions = self.reactions_block.items
+        concentrations = self.initialise_concentrations()
 
         if method == 'ssa':
-            # t_start = params['t_end']
-            t_end = params['t_end']
-            n_steps = params['n_steps']
             self.gillespie_simulation(params)
         elif method == 'ode':
-            t_start = params['t_start']
-            t_end = params['t_end']
-            n_steps = params['n_steps']
-            n_steps = n_steps if n_steps is not None else 100
-            t_span = np.linspace(t_start, t_end, n_steps)
 
             # evaluate species expressions and initialize concentrations
-            concentrations = np.array(list(self.initialise_concentrations().values()),
-                                      dtype=np.float64)
+            y = np.array(list(concentrations.values()), dtype=np.float64)
 
-            simulator = ODESimulator(self.cdat_filename, self.gdat_filename)
-            simulator.solve(concentrations, t_span, reactions, rate_constants, groups)
+            simulator = ODESimulator(params, self.cdat_filename, self.gdat_filename)
+            simulator.solve(y, reactions, rate_constants, groups)
         elif method == 'tau-leap':
             simulator = TauLeapingSimulator(params, self.cdat_filename, self.gdat_filename)
-            concentrations = self.initialise_concentrations()
             simulator.solve(concentrations, reactions, rate_constants, groups)
+        elif method == 'nrm':
+            simulator = NextReactionMethod(params, self.cdat_filename, self.gdat_filename)
+            simulator.simulate(concentrations, reactions, rate_constants, groups)
         else:
             raise ValueError(f"Simulation method '{method}' is not valid.")
 
@@ -347,10 +342,7 @@ class ReactionNetwork:
         reactions = self.reactions_block.items
         groups = self.groups_block.items
 
-        t_end = params['t_end']
-        n_steps = params['n_steps']
-
-        simulator = GillespieSimulator(t_end, n_steps, self.cdat_filename, self.gdat_filename)
+        simulator = GillespieSimulator(params, self.cdat_filename, self.gdat_filename)
         times, groups_concent = simulator.simulate(reactions, rate_constants,
                                                    concentrations, groups)
 

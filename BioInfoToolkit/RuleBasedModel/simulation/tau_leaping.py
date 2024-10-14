@@ -5,33 +5,9 @@ import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import get_groups_weight_matrix
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
+    create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
-from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
-
-
-def compute_propensities(
-    concentrations: npt.NDArray[np.float_],
-    reactions: OrderedDict[int, Reaction],
-    rate_constants: OrderedDict[int, float],
-):
-    propensities = np.zeros(len(reactions))
-
-    # Calculate the propensity for each reaction
-    for reaction_id, reaction in reactions.items():
-        rate_constant = rate_constants[reaction_id]
-        propensity = rate_constant
-
-        # Multiply by the concentration of each reactant
-        for reactant in reaction.reactants:
-            if concentrations[reactant-1] <= 0:
-                propensity = 0  # If any reactant's population is zero, propensity is zero
-                break
-            propensity *= concentrations[reactant-1]
-
-        propensities[reaction_id] = propensity
-
-    return propensities
 
 
 def compute_stoichiometry_matrix(reactions: OrderedDict[int, Reaction], num_species: int):
@@ -155,15 +131,13 @@ class TauLeapingSimulator:
             next_recording_idx = 1  # to track the next recording time index
 
         # write cdat file
-        header = ['Time'] + [f"S{i+1}" for i in range(num_species)]
-        row = [time] + y.tolist()
-        write_to_csv(self.cdat_filename, 'w', [header, row])
+        create_cdat(self.cdat_filename, y.size)
+        write_data_row(self.cdat_filename, time, y)
 
         # write to gdat file
         groups_conc = y @ weights
-        header = ['Time'] + [group.name for group in groups.values()]
-        row = [time] + groups_conc.tolist()
-        write_to_csv(self.gdat_filename, 'w', [header, row])
+        create_gdat(self.gdat_filename, groups)
+        write_data_row(self.gdat_filename, time, groups_conc)
 
         stoichiometry_matrix = compute_stoichiometry_matrix(reactions, num_species)
 
@@ -189,7 +163,6 @@ class TauLeapingSimulator:
 
             # Update the concentrations based on how many times each reaction occurs
             y = update_concentrations(y, reactions, reaction_counts)
-            groups_conc = y @ weights
 
             # Update time
             time += tau
@@ -199,26 +172,25 @@ class TauLeapingSimulator:
                 while next_recording_idx < n_steps and time >= recording_times[next_recording_idx]:
                     times.append(recording_times[next_recording_idx])
 
+                    groups_conc = y @ weights
+
                     # Record concentrations of reactants
-                    row = [time] + list(y)
-                    write_to_csv(self.cdat_filename, 'a', [row])
+                    write_data_row(self.cdat_filename, time, y)
 
                     # Record concentrations of observables
-                    row = [time] + list(groups_conc)
-                    write_to_csv(self.gdat_filename, 'a', [row])
+                    write_data_row(self.gdat_filename, time, groups_conc)
 
                     next_recording_idx += 1
             else:
                 # Record time and concentrations for all reactions
                 times.append(time)
+                groups_conc = y @ weights
 
                 # Record concentrations of reactants
-                row = [time] + list(y)
-                write_to_csv(self.cdat_filename, 'a', [row])
+                write_data_row(self.cdat_filename, time, y)
 
                 # Record concentrations of observables
-                row = [time] + list(groups_conc)
-                write_to_csv(self.gdat_filename, 'a', [row])
+                write_data_row(self.gdat_filename, time, groups_conc)
 
             # Store results
             results.append(y.copy())

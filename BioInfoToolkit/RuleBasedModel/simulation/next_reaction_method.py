@@ -6,9 +6,9 @@ import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_reaction_rates, get_groups_weight_matrix
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
+    create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
-from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 
 def get_reactant_to_reaction_map(reactions: OrderedDict[int, Reaction]) -> defaultdict[int, set[int]]:
@@ -21,7 +21,7 @@ def get_reactant_to_reaction_map(reactions: OrderedDict[int, Reaction]) -> defau
     return map_
 
 
-def get_affected_reactions(sp_to_reaction_map: dict[int, set[int]], species: list[int]):
+def get_affected_reactions(sp_to_reaction_map: dict[int, set[int]], species: set[int]):
     affected: set[int] = set()
 
     for specie in species:
@@ -31,9 +31,9 @@ def get_affected_reactions(sp_to_reaction_map: dict[int, set[int]], species: lis
 
 
 def update_affected_rates(
-    rates: OrderedDict[int, float],
+    propensities: npt.NDArray[np.float_],
     rate_constants: OrderedDict[int, float],
-    concentrations: OrderedDict[int, int],
+    concentrations: npt.NDArray[np.float_],
     reactions: OrderedDict[int, Reaction],
     affected: list[int]
 ):
@@ -41,13 +41,14 @@ def update_affected_rates(
         reaction = reactions[r_id]
         rate = rate_constants[r_id]
         for reactant in reaction.reactants:
-            if concentrations[reactant] <= 0:
+            conc = concentrations[reactant-1]
+            if conc <= 0:
                 rate = 0
                 break
-            rate *= concentrations[reactant]
+            rate *= conc
 
-        rates[r_id] = rate
-    return rates
+        propensities[r_id] = rate
+    return propensities
 
 
 class NextReactionMethod:
@@ -76,19 +77,32 @@ class NextReactionMethod:
 
         t_start = self.sim_params['t_start']
         t_end = self.sim_params['t_end']
+        n_steps = self.sim_params['n_steps']
+
+        # If n_steps is provided, generate time points at which to record data
+        if n_steps is not None:
+            recording_times = np.linspace(t_start, t_end, n_steps)
+            next_recording_idx = 1  # to track the next recording time index
+
         time = t_start
         times: list[float] = [t_start]
 
         sp_to_reaction_map = get_reactant_to_reaction_map(reactions)
 
-        n_steps = self.sim_params['n_steps']
+        y = np.array(list(concentrations.values()), dtype=np.float64)
         weights = get_groups_weight_matrix(groups, num_species)
 
-        rates = compute_reaction_rates(
-            rate_constants, concentrations, reactions)
+        # write cdat file
+        create_cdat(self.cdat_filename, y.size)
+        write_data_row(self.cdat_filename, time, y)
 
-        taus = -np.log(np.random.rand(len(rates))) \
-            / np.array(rates.values(), dtype=np.float64)
+        # write to gdat file
+        groups_conc = y @ weights
+        create_gdat(self.gdat_filename, groups)
+        write_data_row(self.gdat_filename, time, groups_conc)
+
+        propensities = compute_propensities(y, reactions, rate_constants)
+        taus = -np.log(np.random.rand(propensities.size)) / propensities
 
         while time < t_end:
             # Find the reaction with the smallest tau (next to happen)
@@ -103,23 +117,57 @@ class NextReactionMethod:
             reaction = reactions[next_reaction_index]
             species: set[int] = set()
             for reactant in reaction.reactants:
-                concentrations[reactant] -= 1
+                y[reactant-1] -= 1
                 species.add(reactant)
             for prod in reaction.products:
-                concentrations[prod] += 1
+                y[prod-1] += 1
                 species.add(prod)
 
-            affected_rxns = get_affected_reactions(sp_to_reaction_map, list(species))
+            affected_rxns = get_affected_reactions(sp_to_reaction_map, species)
 
             # Recompute the rates after the reaction affects the system
-            rates = update_affected_rates(
-                rates, rate_constants,
-                concentrations, reactions, affected_rxns)
+            new_propensities = propensities.copy()
+            new_propensities = update_affected_rates(
+                new_propensities, rate_constants,
+                y, reactions, affected_rxns)
 
             # Update taus: only those reactions affected by the change need updates
             for r_id, reaction in reactions.items():
-                if r_id in affected_rxns:
-                    taus[r_id] = ((taus[r_id] - tau_min)
-                                  if taus[r_id] > tau_min else 0)
-                    if taus[r_id] == 0:
-                        taus[r_id] = -np.log(np.random.rand()) / rates[r_id]
+                if r_id not in affected_rxns:
+                    continue
+                
+                ratio = propensities[r_id] / new_propensities[r_id] if new_propensities[r_id] != 0 else np.inf
+                taus[r_id] = (ratio*(taus[r_id] - tau_min)
+                                if taus[r_id] > tau_min else 0)
+                if taus[r_id] == 0:
+                    rate = new_propensities[r_id]
+                    taus[r_id] = -np.log(np.random.rand()) / rate if rate != 0 else np.inf
+
+            propensities = new_propensities
+
+            # If n_steps is provided, only record concentrations at predefined time points
+            if n_steps is not None:
+                while next_recording_idx < n_steps and time >= recording_times[next_recording_idx]:
+                    times.append(recording_times[next_recording_idx])
+
+                    groups_conc = y @ weights
+
+                    # Record concentrations of reactants
+                    write_data_row(self.cdat_filename, time, y)
+
+                    # Record concentrations of observables
+                    write_data_row(self.gdat_filename, time, groups_conc)
+
+                    print(f"\tt = {time}")
+
+                    next_recording_idx += 1
+            else:
+                # Record time and concentrations for all reactions
+                times.append(time)
+                groups_conc = y @ weights
+
+                # Record concentrations of reactants
+                write_data_row(self.cdat_filename, time, y)
+
+                # Record concentrations of observables
+                write_data_row(self.gdat_filename, time, groups_conc)

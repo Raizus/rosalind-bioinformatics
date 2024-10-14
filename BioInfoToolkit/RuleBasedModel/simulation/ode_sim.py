@@ -7,7 +7,8 @@ from scipy.integrate import odeint
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import get_groups_weight_matrix
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import create_cdat, create_gdat, get_groups_weight_matrix
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 
@@ -42,30 +43,38 @@ def reaction_system(
 
 
 class ODESimulator:
+    sim_params: SimulateDict
     cdat_filename: str = 'output.cdat'
     gdat_filename: str = 'output.gdat'
 
     def __init__(self,
+                 sim_params: SimulateDict,
                  cdat_filename: str = 'output.cdat',
                  gdat_filename: str = 'output.gdat'
                  ) -> None:
+        self.sim_params = sim_params
         self.cdat_filename = cdat_filename
         self.gdat_filename = gdat_filename
 
     def solve(self,
               concentrations: npt.NDArray[np.float_],
-              t_span: npt.NDArray[np.float_],
               reactions: OrderedDict[int, Reaction],
               rate_constants: OrderedDict[int, float],
               groups: OrderedDict[int, ObservablesGroup]):
+
+        t_start = self.sim_params['t_start']
+        t_end = self.sim_params['t_end']
+        n_steps = self.sim_params['n_steps']
+        n_steps = n_steps if n_steps is not None else 100
+        t_span = np.linspace(t_start, t_end, n_steps)
 
         sol = odeint(reaction_system, concentrations, t_span,
                      args=(reactions, rate_constants))
 
         n = concentrations.size
+
         # write cdat file
-        header = ['Time'] + [f"S{i+1}" for i in range(n)]
-        write_to_csv(self.cdat_filename, 'w', [header])
+        create_cdat(self.cdat_filename, n)
         aux = np.hstack((t_span.reshape((t_span.size, 1)), sol))
         write_to_csv(self.cdat_filename, 'a', aux)
 
@@ -73,7 +82,6 @@ class ODESimulator:
         groups_conc = sol @ weights
 
         # write gdat file
-        header = ['Time'] + [group.name for group in groups.values()]
-        write_to_csv(self.gdat_filename, 'w', [header])
+        create_gdat(self.gdat_filename, groups)
         aux = np.hstack((t_span.reshape((t_span.size, 1)), groups_conc))
         write_to_csv(self.gdat_filename, 'a', aux)
