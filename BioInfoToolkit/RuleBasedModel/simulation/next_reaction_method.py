@@ -51,6 +51,26 @@ def update_affected_rates(
     return propensities
 
 
+def update_taus(
+    propensities: npt.NDArray[np.float_],
+    new_propensities: npt.NDArray[np.float_],
+    taus_es: npt.NDArray[np.float_],
+    tau_min: float,
+    reaction_idx: int
+):
+    for r_id, (old_rate, new_rate) in enumerate(zip(propensities, new_propensities)):
+        new_rate = new_propensities[r_id]
+        old_rate = propensities[r_id]
+        if new_rate == 0:
+            taus_es[r_id] = np.inf
+        elif old_rate == 0 or r_id == reaction_idx:
+            taus_es[r_id] = -np.log(np.random.rand()) / new_rate
+        else:
+            ratio = old_rate / new_rate
+            taus_es[r_id] = ratio * (taus_es[r_id] - tau_min)
+
+    return taus_es
+
 class NextReactionMethod:
     sim_params: SimulateDict
     cdat_filename: str = 'output.cdat'
@@ -102,12 +122,12 @@ class NextReactionMethod:
         write_data_row(self.gdat_filename, time, groups_conc)
 
         propensities = compute_propensities(y, reactions, rate_constants)
-        taus = -np.log(np.random.rand(propensities.size)) / propensities
+        taus_es = -np.log(np.random.rand(propensities.size)) / propensities
 
         while time < t_end:
             # Find the reaction with the smallest tau (next to happen)
-            next_reaction_index = int(np.argmin(taus))
-            tau_min = taus[next_reaction_index]
+            next_reaction_index = int(np.argmin(taus_es))
+            tau_min = taus_es[next_reaction_index]
 
             # Advance time by the smallest tau
             time += tau_min
@@ -132,16 +152,8 @@ class NextReactionMethod:
                 y, reactions, affected_rxns)
 
             # Update taus: only those reactions affected by the change need updates
-            for r_id, reaction in reactions.items():
-                new_rate = new_propensities[r_id]
-                old_rate = propensities[r_id]
-                if new_rate == 0:
-                    taus[r_id] = np.inf
-                elif old_rate == 0 or r_id == next_reaction_index:
-                    taus[r_id] = -np.log(np.random.rand()) / new_rate
-                else:
-                    ratio = old_rate / new_rate
-                    taus[r_id] = ratio * (taus[r_id] - tau_min)
+            taus_es = update_taus(propensities, new_propensities, taus_es,
+                                  tau_min, next_reaction_index)
 
             propensities = new_propensities
 
