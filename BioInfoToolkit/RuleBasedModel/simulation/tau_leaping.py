@@ -5,7 +5,7 @@ import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import calculate_tau_full, compute_propensities, \
     create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 
@@ -47,49 +47,6 @@ def update_concentrations(
             y[product-1] += num_firings
 
     return y
-
-
-def calculate_tau_full(concentrations,
-                       reactions: OrderedDict[int, Reaction],
-                       propensities: npt.NDArray[np.float_],
-                       stoichiometry_matrix: npt.NDArray[np.int_],
-                       epsilon=0.03):
-    # Helper function to compute tau using the full Cao method
-    num_species = len(concentrations)
-
-    # Initialize mu_i and sigma_i^2
-    mu = np.zeros(num_species)
-    sigma2 = np.zeros(num_species)
-
-    # Calculate mu_i and sigma_i^2 for each species
-    for reaction_id, reaction in reactions.items():
-        propensity = propensities[reaction_id]
-
-        # Update mu_i and sigma_i^2 for each reactant and product
-        for i in range(num_species):
-            v_ij = stoichiometry_matrix[i, reaction_id]
-            mu[i] += v_ij * propensity
-            sigma2[i] += (v_ij ** 2) * propensity
-
-    # Determine the highest-order event (g_i) for each species
-    g = np.ones(num_species)  # Assuming unimolecular (1) or bimolecular (2)
-    for reaction in reactions.values():
-        if len(reaction.reactants) == 2:  # Bimolecular reaction
-            for reactant in reaction.reactants:
-                g[reactant-1] = max(g[reactant-1], 2)
-
-    # Calculate tau
-    tau = float('inf')
-    for i in range(num_species):
-        if mu[i] != 0:
-            term1 = (max(epsilon * concentrations[i] / g[i], 1)) / abs(mu[i])
-            tau = min(tau, term1)
-        if sigma2[i] != 0:
-            term2 = (
-                max(epsilon * concentrations[i] / g[i], 1)) ** 2 / sigma2[i]
-            tau = min(tau, term2)
-
-    return tau
 
 
 class TauLeapingSimulator:
@@ -194,6 +151,6 @@ class TauLeapingSimulator:
 
             # Store results
             results.append(y.copy())
-            print(f"\tt = {time}")
+            print(f"\tt = {time}; tau = {tau}")
 
         return np.array(times), np.array(results)
