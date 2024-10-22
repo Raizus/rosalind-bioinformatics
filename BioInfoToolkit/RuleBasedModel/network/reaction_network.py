@@ -16,6 +16,7 @@ from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
 from BioInfoToolkit.RuleBasedModel.simulation.next_reaction_method import NextReactionMethod
 from BioInfoToolkit.RuleBasedModel.simulation.ode_sim import ODESimulator
+from BioInfoToolkit.RuleBasedModel.simulation.progressive_leaping import ProgressiveLeapingSimulator
 from BioInfoToolkit.RuleBasedModel.simulation.tau_leaping import TauLeapingSimulator
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
@@ -309,6 +310,10 @@ class ReactionNetwork:
             simulator.solve(concentrations, reactions, rate_constants, groups)
         elif method == 'nrm':
             simulator = NextReactionMethod(params, self.cdat_filename, self.gdat_filename)
+            simulator.simulate(concentrations, reactions, rate_constants, groups)
+        elif method == 'pla':
+            simulator = ProgressiveLeapingSimulator(
+                params, self.cdat_filename, self.gdat_filename)
             simulator.simulate(concentrations, reactions, rate_constants, groups)
         else:
             raise ValueError(f"Simulation method '{method}' is not valid.")

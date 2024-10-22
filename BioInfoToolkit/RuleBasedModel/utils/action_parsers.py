@@ -150,9 +150,10 @@ def parse_simulate(declaration: str) -> SimulateDict:
     # parse_actions
     def parse_method_action(token: pp.ParseResults):
         method = token[0]
-        if method not in ("ssa", "ode", "tau-leap", 'nrm'):
-            raise ValueError(
-                f"Invalid method '{method}'. Only 'ssa', 'ode', 'tau-leap' and 'nrm' is supported.")
+        valid_methods = ("ssa", "ode", "tau-leap", 'nrm', 'pla')
+        if method not in valid_methods:
+            msg = f"Invalid method '{method}'. Only " + ', '.join(valid_methods) + " are supported."
+            raise ValueError(msg)
         return method
 
     def parse_int_action(token: pp.ParseResults):
