@@ -153,17 +153,17 @@ def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
 def parse_reaction_rule(reaction_str: str):
     """Parses a biochemical reaction and verifies the correctness of complexes and bonds."""
 
-    reagent_pattern = pp.Group(PATTERN_PARSER)
-    reagents_pattern = (pp.delimitedList(reagent_pattern, '+')
+    reagent_expr = pp.Group(PATTERN_PARSER)
+    reagents_expr = (pp.delimitedList(reagent_expr, '+')
                         | pp.Group(pp.Literal('0')))
 
-    left_side_reactants = reagents_pattern('left_side_reactants')
-    right_side_reactants = reagents_pattern('right_side_reactants')
+    left_side_reactants = reagents_expr('left_side_reactants')
+    right_side_reactants = reagents_expr('right_side_reactants')
 
     expression_parser = pp.Combine(EXPRESSION_PARSER)
 
-    forward_rate_pattern = expression_parser('forward_rate')
-    reverse_rate_pattern = expression_parser('reverse_rate')
+    forward_rate_expr = expression_parser('forward_rate')
+    reverse_rate_expr = expression_parser('reverse_rate')
 
     name_parser = pp.Optional((NAME_EXPRESSION('name') +
                    pp.Suppress(':')).leaveWhitespace())
@@ -172,15 +172,15 @@ def parse_reaction_rule(reaction_str: str):
         left_side_reactants + \
         pp.Suppress('->') + \
         right_side_reactants + \
-        forward_rate_pattern
+        forward_rate_expr
 
     bidirectional_pattern = name_parser + \
         left_side_reactants + \
         pp.Suppress('<->') + \
         right_side_reactants + \
-        forward_rate_pattern + \
+        forward_rate_expr + \
         pp.Literal(',') + \
-        reverse_rate_pattern
+        reverse_rate_expr
 
     rule_parser = unidirectional_pattern | bidirectional_pattern
 
