@@ -31,6 +31,7 @@ class ReactionNetwork:
     species_block: SpeciesBlock
     reactions_block: ReactionsBlock
     groups_block: GroupsBlock
+    concentrations: OrderedDict[int, int]
 
     graph: nx.DiGraph
     model: Model | None
@@ -44,6 +45,7 @@ class ReactionNetwork:
         self.reactions_block = ReactionsBlock()
         self.groups_block = GroupsBlock()
         self.model = None
+        self.concentrations = OrderedDict()
 
         self.net_filename = 'model.net'
         self.cdat_filename = 'model.cdat'
@@ -297,26 +299,30 @@ class ReactionNetwork:
         concentrations = self.initialise_concentrations()
 
         if method == 'ssa':
-            self.gillespie_simulation(params)
+            yf = self.gillespie_simulation(params)
         elif method == 'ode':
 
             # evaluate species expressions and initialize concentrations
             y = np.array(list(concentrations.values()), dtype=np.float64)
 
             simulator = ODESimulator(params, self.cdat_filename, self.gdat_filename)
-            simulator.solve(y, reactions, rate_constants, groups)
+            yf = simulator.simulate(y, reactions, rate_constants, groups)
         elif method == 'tau-leap':
             simulator = TauLeapingSimulator(params, self.cdat_filename, self.gdat_filename)
-            simulator.solve(concentrations, reactions, rate_constants, groups)
+            yf = simulator.solve(concentrations, reactions, rate_constants, groups)
         elif method == 'nrm':
             simulator = NextReactionMethod(params, self.cdat_filename, self.gdat_filename)
-            simulator.simulate(concentrations, reactions, rate_constants, groups)
+            yf = simulator.simulate(concentrations, reactions, rate_constants, groups)
         elif method == 'pla':
             simulator = ProgressiveLeapingSimulator(
                 params, self.cdat_filename, self.gdat_filename)
-            simulator.simulate(concentrations, reactions, rate_constants, groups)
+            yf = simulator.simulate(
+                concentrations, reactions, rate_constants, groups)
         else:
             raise ValueError(f"Simulation method '{method}' is not valid.")
+
+        for i, conc in enumerate(yf, start=1):
+            self.concentrations[i] = int(conc)
 
     def initialise_concentrations(self):
         # evaluate species expressions and initialize concentrations
@@ -325,7 +331,8 @@ class ReactionNetwork:
         concentrations: OrderedDict[int, int] = OrderedDict()
         for sp_id, specie in self.species_block.items.items():
             concentrations[sp_id] = int(specie.conc)
-        
+
+        self.concentrations = concentrations
         return concentrations
 
     # def set_concentration(self, specie_q: int | Pattern, value: str):
@@ -348,7 +355,8 @@ class ReactionNetwork:
         groups = self.groups_block.items
 
         simulator = GillespieSimulator(params, self.cdat_filename, self.gdat_filename)
-        simulator.simulate(reactions, rate_constants, concentrations, groups)
+        y = simulator.simulate(reactions, rate_constants, concentrations, groups)
+        return y
 
     def save_network(self, fp: str | None = None, overwrite: bool | None = None):
         if fp is None:
