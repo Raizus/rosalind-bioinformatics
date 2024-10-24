@@ -2,113 +2,9 @@ from typing import Any, TypedDict
 import pyparsing as pp
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import EXPRESSION_PARSER, NAME_EXPRESSION, \
-    PATTERN_PARSER, UNSIGNED_NUMBER_PARSER, ParsingError, PatternDict, parsed_pattern_to_pattern_dict
+    PATTERN_PARSER, UNSIGNED_NUMBER_PARSER, ParsingError, PatternDict, \
+    parsed_pattern_to_pattern_dict
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
-
-
-class GenerateNetworkDict(TypedDict):
-    overwrite: bool | None
-    text_reaction: bool | None
-    max_stoich: dict[str, int] | None
-    max_iter: int | None
-
-
-def generate_network_parsed_dict(parsed_dict: dict[Any, Any]) -> GenerateNetworkDict:
-    max_iter: int | None = parsed_dict.get('max_iter', None)
-    overwrite: bool | None = parsed_dict.get('overwrite', None)
-    text_reaction: bool | None = parsed_dict.get('text_reaction', None)
-    max_stoich: dict[str, int] | None = parsed_dict.get('max_stoich', None)
-
-    result: GenerateNetworkDict = {
-        'max_iter': max_iter,
-        'overwrite': overwrite,
-        'max_stoich': max_stoich,
-        'text_reaction': text_reaction
-    }
-
-    return result
-
-
-def parse_generate_network(declaration: str):
-    # Basic patterns
-    integer = pp.Word(pp.nums)
-    zero_or_one = pp.Word('01', exact=1)
-    name = NAME_EXPRESSION
-
-    # parse_actions
-    def parse_01_action(token: pp.ParseResults):
-        return bool(int(token.asList()[0]))
-
-    def parse_int_action(token: pp.ParseResults):
-        return int(token.asList()[0])
-
-    def parse_stoich_action(token: pp.ParseResults):
-        stoich_dict: dict[str, int] = {}
-        dict_aux = token.asDict()['max_stoich']
-        for key, val in dict_aux.items():
-            stoich_dict[key] = int(val)
-        return stoich_dict
-
-    # Define key=>value pairs for each parameter
-    overwrite_expr = (
-        pp.Literal("overwrite")
-        + pp.Suppress("=>")
-        + zero_or_one("overwrite").set_parse_action(parse_01_action))
-
-    text_reaction_expr = (
-        pp.Literal("TextReaction")
-        + pp.Suppress("=>")
-        + zero_or_one("text_reaction").set_parse_action(parse_01_action))
-
-    max_iter_expr = (
-        pp.Literal("max_iter")
-        + pp.Suppress("=>")
-        + integer("max_iter").set_parse_action(parse_int_action))
-
-    # max_stoich list of {name=>value}
-    stoich_pair = pp.Group(name("name") + pp.Suppress("=>") +
-                        integer("value"))
-    max_stoich_expr = (
-        pp.Literal("max_stoich") + pp.Suppress("=>")
-        + pp.Suppress("{")
-        + pp.Dict(pp.delimitedList(stoich_pair)
-                  )("max_stoich").set_parse_action(parse_stoich_action)
-        + pp.Suppress("}")
-    )
-
-    # Combining all expressions
-    parameters_expr = pp.Optional(
-        pp.Suppress("{") +
-        pp.delimitedList(overwrite_expr | text_reaction_expr
-                         | max_iter_expr | max_stoich_expr)
-        + pp.Suppress("}"))
-
-    expr = (
-        pp.Suppress("generate_network(")
-        + parameters_expr
-        + pp.Suppress(")")
-    )
-
-    try:
-        parsed = expr.parseString(declaration)
-        parsed_dict = parsed.asDict()
-        result = generate_network_parsed_dict(parsed_dict)
-        return result
-    except (pp.ParseException, pp.ParseBaseException) as ee:
-        msg = f"generate_network '{declaration}' not declared correctly."
-        raise ParsingError(msg) from ee
-
-
-class SimulateDict(TypedDict):
-    method: str
-    t_start: float
-    t_end: float
-    n_steps: int | None
-    continue_: bool | None
-    verbose: bool | None
-    atol: float | None
-    rtol: float | None
-    tau: float | None
 
 
 def action_float_param_parser(param_name: str, parsed_name: str):
@@ -137,6 +33,126 @@ def action_01_param_parser(param_name: str, parsed_name: str):
         + zero_or_one(parsed_name).set_parse_action(parse_01_param))
 
     return expr
+
+
+def action_string_param_parser(param_name: str, parsed_name: str):
+    string_expr = pp.Suppress(
+        '"') + pp.Word(pp.alphanums+'-_') + pp.Suppress('"')
+
+    def parse_str_param(token: pp.ParseResults):
+        return str(token.asList()[0])
+
+    expr = (
+        pp.Literal(param_name)
+        + pp.Suppress("=>")
+        + string_expr(parsed_name).set_parse_action(parse_str_param))
+
+    return expr
+
+
+class GenerateNetworkDict(TypedDict):
+    overwrite: bool | None
+    text_reaction: bool | None
+    verbose: bool | None
+    max_stoich: dict[str, int] | None
+    max_iter: int | None
+
+
+def generate_network_parsed_dict(parsed_dict: dict[Any, Any]) -> GenerateNetworkDict:
+    max_iter: int | None = parsed_dict.get('max_iter', None)
+    overwrite: bool | None = parsed_dict.get('overwrite', None)
+    verbose: bool | None = parsed_dict.get('verbose', None)
+    text_reaction: bool | None = parsed_dict.get('text_reaction', None)
+    max_stoich: dict[str, int] | None = parsed_dict.get('max_stoich', None)
+
+
+    result: GenerateNetworkDict = {
+        'max_iter': max_iter,
+        'overwrite': overwrite,
+        'max_stoich': max_stoich,
+        'verbose': verbose,
+        'text_reaction': text_reaction
+    }
+
+    return result
+
+
+def parse_generate_network(declaration: str):
+    # Basic patterns
+    integer = pp.Word(pp.nums)
+    name = NAME_EXPRESSION
+
+    # parse_actions
+    def parse_int_action(token: pp.ParseResults):
+        return int(token.asList()[0])
+
+    def parse_stoich_action(token: pp.ParseResults):
+        stoich_dict: dict[str, int] = {}
+        dict_aux = token.asDict()['max_stoich']
+        for key, val in dict_aux.items():
+            stoich_dict[key] = int(val)
+        return stoich_dict
+
+    # Define key=>value pairs for each parameter
+
+    overwrite_expr = action_01_param_parser("overwrite", "overwrite")
+    verbose_expr = action_01_param_parser("verbose", "verbose")
+    text_reaction_expr = action_01_param_parser(
+        "TextReaction", "text_reaction")
+
+    max_iter_expr = (
+        pp.Literal("max_iter")
+        + pp.Suppress("=>")
+        + integer("max_iter").set_parse_action(parse_int_action))
+
+    # max_stoich list of {name=>value}
+    stoich_pair = pp.Group(name("name") + pp.Suppress("=>") +
+                        integer("value"))
+    max_stoich_expr = (
+        pp.Literal("max_stoich") + pp.Suppress("=>")
+        + pp.Suppress("{")
+        + pp.Dict(pp.delimitedList(stoich_pair)
+                  )("max_stoich").set_parse_action(parse_stoich_action)
+        + pp.Suppress("}")
+    )
+
+    # Combining all expressions
+    parameters_expr = pp.Optional(
+        pp.Suppress("{") +
+        pp.delimitedList(overwrite_expr
+                         | text_reaction_expr
+                         | verbose_expr
+                         | max_iter_expr
+                         | max_stoich_expr)
+        + pp.Suppress("}"))
+
+    expr = (
+        pp.Suppress("generate_network(")
+        + parameters_expr
+        + pp.Suppress(")")
+    )
+
+    try:
+        parsed = expr.parseString(declaration)
+        parsed_dict = parsed.asDict()
+        result = generate_network_parsed_dict(parsed_dict)
+        return result
+    except (pp.ParseException, pp.ParseBaseException) as ee:
+        msg = f"generate_network '{declaration}' not declared correctly."
+        raise ParsingError(msg) from ee
+
+
+class SimulateDict(TypedDict):
+    method: str
+    t_start: float | None
+    t_end: float
+    n_steps: int | None
+    continue_: bool | None
+    verbose: bool | None
+    atol: float | None
+    rtol: float | None
+    tau: float | None
+    suffix: str | None
 
 
 def parse_simulate(declaration: str) -> SimulateDict:
@@ -175,9 +191,10 @@ def parse_simulate(declaration: str) -> SimulateDict:
     atol_expr = action_float_param_parser("atol", "atol")
     rtol_expr = action_float_param_parser("rtol", "rtol")
     tau_expr = action_float_param_parser("tau", "tau")
-    
+
     continue_expr = action_01_param_parser("continue", "continue_")
     verbose_expr = action_01_param_parser("verbose", "verbose")
+    suffix_expr = action_string_param_parser('suffix', 'suffix')
 
     n_steps_expr = (
         pp.Literal("n_steps")
@@ -186,9 +203,17 @@ def parse_simulate(declaration: str) -> SimulateDict:
 
     # Combining all expressions
     parameters_expr = pp.Optional(
-        pp.delimitedList(t_end_expr | t_start_expr | n_steps_expr
-                         | continue_expr | atol_expr | rtol_expr
-                         | tau_expr | verbose_expr)
+        pp.delimitedList(
+            t_end_expr
+            | t_start_expr
+            | n_steps_expr
+            | continue_expr
+            | atol_expr
+            | rtol_expr
+            | tau_expr
+            | verbose_expr
+            | suffix_expr
+        )
     )
 
     expr = (
@@ -209,13 +234,14 @@ def parse_simulate(declaration: str) -> SimulateDict:
         parsed_dict = parsed.asDict()
 
         # Set defaults for optional parameters
-        t_start = parsed_dict.get("t_start", 0.0)  # default is 0
+        t_start = parsed_dict.get("t_start", None)  # default is 0
         n_steps = parsed_dict.get("n_steps", None)  # default is None
         continue_val = parsed_dict.get("continue_", None)  # default is None
         atol = parsed_dict.get("atol", None)
         rtol = parsed_dict.get("rtol", None)
         tau = parsed_dict.get("tau", None)
         verbose = parsed_dict.get("verbose", None)
+        suffix = parsed_dict.get("suffix", None)
 
         # Ensure required parameters are present
         t_end = parsed_dict["t_end"]  # t_end is mandatory
@@ -231,6 +257,7 @@ def parse_simulate(declaration: str) -> SimulateDict:
             "rtol": rtol,
             "tau": tau,
             "verbose": verbose,
+            "suffix": suffix
         }
 
         return result
