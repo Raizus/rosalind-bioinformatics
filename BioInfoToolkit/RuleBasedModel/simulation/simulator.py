@@ -4,6 +4,7 @@ import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import write_data_row
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
+from BioInfoToolkit.RuleBasedModel.utils.utls import get_cdat_last_line
 
 
 class SimulatorABC(abc.ABC):
@@ -22,6 +23,26 @@ class SimulatorABC(abc.ABC):
         self.cdat_filename = cdat_filename
         self.gdat_filename = gdat_filename
         self.next_recording_idx = 0
+
+    def get_initial(self, y: npt.NDArray[np.float_]) -> tuple[float, npt.NDArray[np.float_]]:
+        t_start = self.sim_params['t_start']
+        continue_ = self.sim_params['continue_']
+
+        if continue_:
+            # read last line
+            t, y = get_cdat_last_line(self.cdat_filename)
+            if t_start is None or t_start == t:
+                t_start = t
+            else:
+                msg = ("When continue is True, start_time must be "
+                       "equal to the last value in the cdat file."
+                       f" t_start = {t_start}; t = {t}")
+                raise ValueError(msg)
+
+        if t_start is None:
+            t_start = 0.0
+
+        return t_start, y
 
     def record_line(self,
                     time: float,

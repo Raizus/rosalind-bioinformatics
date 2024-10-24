@@ -1,11 +1,14 @@
 
+from typing import Any, Iterable
+from collections import deque
 import os
 import ast
 import operator as op
-from typing import Any, Iterable
+import csv
+import numpy as np
 import graphviz
 import networkx as nx
-import csv
+
 
 def draw_graph(dot: graphviz.Graph, graph: nx.Graph):
     # Add nodes for molecules and components
@@ -222,6 +225,14 @@ def write_to_csv(filename: str, mode: str, rows: Iterable[Iterable[Any]]):
         csv_writer = csv.writer(cvs_file)
         csv_writer.writerows(rows)
 
+
+def get_cdat_last_line(filename: str):
+    with open(filename, 'r', encoding="utf-8") as file:
+        reader = csv.reader(file)
+        last_line = deque(reader, maxlen=1).pop()
+        t = float(last_line[0])
+        y = np.array([float(v) for v in last_line[1:]])
+        return t, y
 
 def read_simulation_data(filename: str):
     """

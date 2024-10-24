@@ -45,15 +45,16 @@ class TauLeapingSimulator(SimulatorABC):
 
         epsilon = 0.03
 
+        y = np.array(list(concentrations.values()), dtype=np.float64)
+        t_start, y = self.get_initial(y)
+        time = t_start
+
         num_species = len(concentrations)
-        t_start = self.sim_params['t_start']
         t_end = self.sim_params['t_end']
         n_steps = self.sim_params['n_steps']
         given_tau = self.sim_params['tau']
-        time = t_start
         recording_times: npt.NDArray[np.float_] | None = None
 
-        y = np.array(list(concentrations.values()), dtype=np.float64)
         weights = get_groups_weight_matrix(groups, num_species)
 
         # If n_steps is provided, generate time points at which to record data

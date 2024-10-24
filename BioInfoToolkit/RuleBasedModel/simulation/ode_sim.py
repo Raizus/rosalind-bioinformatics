@@ -15,7 +15,7 @@ from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 def reaction_system(
     y: npt.NDArray[np.float_],
-    t: float,
+    t: float, # pylint: disable=unused-argument
     reactions: OrderedDict[int, Reaction],
     rate_constants: OrderedDict[int, float]
 ):
@@ -45,21 +45,31 @@ def reaction_system(
 
 class ODESimulator(SimulatorABC):
 
-    def solve(self,
-              concentrations: npt.NDArray[np.float_],
-              reactions: OrderedDict[int, Reaction],
-              rate_constants: OrderedDict[int, float],
-              groups: OrderedDict[int, ObservablesGroup]):
+    def simulate(
+        self,
+        concentrations: npt.NDArray[np.float_],
+        reactions: OrderedDict[int, Reaction],
+        rate_constants: OrderedDict[int, float],
+        groups: OrderedDict[int, ObservablesGroup]
+    ):
 
         t_start = self.sim_params['t_start']
         t_end = self.sim_params['t_end']
         n_steps = self.sim_params['n_steps']
         n_steps = n_steps if n_steps is not None else 1000
         self.sim_params['n_steps'] = n_steps
+
+        t_start, concentrations = self.get_initial(concentrations)
         t_span = np.linspace(t_start, t_end, n_steps)
 
-        sol = odeint(reaction_system, concentrations, t_span,
-                     args=(reactions, rate_constants))
+        sol = odeint(
+            reaction_system,
+            concentrations,
+            t_span,
+            args=(reactions, rate_constants),
+            rtol=self.sim_params['rtol'],
+            atol=self.sim_params['atol']
+        )
 
         n = concentrations.size
 
@@ -75,3 +85,6 @@ class ODESimulator(SimulatorABC):
         create_gdat(self.gdat_filename, groups)
         aux = np.hstack((t_span.reshape((t_span.size, 1)), groups_conc))
         write_to_csv(self.gdat_filename, 'a', aux)
+
+        y = sol[-1, :]
+        return y

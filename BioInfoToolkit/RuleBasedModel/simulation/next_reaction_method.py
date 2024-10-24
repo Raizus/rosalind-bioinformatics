@@ -41,12 +41,13 @@ class NextReactionMethod(SimulatorABC):
         groups: OrderedDict[int, ObservablesGroup]
     ):
 
-        num_species = len(concentrations)
+        y = np.array(list(concentrations.values()), dtype=np.float64)
+        t_start, y = self.get_initial(y)
+        time = t_start
 
-        t_start = self.sim_params['t_start']
+        num_species = len(concentrations)
         t_end = self.sim_params['t_end']
         n_steps = self.sim_params['n_steps']
-        time = t_start
         recording_times: npt.NDArray[np.float_] | None = None
 
         # If n_steps is provided, generate time points at which to record data
@@ -55,8 +56,6 @@ class NextReactionMethod(SimulatorABC):
             self.next_recording_idx = 1  # to track the next recording time index
 
         sp_to_reaction_map = get_species_to_reaction_map(reactions)
-
-        y = np.array(list(concentrations.values()), dtype=np.float64)
         weights = get_groups_weight_matrix(groups, num_species)
 
         # write cdat file
