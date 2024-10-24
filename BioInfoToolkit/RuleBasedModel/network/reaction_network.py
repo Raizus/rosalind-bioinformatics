@@ -366,15 +366,13 @@ class ReactionNetwork:
         if fp is None:
             fp = self.net_filename
 
-        # ext = '.net'
-        # path, name, _ = decompose_path(fp)
-        # fp = compose_path(path, name, ext)
-
         # Check if the file exists and raise an error if overwrite is False or None
         if not overwrite and os.path.exists(fp):
             msg = (f"A file already exists at '{fp}'. To overwrite, set 'overwrite' to True "
                    + "or pass overwrite=>1 to the generate_network action.")
-            raise FileExistsError(msg)
+            print(msg)
+            return
+            # raise FileExistsError(msg)
 
         with open(fp, 'w', encoding='utf-8') as net_file:
             out = self.as_string()
