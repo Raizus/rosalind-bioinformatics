@@ -7,8 +7,9 @@ from scipy.integrate import odeint
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import create_cdat, create_gdat, get_groups_weight_matrix
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import create_cdat, create_gdat, \
+    get_groups_weight_matrix
+from BioInfoToolkit.RuleBasedModel.simulation.simulator import SimulatorABC
 from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 
@@ -42,19 +43,7 @@ def reaction_system(
     return dydt
 
 
-class ODESimulator:
-    sim_params: SimulateDict
-    cdat_filename: str = 'output.cdat'
-    gdat_filename: str = 'output.gdat'
-
-    def __init__(self,
-                 sim_params: SimulateDict,
-                 cdat_filename: str = 'output.cdat',
-                 gdat_filename: str = 'output.gdat'
-                 ) -> None:
-        self.sim_params = sim_params
-        self.cdat_filename = cdat_filename
-        self.gdat_filename = gdat_filename
+class ODESimulator(SimulatorABC):
 
     def solve(self,
               concentrations: npt.NDArray[np.float_],
