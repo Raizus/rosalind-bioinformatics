@@ -8,9 +8,11 @@ import numpy as np
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
+from BioInfoToolkit.RuleBasedModel.model.Species import Species
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-from BioInfoToolkit.RuleBasedModel.network.reaction import ReactionGenerator, build_rules_dict
+from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction, ReactionGenerator, \
+    build_rules_dict
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
 from BioInfoToolkit.RuleBasedModel.simulation.gillespie import GillespieSimulator
@@ -18,7 +20,8 @@ from BioInfoToolkit.RuleBasedModel.simulation.next_reaction_method import NextRe
 from BioInfoToolkit.RuleBasedModel.simulation.ode_sim import ODESimulator
 from BioInfoToolkit.RuleBasedModel.simulation.progressive_leaping import ProgressiveLeapingSimulator
 from BioInfoToolkit.RuleBasedModel.simulation.tau_leaping import TauLeapingSimulator
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import GenerateNetworkDict, SimulateDict
+from BioInfoToolkit.RuleBasedModel.utils.network_parsers import parse_parameters, parse_seed_species
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr, compose_path, decompose_path
 
 
@@ -51,9 +54,8 @@ class ReactionNetwork:
         self.cdat_filename = 'model.cdat'
         self.gdat_filename = 'model.gdat'
 
-    def build_network(self, model: Model,
-                      max_iter: int | None = None,
-                      max_stoich: dict[str, int] | None = None):
+    def generate_network(self, model: Model,
+                         params: GenerateNetworkDict):
         self.model = model
 
         try:
@@ -62,6 +64,8 @@ class ReactionNetwork:
             msg = "Could not build the reaction network. Model has invalid block(s)."
             raise NetworkConstructionError(msg) from exc
 
+        path, name, _ = decompose_path(model.filename)
+        net_path = compose_path(path, name, ".net")
         # generate parameters
         self.generate_parameters(model)
 
@@ -69,13 +73,13 @@ class ReactionNetwork:
         self.generate_seed_species(model)
 
         # generate reactions
+        max_iter = params['max_iter']
+        max_stoich = params['max_stoich']
         self.generate_reactions(model, max_iter, max_stoich)
 
         # generate groups
         self.populate_groups(model)
 
-        path, name, _ = decompose_path(model.filename)
-        net_path = compose_path(path, name, ".net")
         self.set_output_filepaths(net_path)
 
     def set_output_filepaths(self, net_filename: str):
