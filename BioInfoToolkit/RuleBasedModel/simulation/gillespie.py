@@ -1,49 +1,41 @@
+
 from typing import OrderedDict
 import random
-
 import numpy as np
+import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
 from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
-    create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
+    create_cdat, create_gdat, get_affected_reactions, get_groups_weight_matrix, get_species_to_reaction_map, update_affected_propensities, write_data_row
+from BioInfoToolkit.RuleBasedModel.simulation.simulator import SimulatorABC
 
 
-class GillespieSimulator:
-    sim_params: SimulateDict
-    cdat_filename: str = 'output.cdat'
-    gdat_filename: str = 'output.gdat'
-
-    def __init__(self,
-                 sim_params: SimulateDict,
-                 cdat_filename: str = 'output.cdat',
-                 gdat_filename: str = 'output.gdat'
-                ) -> None:
-        self.sim_params = sim_params
-        self.cdat_filename = cdat_filename
-        self.gdat_filename = gdat_filename
+class GillespieSimulator(SimulatorABC):
 
     def simulate(self,
                  reactions: OrderedDict[int, Reaction],
                  rate_constants: OrderedDict[int, float],
                  concentrations: OrderedDict[int, int],
                  groups: OrderedDict[int, ObservablesGroup]):
+
+        num_species = len(concentrations)
         t_start = self.sim_params['t_start']
         t_end = self.sim_params['t_end']
-        time = t_start
-        times: list[float] = [t_start]
         n_steps = self.sim_params['n_steps']
-
-        # Initialize observable groups concentrations
-        y = np.array(list(concentrations.values()), dtype=np.float64)
-        num_species = len(concentrations)
-        weights = get_groups_weight_matrix(groups, num_species)
+        time = t_start
+        recording_times: npt.NDArray[np.float_] | None = None
 
         # If n_steps is provided, generate time points at which to record data
         if n_steps is not None:
             recording_times = np.linspace(t_start, t_end, n_steps)
-            next_recording_idx = 1  # to track the next recording time index
+            self.next_recording_idx = 1  # to track the next recording time index
+
+        sp_to_reaction_map = get_species_to_reaction_map(reactions)
+
+        # Initialize observable groups concentrations
+        y = np.array(list(concentrations.values()), dtype=np.float64)
+        weights = get_groups_weight_matrix(groups, num_species)
 
         # Write the header and first row of .cdat file
         create_cdat(self.cdat_filename, num_species)
@@ -56,10 +48,11 @@ class GillespieSimulator:
 
         print("Starting simulation with Gillespie algorithm...")
         print(f"\tt = {time}")
+
         r_keys = list(reactions.keys())
+        propensities = compute_propensities(y, reactions, rate_constants)
 
         while time < t_end:
-            propensities = compute_propensities(y, reactions, rate_constants)
             total_rate = float(np.sum(propensities))
             if total_rate == 0:
                 break
@@ -74,36 +67,19 @@ class GillespieSimulator:
 
             # Update concentrations based on the chosen reaction
             rxn = reactions[chosen_reaction]
+            species: set[int] = set()
             for reactant in rxn.reactants:
                 y[reactant-1] -= 1
+                species.add(reactant)
             for prod in rxn.products:
                 y[prod-1] += 1
+                species.add(prod)
 
-            # If n_steps is provided, only record concentrations at predefined time points
-            if n_steps is not None:
-                while next_recording_idx < n_steps and time >= recording_times[next_recording_idx]:
-                    times.append(recording_times[next_recording_idx])
+            affected_rxns = get_affected_reactions(sp_to_reaction_map, species)
+            propensities = update_affected_propensities(
+                propensities, rate_constants,
+                y, reactions, affected_rxns)
 
-                    groups_conc = y @ weights
+            self.record_line(time, y, weights, recording_times)
 
-                    # Record concentrations of reactants
-                    write_data_row(self.cdat_filename, time, y)
-
-                    # Record concentrations of observables
-                    write_data_row(self.gdat_filename, time, groups_conc)
-
-                    print(f"\tt = {time}")
-
-                    next_recording_idx += 1
-            else:
-                # Record time and concentrations for all reactions
-                times.append(time)
-                groups_conc = y @ weights
-
-                # Record concentrations of reactants
-                write_data_row(self.cdat_filename, time, y)
-
-                # Record concentrations of observables
-                write_data_row(self.gdat_filename, time, groups_conc)
-
-        return times, groups_conc
+        return y

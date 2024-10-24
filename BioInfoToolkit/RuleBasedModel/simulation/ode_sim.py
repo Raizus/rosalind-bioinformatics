@@ -65,7 +65,8 @@ class ODESimulator:
         t_start = self.sim_params['t_start']
         t_end = self.sim_params['t_end']
         n_steps = self.sim_params['n_steps']
-        n_steps = n_steps if n_steps is not None else 100
+        n_steps = n_steps if n_steps is not None else 1000
+        self.sim_params['n_steps'] = n_steps
         t_span = np.linspace(t_start, t_end, n_steps)
 
         sol = odeint(reaction_system, concentrations, t_span,

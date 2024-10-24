@@ -1,10 +1,10 @@
 
+import os
 from collections import defaultdict
 from typing import OrderedDict
 import networkx as nx
 import graphviz
 import numpy as np
-import os
 
 from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
@@ -348,10 +348,7 @@ class ReactionNetwork:
         groups = self.groups_block.items
 
         simulator = GillespieSimulator(params, self.cdat_filename, self.gdat_filename)
-        times, groups_concent = simulator.simulate(reactions, rate_constants,
-                                                   concentrations, groups)
-
-        return times, groups_concent
+        simulator.simulate(reactions, rate_constants, concentrations, groups)
 
     def save_network(self, fp: str | None = None, overwrite: bool | None = None):
         if fp is None:

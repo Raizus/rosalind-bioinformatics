@@ -5,23 +5,9 @@ import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
-from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import calculate_tau_full, compute_propensities, \
-    create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
-
-
-def compute_stoichiometry_matrix(reactions: OrderedDict[int, Reaction], num_species: int):
-    # Stoichiometry matrix (species x reactions)
-    num_reactions = len(reactions)
-    stoichiometry_matrix = np.zeros((num_species, num_reactions), dtype=np.int64)
-
-    for reaction_id, reaction in reactions.items():
-        for reactant in reaction.reactants:
-            stoichiometry_matrix[reactant-1, reaction_id] -= 1
-        for product in reaction.products:
-            stoichiometry_matrix[product-1, reaction_id] += 1
-
-    return stoichiometry_matrix
+from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import calculate_tau_full, \
+    compute_propensities, compute_stoichiometry_matrix, create_cdat, create_gdat, get_groups_weight_matrix, write_data_row
+from BioInfoToolkit.RuleBasedModel.simulation.simulator import SimulatorABC
 
 
 def update_concentrations(
@@ -49,19 +35,7 @@ def update_concentrations(
     return y
 
 
-class TauLeapingSimulator:
-    sim_params: SimulateDict
-    cdat_filename: str = 'output.cdat'
-    gdat_filename: str = 'output.gdat'
-
-    def __init__(self,
-                 sim_params: SimulateDict,
-                 cdat_filename: str = 'output.cdat',
-                 gdat_filename: str = 'output.gdat'
-                 ) -> None:
-        self.sim_params = sim_params
-        self.cdat_filename = cdat_filename
-        self.gdat_filename = gdat_filename
+class TauLeapingSimulator(SimulatorABC):
 
     def solve(self,
               concentrations: OrderedDict[int, int],
@@ -69,23 +43,23 @@ class TauLeapingSimulator:
               rate_constants: OrderedDict[int, float],
               groups: OrderedDict[int, ObservablesGroup]):
 
-        num_species = len(concentrations)
         epsilon = 0.03
 
-        y = np.array(list(concentrations.values()), dtype=np.float64)
+        num_species = len(concentrations)
         t_start = self.sim_params['t_start']
-        time = t_start
-        times: list[float] = [t_start]
         t_end = self.sim_params['t_end']
         n_steps = self.sim_params['n_steps']
-        results = [y.copy()]
+        given_tau = self.sim_params['tau']
+        time = t_start
+        recording_times: npt.NDArray[np.float_] | None = None
 
+        y = np.array(list(concentrations.values()), dtype=np.float64)
         weights = get_groups_weight_matrix(groups, num_species)
 
         # If n_steps is provided, generate time points at which to record data
         if n_steps is not None:
             recording_times = np.linspace(t_start, t_end, n_steps)
-            next_recording_idx = 1  # to track the next recording time index
+            self.next_recording_idx = 1  # to track the next recording time index
 
         # write cdat file
         create_cdat(self.cdat_filename, y.size)
@@ -101,14 +75,12 @@ class TauLeapingSimulator:
         print("Starting simulation with tau-leaping algorithm...")
         print(f"\tt = {time}")
 
-        given_tau = self.sim_params['tau']
-
         # Perform tau-leaping simulation
         while time < t_end:
             # Calculate propensities for each reaction
             propensities = compute_propensities(y, reactions, rate_constants)
 
-            # Calculate tau using the full Cao method
+            # Calculate tau using the Cao method
             if given_tau is None:
                 tau = calculate_tau_full(
                     y, reactions, propensities, stoichiometry_matrix, epsilon=epsilon)
@@ -124,33 +96,6 @@ class TauLeapingSimulator:
             # Update time
             time += tau
 
-            # If n_steps is provided, only record concentrations at predefined time points
-            if n_steps is not None:
-                while next_recording_idx < n_steps and time >= recording_times[next_recording_idx]:
-                    times.append(recording_times[next_recording_idx])
+            self.record_line(time, y, weights, recording_times)
 
-                    groups_conc = y @ weights
-
-                    # Record concentrations of reactants
-                    write_data_row(self.cdat_filename, time, y)
-
-                    # Record concentrations of observables
-                    write_data_row(self.gdat_filename, time, groups_conc)
-
-                    next_recording_idx += 1
-            else:
-                # Record time and concentrations for all reactions
-                times.append(time)
-                groups_conc = y @ weights
-
-                # Record concentrations of reactants
-                write_data_row(self.cdat_filename, time, y)
-
-                # Record concentrations of observables
-                write_data_row(self.gdat_filename, time, groups_conc)
-
-            # Store results
-            results.append(y.copy())
-            print(f"\tt = {time}; tau = {tau}")
-
-        return np.array(times), np.array(results)
+        return y

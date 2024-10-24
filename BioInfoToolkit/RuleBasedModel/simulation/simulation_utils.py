@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import reduce
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 
@@ -147,3 +148,57 @@ def calculate_tau_full(concentrations,
             tau = min(tau, term2)
 
     return tau
+
+
+def get_species_to_reaction_map(reactions: OrderedDict[int, Reaction]) -> defaultdict[int, set[int]]:
+    # maps species_id to set of r_ids
+    map_: defaultdict[int, set[int]] = defaultdict(set)
+
+    for r_id, reaction in reactions.items():
+        for reactant in reaction.reactants:
+            map_[reactant].add(r_id)
+    return map_
+
+
+def get_affected_reactions(sp_to_reaction_map: dict[int, set[int]], species: set[int]):
+    affected: set[int] = set()
+
+    for specie in species:
+        affected.update(sp_to_reaction_map[specie])
+
+    return list(affected)
+
+
+def update_affected_propensities(
+    propensities: npt.NDArray[np.float_],
+    rate_constants: OrderedDict[int, float],
+    concentrations: npt.NDArray[np.float_],
+    reactions: OrderedDict[int, Reaction],
+    affected: list[int]
+):
+    for r_id in affected:
+        reaction = reactions[r_id]
+        rate = rate_constants[r_id]
+        for reactant in reaction.reactants:
+            conc = concentrations[reactant-1]
+            if conc <= 0:
+                rate = 0
+                break
+            rate *= conc
+
+        propensities[r_id] = rate
+    return propensities
+
+
+def compute_stoichiometry_matrix(reactions: OrderedDict[int, Reaction], num_species: int):
+    # Stoichiometry matrix (species x reactions)
+    num_reactions = len(reactions)
+    stoichiometry_matrix = np.zeros((num_species, num_reactions), dtype=np.int64)
+
+    for reaction_id, reaction in reactions.items():
+        for reactant in reaction.reactants:
+            stoichiometry_matrix[reactant-1, reaction_id] -= 1
+        for product in reaction.products:
+            stoichiometry_matrix[product-1, reaction_id] += 1
+
+    return stoichiometry_matrix
