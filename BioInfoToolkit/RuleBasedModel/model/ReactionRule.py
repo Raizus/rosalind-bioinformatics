@@ -139,15 +139,19 @@ class ReactionRule:
         self.transformations = transformations
 
     def __repr__(self) -> str:
-        left_side = ' + '.join(str(reagent) for reagent in self.reactants)
-        right_side = ' + '.join(str(reagent) for reagent in self.products)
+        left_side = ' + '.join(str(reagent) for reagent in self.reactants) \
+            if len(self.reactants) > 0 else '0'
+        right_side = ' + '.join(str(reagent) for reagent in self.products) \
+            if len(self.products) > 0 else '0'
         arrow = '<->' if self.is_bidirectional() else '->'
 
         rates_str = f"{self.forward_rate}"
         if self.is_bidirectional():
             rates_str += ', ' + f"{self.reverse_rate}"
 
-        out = f"{self.name}: {left_side} {arrow} {right_side} {rates_str}"
+        out = f"{left_side} {arrow} {right_side} {rates_str}"
+        if self.name:
+            out = f"{self.name}: {out}"
         return out
 
 
