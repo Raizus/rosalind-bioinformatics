@@ -120,12 +120,12 @@ end reaction rules
 end model
 
 ## actions ##
-generate_network({overwrite=>1})
+generate_network({overwrite=>0})
 # Pre-equilibration
 simulate({method=>"ode",t_end=>10,n_steps=>10,atol=>1e-8,rtol=>1e-8})
 # Addition of ligand
-setConcentration("Lig(l,l)", "Lig_tot")
-simulate({method=>"ode",t_end=>1000,n_steps=>990,atol=>1e-8,rtol=>1e-8,continue=>1})
+# setConcentration("Lig(l,l)", "Lig_tot")
+# simulate({method=>"ode",t_end=>1000,n_steps=>990,atol=>1e-8,rtol=>1e-8,continue=>1})
 
 # To perform a parameter scan of this model, comment the last simulate command and uncomment the following:
 #parameter_scan({method=>"ode",parameter=>"lig_conc",par_min=>1e-12,par_max=>1e-6,\
