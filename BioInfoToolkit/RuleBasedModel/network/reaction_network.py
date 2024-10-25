@@ -353,6 +353,9 @@ class ReactionNetwork:
         self.concentrations = concentrations
         return concentrations
 
+    def reset_concentrations(self):
+        self.initialise_concentrations()
+
     # def set_concentration(self, specie_q: int | Pattern, value: str):
     #     if isinstance(specie_q, int):
     #         specie = self.species_block.get_specie(specie_q)
@@ -375,6 +378,18 @@ class ReactionNetwork:
         simulator = GillespieSimulator(params, self.cdat_filename, self.gdat_filename)
         y = simulator.simulate(reactions, rate_constants, concentrations, groups)
         return y
+
+    def save_concentrations(self):
+        """
+        Saves the current concentrations to the species block and saves the network file
+        """
+        concentrations = self.concentrations
+        species_dict = self.species_block.items
+        for i, conc in enumerate(concentrations, start=1):
+            species_dict[i].conc = conc
+            species_dict[i].expression = str(conc)
+
+        self.save_network(None, True)
 
     def save_network(self, fp: str | None = None, overwrite: bool | None = None):
         if fp is None:
