@@ -54,6 +54,14 @@ class ReactionNetwork:
         self.cdat_filename = 'model.cdat'
         self.gdat_filename = 'model.gdat'
 
+    def load_network(self, net_path: str):
+        network = load_network(net_path)
+        self.parameters_block = network.parameters_block
+        self.reactions_block = network.reactions_block
+        self.species_block = network.species_block
+        self.groups_block = network.groups_block
+        self.set_output_filepaths(net_path)
+
     def generate_network(self, model: Model,
                          params: GenerateNetworkDict):
         self.model = model
@@ -64,8 +72,14 @@ class ReactionNetwork:
             msg = "Could not build the reaction network. Model has invalid block(s)."
             raise NetworkConstructionError(msg) from exc
 
+        overwrite = params['overwrite']
         path, name, _ = decompose_path(model.filename)
         net_path = compose_path(path, name, ".net")
+        # if overwrite is False, and a .net file already exists, load that file instead
+        if not overwrite and os.path.isfile(net_path):
+            self.load_network(net_path)
+            return
+
         # generate parameters
         self.generate_parameters(model)
 
