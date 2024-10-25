@@ -137,7 +137,8 @@ def species_match_gen(pattern: Pattern,
     Args:
         pattern (Pattern): pattern to match
         species (dict[int, Species]): species dictionary
-        cache (dict[str, int], optional): memoization cache. Defaults to None.
+        cache (dict[str, int], optional): memoization cache. Maps str(pattern) to species_id. 
+        Defaults to None.
 
     Yields:
         int: sp_id (species_id)
