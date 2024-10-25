@@ -319,6 +319,11 @@ def find_bond_breaks(
         # check if matching edge is on products graph
         n1_out = node_map.get(n1, None)
         n2_out = node_map.get(n2, None)
+
+        # if both molecules got deleted ignore this bond
+        if not n1_out and not n2_out:
+            continue
+
         if not n1_out or not n2_out:
             raise ValueError("One of the bonded molecules was deleted.")
 
