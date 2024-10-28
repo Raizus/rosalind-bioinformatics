@@ -6,7 +6,7 @@ import numpy.typing as npt
 from scipy.integrate import odeint
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import create_cdat, create_gdat, \
     get_groups_weight_matrix
 from BioInfoToolkit.RuleBasedModel.simulation.simulator import SimulatorABC

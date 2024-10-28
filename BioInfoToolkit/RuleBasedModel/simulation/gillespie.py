@@ -5,7 +5,7 @@ import numpy as np
 import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import compute_propensities, \
     create_cdat, create_gdat, get_affected_reactions, get_groups_weight_matrix, get_species_to_reaction_map, update_affected_propensities, write_data_row
 from BioInfoToolkit.RuleBasedModel.simulation.simulator import SimulatorABC

@@ -8,7 +8,7 @@ import numpy.typing as npt
 
 from typing import OrderedDict
 
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 from BioInfoToolkit.RuleBasedModel.utils.utls import write_to_csv
 
 

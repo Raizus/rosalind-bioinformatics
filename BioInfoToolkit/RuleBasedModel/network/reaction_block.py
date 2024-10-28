@@ -1,5 +1,5 @@
 from BioInfoToolkit.RuleBasedModel.network.blocks import NetworkBlock
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 from BioInfoToolkit.RuleBasedModel.utils.utls import format_data_into_lines
 
 

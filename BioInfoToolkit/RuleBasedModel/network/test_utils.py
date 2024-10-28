@@ -2,7 +2,7 @@
 from collections import defaultdict
 from typing import OrderedDict
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 
 
 def compare_species_dicts(
