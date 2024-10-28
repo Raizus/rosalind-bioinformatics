@@ -137,7 +137,7 @@ def count_generated_rules(
         int
     ] = defaultdict(int)
 
-    products_gen = apply_transforms(react_species, rule.transformations)
+    products_gen = apply_transforms(react_species, rule.transformations, rule.modifiers)
     for prod_sp_patts in products_gen:
         # check max stoichiometry
         if breaks_stoich_multiple(prod_sp_patts, max_stoich):

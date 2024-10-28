@@ -3,7 +3,7 @@ import pyparsing as pp
 
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import COMMENT_PARSER, NUMS, UNSIGNED_NUMBER_PARSER, \
     VARIABLE_PARSER, NAME_EXPRESSION, STATE, MOLECULE_PARSER, PATTERN_PARSER, EXPRESSION_PARSER, \
-    CompartmentDict, MoleculeTypeComponentDict, MoleculeTypeDict, MoleculeDict, \
+    CompartmentDict, ModifiersDict, MoleculeTypeComponentDict, MoleculeTypeDict, MoleculeDict, \
     ObservableExpressionDict, ParsingError, PatternDict, ReactionRuleDict, ObservableDict, \
     ParameterDict, SeedSpeciesDict, parsed_compartment_to_compartment_dict, \
     parsed_parameter_to_parameter_dict, parsed_seed_species_to_seed_species_dict
@@ -119,6 +119,25 @@ def parse_reactants_sum(string: str):
     return reactants
 
 
+def parsed_modifiers_to_dict(parsed: pp.ParseResults | Any) -> ModifiersDict:
+    if not parsed:
+        del_mol = False
+    elif not isinstance(parsed, pp.ParseResults):
+        raise TypeError(f"{parsed} must be of type ParseResults.")
+    else:
+        parsed = parsed[0]
+        del_mol = bool(parsed.get('delete_molecules', False))
+
+    modifiers: ModifiersDict = {
+        'delete_molecules': del_mol,
+        'include_reactants': [],
+        'exclude_reactants': [],
+        'include_products': [],
+        'exclude_products': []
+    }
+
+    return modifiers
+
 def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
     name = parsed.name
     forward_rate = parsed.forward_rate
@@ -133,21 +152,29 @@ def parsed_rule_to_rule_dict(parsed: pp.ParseResults):
     if reverse_rate is not None and not isinstance(reverse_rate, str):
         raise TypeError("reverse_rate must be a string or none.")
 
-    left_side = parsed.left_side_reactants
-    right_side = parsed.right_side_reactants
+    left_reactants = parsed_patterns_to_list(parsed.left_side_reactants)
+    right_reactants = parsed_patterns_to_list(parsed.right_side_reactants)
 
-    left_reactants = parsed_patterns_to_list(left_side)
-    right_reactants = parsed_patterns_to_list(right_side)
+    parsed_modifiers = parsed.modifiers
+    modifiers = parsed_modifiers_to_dict(parsed_modifiers)
 
     result: ReactionRuleDict = {
         "name": name,
         "reactants": left_reactants,
         "products": right_reactants,
         "forward_rate": forward_rate,
-        "reverse_rate": reverse_rate
+        "reverse_rate": reverse_rate,
+        "modifiers": modifiers
     }
 
     return result
+
+
+def get_rule_mod_parser():
+    del_mol_expr = pp.Literal('DeleteMolecules')('delete_molecules')
+    mod_rule_expr = pp.Group(del_mol_expr)
+    mod_parser = pp.Optional(mod_rule_expr)('modifiers')
+    return mod_parser
 
 
 def parse_reaction_rule(reaction_str: str):
@@ -165,8 +192,12 @@ def parse_reaction_rule(reaction_str: str):
     forward_rate_expr = expression_parser('forward_rate')
     reverse_rate_expr = expression_parser('reverse_rate')
 
-    name_parser = pp.Optional((NAME_EXPRESSION('name') +
-                   pp.Suppress(':')).leaveWhitespace())
+    modifiers_expr = get_rule_mod_parser()
+
+    name_parser = pp.Optional(
+        (NAME_EXPRESSION('name') +
+        pp.Suppress(':')).leaveWhitespace()
+    )
 
     unidirectional_pattern = name_parser + \
         left_side_reactants + \
@@ -182,12 +213,12 @@ def parse_reaction_rule(reaction_str: str):
         pp.Literal(',') + \
         reverse_rate_expr
 
-    rule_parser = unidirectional_pattern | bidirectional_pattern
+    rule_parser = (unidirectional_pattern | bidirectional_pattern) + modifiers_expr
 
     try:
         parsed = rule_parser.parseString(reaction_str)
-        reaction = parsed_rule_to_rule_dict(parsed)
-        return reaction
+        reaction_rule = parsed_rule_to_rule_dict(parsed)
+        return reaction_rule
     except (pp.ParseException, pp.ParseBaseException) as ee:
         raise ParsingError(f"Reaction:\n\t{reaction_str}\nnot declared correctly.") from ee
 

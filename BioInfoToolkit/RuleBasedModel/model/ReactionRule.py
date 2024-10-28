@@ -3,10 +3,12 @@ from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
+from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_reaction_rule
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern
 from BioInfoToolkit.RuleBasedModel.model.ReactionTransformations import BreakBondTransform, \
-    ChangeStateAction, CreateMoleculeAction, DestroyMoleculeAction, FormBondTransform, ReactionTransformation, apply_transforms
+    ChangeStateAction, CreateMoleculeAction, DestroyMoleculeAction, FormBondTransform, \
+    ReactionTransformation, apply_transforms
 from BioInfoToolkit.RuleBasedModel.model.chemical_array import build_chemical_array_graph, \
     compare_chemical_array_graphs, node_matching
 from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
@@ -23,7 +25,8 @@ class ReactionRule:
 
     A single reaction may involve any number of transformations:
         - A(b) + B(a!0).C(d!0) -> A(b!0).B(a!0) + C(d)  Break bond and form new one
-        - A(b) + B(a!0).C(d!0) -> A(b!0).B(a!0)         Break bond, form new bond, destroy C molecule
+        - A(b) + B(a!0).C(d!0) -> A(b!0).B(a!0)         Break bond, form new bond, 
+                                                        destroy C molecule
 
     A Reaction rule is a composition of simple transformations, that transforms the reactants 
     patterns into the product patterns (and vice-versa if the reaction is bidirectional)
@@ -54,13 +57,15 @@ class ReactionRule:
     reactants_graph: nx.Graph
     products_graph: nx.Graph
     transformations: list[ReactionTransformation]
+    modifiers: RuleModifiers | None
 
     def __init__(self,
                  name: str,
                  reactants: list[Pattern],
                  products: list[Pattern],
                  forward_rate: str,
-                 reverse_rate: str|None = None) -> None:
+                 reverse_rate: str|None = None,
+                 modifiers: RuleModifiers | None = None) -> None:
         self.name = name
         self.forward_rate = forward_rate
         self.reactants = reactants
@@ -69,6 +74,7 @@ class ReactionRule:
         self.reverse_rate = reverse_rate
         self.reverse_rate_value = 0.0
         self.transformations = []
+        self.modifiers = modifiers
 
         self.reactants_graph = build_chemical_array_graph(reactants)
         self.products_graph = build_chemical_array_graph(products)
@@ -85,11 +91,13 @@ class ReactionRule:
         reverse_rate = reaction_dict["reverse_rate"]
         parsed_reactants = reaction_dict["reactants"]
         parsed_products = reaction_dict["products"]
-        reactants = [Pattern.from_dict(parsed_pattern, molecules) 
+        reactants = [Pattern.from_dict(parsed_pattern, molecules)
                      for parsed_pattern in parsed_reactants]
         products = [Pattern.from_dict(parsed_pattern, molecules)
                      for parsed_pattern in parsed_products]
-        reaction = ReactionRule(name, reactants, products, forward_rate, reverse_rate)
+        parsed_mods = reaction_dict['modifiers']
+        modifiers = RuleModifiers(parsed_mods)
+        reaction = ReactionRule(name, reactants, products, forward_rate, reverse_rate, modifiers)
 
         return reaction
 
@@ -97,17 +105,18 @@ class ReactionRule:
         return self.reverse_rate is not None
 
     def get_forward(self) -> "ReactionRule":
-        new_rule = ReactionRule(self.name, self.reactants, self.products, self.forward_rate)
+        new_rule = ReactionRule(self.name, self.reactants, self.products,
+                                self.forward_rate, None, self.modifiers)
         new_rule.transformations = self.transformations
         return new_rule
-    
+
     def get_reverse(self) -> "ReactionRule":
         if not self.reverse_rate:
             raise TypeError(f"Reaction rule must have a reverse rate ({self.reverse_rate})")
 
         name = f"_reverse_{self.name}"
-        new_rule = ReactionRule(name, self.products,
-                                self.reactants, self.reverse_rate)
+        new_rule = ReactionRule(name, self.products, self.reactants,
+                                self.reverse_rate, None, self.modifiers)
         new_rule.decompose_reaction()
         return new_rule
 
@@ -458,7 +467,7 @@ def find_transformation(
 
     res = find_deleted_molecules(curr_reactants, curr_graph_r, node_map)
     if res:
-        idx, deleted_pattern = res
+        idx, _ = res
         delete_molecule_action = DestroyMoleculeAction(
             curr_reactants, curr_graph_r, idx)
         transformations.append(delete_molecule_action)
@@ -488,7 +497,7 @@ def decompose_reaction(reaction: ReactionRule):
                                                    curr_graph_r, graph_p,
                                                    node_map, node_map_reverse)
         except ValueError as exc:
-            msg = (f"Could not decompose the reaction:\n\t{reaction}")
+            msg = f"Could not decompose the reaction:\n\t{reaction}"
             raise ValueError() from exc
         if len(transformations2) == 0:
             msg = (f"Could not decompose the reaction '{reaction}' " +

@@ -38,6 +38,18 @@ class PatternDict(TypedDict):
     aggregate_compartment: str | None
 
 
+class InclExclDict(TypedDict):
+    idx: int
+    patterns: list[PatternDict]
+
+
+class ModifiersDict(TypedDict):
+    delete_molecules: bool
+    include_reactants: list[InclExclDict]
+    exclude_reactants: list[InclExclDict]
+    include_products: list[InclExclDict]
+    exclude_products: list[InclExclDict]
+
 class ReactionRuleDict(TypedDict):
     """Typed dict for reaction rule"""
     name: str
@@ -45,6 +57,7 @@ class ReactionRuleDict(TypedDict):
     products: list[PatternDict]
     forward_rate: str
     reverse_rate: str | None
+    modifiers: ModifiersDict
 
 
 class ReactionDict(TypedDict):

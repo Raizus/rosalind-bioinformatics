@@ -169,7 +169,8 @@ class TestParseReaction():
     @pytest.mark.parametrize("declaration, count1, count2", [
         ("R1: S(x~u) + A() + B() + C() -> S(x~p) + A() + B() k1", 4, 3),
         ("R2: S(x~u) + A(b~u!0).B(a!0,c!1).C(b~abc!1) + D(a!0).A(d!0) -> S(x~u) + D(a!0).A(d!0) k2", 3, 2),
-        ("R3: R(lig,ch~closed) + L(rec) <-> R(lig!0,ch~closed).L(rec!0) k2, kr", 2, 1)
+        ("R3: R(lig,ch~closed) + L(rec) <-> R(lig!0,ch~closed).L(rec!0) k2, kr", 2, 1),
+        ("EGF(R!1).EGF(R!2).EGFR(L!1,CR1!3).EGFR(L!2,CR1!3) -> 0 deg DeleteMolecules", 1, 0)
     ])
     def test_valid_unidirectional(self, declaration: str, count1: int, count2: int):
         parsed = parse_reaction_rule(declaration)

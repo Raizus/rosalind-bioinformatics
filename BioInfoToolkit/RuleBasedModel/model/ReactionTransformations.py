@@ -1,10 +1,12 @@
 import abc
+from collections import defaultdict
 from enum import Enum
 from typing import Any, Generator
 import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, form_bond, \
+from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, form_bond, \
     node_pattern_matching_func
+from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 
 def idxs_from_reactants(reactants: list[Pattern]):
     idxs: list[tuple[int, int, int]] = []
@@ -53,7 +55,11 @@ class ReactionTransformation(abc.ABC):
         self.patterns_graph = graph
 
     @abc.abstractmethod
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         pass
 
 
@@ -134,7 +140,11 @@ class FormBondTransform(ReactionTransformation):
 
         self.bond = comp1_out_bond
 
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         reactants = [reactant.copy() for reactant in reactants]
 
         center1 = self.reaction_center_in[0]
@@ -247,7 +257,11 @@ class BreakBondTransform(ReactionTransformation):
 
         self.bond = comp1_in_bond
 
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         reactants = [reactant.copy() for reactant in reactants]
 
         center1 = self.reaction_center_in[0]
@@ -330,7 +344,11 @@ class ChangeStateAction(ReactionTransformation):
                f" -> {self.reaction_center_out[0]} ({comp2_str})")
         return out
 
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         # find affected reactant
         reactants = [reactant.copy() for reactant in reactants]
         # reactants_g = build_chemical_array_graph(products)
@@ -362,6 +380,25 @@ class ChangeStateAction(ReactionTransformation):
             yield products
 
 
+def remove_dangling_bonds(mols: list[Molecule]):
+    bonds: defaultdict[str, list[tuple[int, int]]] = defaultdict(list)
+
+    for i, mol in enumerate(mols):
+        for j, comp in enumerate(mol.components):
+            if comp.is_bonded() and not comp.is_bond_wildcard():
+                bonds[comp.bond].append((i,j))
+
+    for _, bonds_l in bonds.items():
+        if len(bonds_l) == 2:
+            continue
+
+        # remove the dangling bonds
+        for i, j in bonds_l:
+            mols[i].components[j].bond = ''
+
+    return mols
+
+
 class DestroyMoleculeAction(ReactionTransformation):
     transformation = TransformationType.DESTROY_MOLECULE
     patterns: list[Pattern]
@@ -379,14 +416,49 @@ class DestroyMoleculeAction(ReactionTransformation):
         out = f"{self.transformation.value}: "
         return out
 
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         # find affected reactant
         reactants = [reactant.copy() for reactant in reactants]
 
         idx = self.react_idx
-        products = reactants.copy()
-        products.pop(idx)
-        yield products
+        pattern = self.patterns[idx]
+        if not modifiers or not modifiers.delete_molecules:
+            products = reactants.copy()
+            products.pop(idx)
+            yield products
+        else:
+            affected_specie = reactants[idx].copy()
+
+            # we need to find the isomorphism between the affected reactant and the pattern
+            # and then delete the correct molecules and any dangling bonds
+            match_func = node_pattern_matching_func
+            matcher = nx.isomorphism.GraphMatcher(
+                affected_specie.graph, pattern.graph, match_func)
+            for mapping in matcher.subgraph_isomorphisms_iter():
+                products = reactants.copy()
+
+                # remove affected molecules
+                n_mols = affected_specie.number_of_molecules()
+                idxs_to_remove = set(n1[0] for n1 in mapping.keys())
+                mols = [affected_specie.molecules[i].copy() for i in range(n_mols)
+                        if i not in idxs_to_remove]
+
+                # remove dangling bonds
+                mols = remove_dangling_bonds(mols)
+
+                if len(mols) > 0:
+                    new_pattern = Pattern(mols)
+                    if not new_pattern.is_connected():
+                        return
+                    products[idx] = new_pattern
+                else:
+                    products.pop(idx)
+                yield products
+                return
 
 
 class CreateMoleculeAction(ReactionTransformation):
@@ -406,7 +478,11 @@ class CreateMoleculeAction(ReactionTransformation):
         out = f"{self.transformation.value}: "
         return out
 
-    def apply(self, reactants: list[Pattern]) -> Generator[list[Pattern], Any, None]:
+    def apply(
+        self,
+        reactants: list[Pattern],
+        modifiers: RuleModifiers | None = None
+    ) -> Generator[list[Pattern], Any, None]:
         # find affected reactant
         reactants = [reactant.copy() for reactant in reactants]
 
@@ -415,10 +491,10 @@ class CreateMoleculeAction(ReactionTransformation):
         yield products
 
 
-
 def apply_transforms(
     reactants: list[Pattern],
-    actions: list[ReactionTransformation]
+    actions: list[ReactionTransformation],
+    modifiers: RuleModifiers | None = None
 ) -> Generator[list[Pattern], Any, None]:
     # Start with the initial list of reactants as the first generator
     def generator_chain(reactants: list[Pattern], actions: list[ReactionTransformation]) -> Generator[list[Pattern], Any, None]:
@@ -428,7 +504,7 @@ def apply_transforms(
         # Apply each action to the results of the previous action
         for action in actions:
             # Apply the current action to each result from the previous step
-            res = [p for r in res for p in action.apply(r)]
+            res = [p for r in res for p in action.apply(r, modifiers)]
 
         # Yield the final results after all actions have been applied
         yield from res
