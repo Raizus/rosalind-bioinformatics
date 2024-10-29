@@ -76,19 +76,19 @@ def compare_reactions_dicts(
     # Check if the map is bijective
     used_in_cdomain = set()
 
-    for sp_id1, candidates in mapping.items():
+    for r_id1, candidates in mapping.items():
         # Each species in dict1 must map to exactly one species in dict2
         if len(candidates) != 1:
             return None
 
-        sp_id2 = list(candidates)[0]
+        r_id2 = list(candidates)[0]
 
         # Ensure no two species from dict1 map to the same species in dict2
-        if sp_id2 in used_in_cdomain:
+        if r_id2 in used_in_cdomain:
             return None
 
-        bijective_map[sp_id1] = sp_id2
-        used_in_cdomain.add(sp_id2)
+        bijective_map[r_id1] = r_id2
+        used_in_cdomain.add(r_id2)
 
     # Ensure every species in dict2 is accounted for
     if len(used_in_cdomain) != len(dict2):
