@@ -7,3 +7,5 @@ __pycache__/
 prompts.txt
 .pylintrc
 rule_modeling_imgs/
+*.cdat
+*.gdat
