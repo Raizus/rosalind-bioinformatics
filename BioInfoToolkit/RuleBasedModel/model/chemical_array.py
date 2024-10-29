@@ -47,6 +47,8 @@ def node_matching(n1: Any, n2: Any,
     comp2_bond = n2.get('bond', None)
 
     component_match = mol1_name == mol2_name and comp1_name == comp2_name
+    if not component_match:
+        return False
 
     # state does not have to match, but must be either undefined in both or defined in both
     state_match = comp1_state == comp2_state
@@ -55,6 +57,8 @@ def node_matching(n1: Any, n2: Any,
                        or (comp1_state is not None
                            and comp2_state is not None
                            and len(comp2_state) > 0 and len(comp1_state) > 0))
+    if not state_match:
+        return False
 
     # when finding mappings, bond wildcards must match
     is_wildcard = comp1_bond in ('?', '+') or comp2_bond in ('?', '+')
@@ -66,8 +70,7 @@ def node_matching(n1: Any, n2: Any,
     elif match_bond:
         bond_match = is_bonded1 == is_bonded2
 
-    full_match = component_match and state_match and bond_match
-    return full_match
+    return bond_match
 
 
 def compare_chemical_array_graphs(graph1: nx.Graph, graph2: nx.Graph) -> bool:
