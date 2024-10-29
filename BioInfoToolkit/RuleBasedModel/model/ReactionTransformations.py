@@ -5,7 +5,7 @@ from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, form_bond, \
-    node_pattern_matching_func
+    node_pattern_matching_func, split_pattern_into_connected_components
 from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 
 def idxs_from_reactants(reactants: list[Pattern]):
@@ -452,9 +452,12 @@ class DestroyMoleculeAction(ReactionTransformation):
 
                 if len(mols) > 0:
                     new_pattern = Pattern(mols)
+                    # if deleting the molecules results into multiple disconnected molecules
                     if not new_pattern.is_connected():
-                        return
-                    products[idx] = new_pattern
+                        new_patterns = split_pattern_into_connected_components(new_pattern)
+                        products = products[:idx] + new_patterns + products[idx+1:]
+                    else:
+                        products[idx] = new_pattern
                 else:
                     products.pop(idx)
                 yield products
