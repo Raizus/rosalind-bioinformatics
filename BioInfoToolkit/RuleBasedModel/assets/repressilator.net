@@ -37,21 +37,21 @@ begin parameters
 end parameters
 
 begin species
-	1   gTetR(lac!1,lac!2).pLacI(tet!1).pLacI(tet!2) 1
-	2   gCI(tet!1,tet!2).pTetR(cI!1).pTetR(cI!2)     1
-	3   gLacI(cI!1,cI!2).pCI(lac!1).pCI(lac!2)       1
-	4   mTetR()                                      3163
-	5   mCI()                                        6819
-	6   mLacI()                                      129
-	7   pTetR(cI)                                    183453
-	8   pCI(lac)                                     2006198
-	9   pLacI(tet)                                   165670
-	10  gTetR(lac,lac!2).pLacI(tet!2)                0
-	11  gCI(tet,tet!2).pTetR(cI!2)                   0
-	12  gLacI(cI,cI!2).pCI(lac!2)                    0
-	13  gTetR(lac,lac)                               0
-	14  gCI(tet,tet)                                 0
-	15  gLacI(cI,cI)                                 0
+	1  gTetR(lac!1,lac!2).pLacI(tet!1).pLacI(tet!2) 1
+	2  gCI(tet!1,tet!2).pTetR(cI!1).pTetR(cI!2) 1
+	3  gLacI(cI!1,cI!2).pCI(lac!1).pCI(lac!2) 1
+	4  mTetR() 3163
+	5  mCI() 6819
+	6  mLacI() 129
+	7  pTetR(cI) 183453
+	8  pCI(lac) 2006198
+	9  pLacI(tet) 165670
+	10 gTetR(lac,lac!2).pLacI(tet!2) 0
+	11 gCI(tet,tet!2).pTetR(cI!2) 0
+	12 gLacI(cI,cI!2).pCI(lac!2) 0
+	13 gTetR(lac,lac) 0
+	14 gCI(tet,tet) 0
+	15 gLacI(cI,cI) 0
 end species
 
 begin reactions

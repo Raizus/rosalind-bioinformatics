@@ -14,14 +14,14 @@ begin parameters
 end parameters
 
 begin species
-	1  L(t)                 L0
-	2  T(Phos~U,l)          T0*0.8
-	3  T(Phos~P,l)          T0*0.2
-	4  CheY(Phos~U)         CheY0*0.5
-	5  CheY(Phos~P)         CheY0*0.5
-	6  CheZ()               CheZ0
-	7  L(t!1).T(Phos~U,l!1) 0
-	8  L(t!1).T(Phos~P,l!1) 0
+	1 L(t) L0
+	2 T(Phos~U,l) T0*0.8
+	3 T(Phos~P,l) T0*0.2
+	4 CheY(Phos~U) CheY0*0.5
+	5 CheY(Phos~P) CheY0*0.5
+	6 CheZ() CheZ0
+	7 L(t!1).T(Phos~U,l!1) 0
+	8 L(t!1).T(Phos~P,l!1) 0
 end species
 
 begin reactions

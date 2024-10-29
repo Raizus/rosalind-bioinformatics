@@ -11,21 +11,21 @@ begin parameters
 end parameters
 
 begin species
-	1   R(r,r)                                                                                                    R0
-	2   L(l,l)                                                                                                    L0
-	3   L(l,l!1).R(r,r!1)                                                                                         0
-	4   L(l!1,l!2).R(r,r!1).R(r,r!2)                                                                              0
-	5   L(l!1,l!3).L(l,l!2).R(r!2,r!3).R(r,r!1)                                                                   0
-	6   L(l,l!2).L(l,l!3).R(r!2,r!3)                                                                              0
-	7   L(l!1,l!2).L(l,l!4).L(l,l!3).R(r!2,r!3).R(r!1,r!4)                                                        0
-	8   L(l!1,l!2).L(l!3,l!4).R(r!2,r!3).R(r,r!1).R(r,r!4)                                                        0
-	9   L(l!1,l!2).L(l!3,l!5).L(l,l!4).R(r!1,r!4).R(r!2,r!3).R(r,r!5)                                             0
-	10  L(l!1,l!2).L(l!3,l!6).L(l,l!4).L(l,l!5).R(r!1,r!4).R(r!2,r!3).R(r!5,r!6)                                  0
-	11  L(l!1,l!2).L(l!4,l!5).L(l!3,l!6).R(r!2,r!3).R(r!4,r!6).R(r,r!1).R(r,r!5)                                  0
-	12  L(l!1,l!2).L(l!5,l!6).L(l!3,l!7).L(l,l!4).R(r!1,r!4).R(r!2,r!3).R(r!5,r!7).R(r,r!6)                       0
-	13  L(l!1,l!2).L(l!5,l!6).L(l!3,l!8).L(l,l!4).L(l,l!7).R(r!1,r!4).R(r!2,r!3).R(r!6,r!7).R(r!5,r!8)            0
-	14  L(l!1,l!2).L(l!3,l!4).L(l!5,l!6).L(l!7,l!8).R(r!1,r!7).R(r!2,r!3).R(r!4,r!5).R(r,r!6).R(r,r!8)            0
-	15  L(l!1,l!2).L(l!3,l!4).L(l!5,l!6).L(l!7,l!9).L(l,l!8).R(r!1,r!7).R(r!2,r!3).R(r!4,r!5).R(r!6,r!8).R(r,r!9) 0
+	1  R(r,r) R0
+	2  L(l,l) L0
+	3  L(l,l!1).R(r,r!1) 0
+	4  L(l!1,l!2).R(r,r!1).R(r,r!2) 0
+	5  L(l!1,l!3).L(l,l!2).R(r!2,r!3).R(r,r!1) 0
+	6  L(l,l!2).L(l,l!3).R(r!2,r!3) 0
+	7  L(l!1,l!2).L(l,l!4).L(l,l!3).R(r!2,r!3).R(r!1,r!4) 0
+	8  L(l!1,l!2).L(l!3,l!4).R(r!2,r!3).R(r,r!1).R(r,r!4) 0
+	9  L(l!1,l!2).L(l!3,l!5).L(l,l!4).R(r!1,r!4).R(r!2,r!3).R(r,r!5) 0
+	10 L(l!1,l!2).L(l!3,l!6).L(l,l!4).L(l,l!5).R(r!1,r!4).R(r!2,r!3).R(r!5,r!6) 0
+	11 L(l!1,l!2).L(l!4,l!5).L(l!3,l!6).R(r!2,r!3).R(r!4,r!6).R(r,r!1).R(r,r!5) 0
+	12 L(l!1,l!2).L(l!5,l!6).L(l!3,l!7).L(l,l!4).R(r!1,r!4).R(r!2,r!3).R(r!5,r!7).R(r,r!6) 0
+	13 L(l!1,l!2).L(l!5,l!6).L(l!3,l!8).L(l,l!4).L(l,l!7).R(r!1,r!4).R(r!2,r!3).R(r!6,r!7).R(r!5,r!8) 0
+	14 L(l!1,l!2).L(l!3,l!4).L(l!5,l!6).L(l!7,l!8).R(r!1,r!7).R(r!2,r!3).R(r!4,r!5).R(r,r!6).R(r,r!8) 0
+	15 L(l!1,l!2).L(l!3,l!4).L(l!5,l!6).L(l!7,l!9).L(l,l!8).R(r!1,r!7).R(r!2,r!3).R(r!4,r!5).R(r!6,r!8).R(r,r!9) 0
 end species
 
 begin reactions
@@ -114,10 +114,10 @@ begin reactions
 end reactions
 
 begin groups
-	0  R1   1,3,6
-	1  R2   4,5,7
-	2  R3   8,9,10
-	3  R4   11,12,13
-	4  R5   14,15
+	0  R1   1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+	1  R2   
+	2  R3   
+	3  R4   
+	4  R5   
 	5  Rbig 
 end groups

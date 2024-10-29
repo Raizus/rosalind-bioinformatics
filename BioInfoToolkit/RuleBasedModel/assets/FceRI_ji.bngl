@@ -120,7 +120,7 @@ end reaction rules
 end model
 
 ## actions ##
-generate_network({overwrite=>0})
+generate_network({overwrite=>1})
 # Pre-equilibration
 simulate({method=>"ode",t_end=>10,n_steps=>10,atol=>1e-8,rtol=>1e-8})
 # Addition of ligand
