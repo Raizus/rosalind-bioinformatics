@@ -73,11 +73,15 @@ class SpeciesBlock(NetworkBlock):
         lines: list[str] = []
         lines.append(f"\nbegin {self.name}")
 
-        data: list[tuple[str, str, str]] = []
+        data: list[tuple[str, str]] = []
         for sp_id, species in self.items.items():
-            data.append((str(sp_id), str(species.pattern), species.expression))
+            data.append((str(sp_id), str(species.pattern)))
 
-        lines.extend(format_data_into_lines(data))
+        data_lines = format_data_into_lines(data)
+        for i, (line, specie) in enumerate(zip(data_lines, self.items.values())):
+            line += f" {specie.expression}"
+            data_lines[i] = line
+        lines.extend(data_lines)
         lines.append(f"end {self.name}\n")
 
         return '\n'.join(lines)
