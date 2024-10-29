@@ -11,7 +11,7 @@ from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
 from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
-from BioInfoToolkit.RuleBasedModel.network.reaction import Reaction, ReactionGenerator, \
+from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction, ReactionGenerator, \
     build_rules_dict
 from BioInfoToolkit.RuleBasedModel.network.reaction_block import ReactionsBlock
 from BioInfoToolkit.RuleBasedModel.network.species_block import SpeciesBlock
