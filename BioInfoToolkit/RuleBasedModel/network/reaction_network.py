@@ -64,14 +64,6 @@ class ReactionNetwork:
 
     def generate_network(self, model: Model,
                          params: GenerateNetworkDict):
-        self.model = model
-
-        try:
-            model.validate()
-        except InvalidModelBlockError as exc:
-            msg = "Could not build the reaction network. Model has invalid block(s)."
-            raise NetworkConstructionError(msg) from exc
-
         overwrite = params['overwrite']
         path, name, _ = decompose_path(model.filename)
         net_path = compose_path(path, name, ".net")
@@ -79,6 +71,13 @@ class ReactionNetwork:
         if not overwrite and os.path.isfile(net_path):
             self.load_network(net_path)
             return
+
+        self.model = model
+        try:
+            model.validate()
+        except InvalidModelBlockError as exc:
+            msg = "Could not build the reaction network. Model has invalid block(s)."
+            raise NetworkConstructionError(msg) from exc
 
         # generate parameters
         self.generate_parameters(model)
@@ -167,7 +166,7 @@ class ReactionNetwork:
         reaction_rules = build_rules_dict(model.reaction_rules_block.items)
         # substitute reaction expression if they're not variables
         r_law_id = 1
-        for r_id, reaction in reaction_rules.items():
+        for _, reaction in reaction_rules.items():
             expr = reaction.forward_rate
             if expr in self.parameters_block.items:
                 continue
