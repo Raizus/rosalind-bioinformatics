@@ -15,6 +15,12 @@ from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 ChemArrayNodeId = tuple[int, int, int]
 
+def graph_automorphism_gen(graph: nx.Graph):
+    match_func = partial(node_matching, match_state=True, match_bond=True)
+    matcher = nx.isomorphism.GraphMatcher(graph, graph, match_func)
+    yield from matcher.isomorphisms_iter()
+
+
 class ReactionRule:
     """Allowed transformations:
         - Forming a bond:  A(b) + B(a) -> A(b!0).B(a!0)
@@ -58,6 +64,7 @@ class ReactionRule:
     products_graph: nx.Graph
     transformations: list[ReactionTransformation]
     modifiers: RuleModifiers | None
+    symmetric: bool
 
     def __init__(self,
                  name: str,
@@ -78,6 +85,7 @@ class ReactionRule:
 
         self.reactants_graph = build_chemical_array_graph(reactants)
         self.products_graph = build_chemical_array_graph(products)
+        self.symmetric = self.is_symmetric()
 
     @classmethod
     def from_declaration(cls, declaration: str, molecules: dict[str, MoleculeType]):
@@ -100,6 +108,32 @@ class ReactionRule:
         reaction = ReactionRule(name, reactants, products, forward_rate, reverse_rate, modifiers)
 
         return reaction
+
+    def is_symmetric(self) -> bool:
+        def automorphism_counter(iso_gen: Generator[Any, Any, None]):
+            count = 0
+            # we only want to count automorphisms where molecules map to different molecules.
+            # Consider a molecule with two components of the same type. This molecule will
+            # have two automorphisms but only one should count to the determine
+            # if the reaction is symmetric
+            mol_maps: list[dict[tuple[int, int], tuple[int, int]]] = []
+            for node_map in iso_gen:
+                mol_map: dict[tuple[int, int], tuple[int, int]] = \
+                    {n1[:2]: n2[:2] for n1, n2 in node_map.items()
+                           if n1[2] == -1 and n2[2] == -1}
+                if mol_map not in mol_maps:
+                    mol_maps.append(mol_map)
+                    count += 1
+            return count
+
+        gen1 = graph_automorphism_gen(self.reactants_graph)
+        react_symmetry_c = automorphism_counter(gen1)
+        gen2 = graph_automorphism_gen(self.products_graph)
+        prod_symmetry_c = automorphism_counter(gen2)
+        if (react_symmetry_c > 1 and prod_symmetry_c > 1
+            and react_symmetry_c == prod_symmetry_c):
+            return True
+        return False
 
     def is_bidirectional(self) -> bool:
         return self.reverse_rate is not None

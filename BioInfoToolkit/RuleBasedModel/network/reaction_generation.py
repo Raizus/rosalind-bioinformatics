@@ -127,7 +127,21 @@ def count_generated_rules(
     rule: ReactionRule,
     species_block: SpeciesBlock,
     max_stoich: dict[str, int]
-):
+) -> defaultdict[tuple[int, tuple[int, ...], tuple[int, ...]], int]:
+    """_summary_
+
+    Args:
+        react_species_ids (list[int]): _description_
+        rule_id (int): _description_
+        rule (ReactionRule): _description_
+        species_block (SpeciesBlock): _description_
+        max_stoich (dict[str, int]): _description_
+
+    Returns:
+        defaultdict[tuple[int, tuple[int, ...], tuple[int, ...]], int]: 
+        dictionary mapping reactions (tuple of (rule_id, reactants, products)) 
+        to counts
+    """
     species_dict = species_block.items
     react_species = [
         species_dict[sp_id].pattern for sp_id in react_species_ids]
@@ -213,8 +227,9 @@ class ReactionGenerator:
 
                 # create new reaction
                 rate_expr = rule.forward_rate
-                if count != 1:
-                    rate_expr = f"{count}*{rate_expr}"
+                multiplier = count if not rule.symmetric else 0.5*count
+                if multiplier != 1:
+                    rate_expr = f"{multiplier}*{rate_expr}"
 
                 comment = f"{rule.name}"
                 rxn = Reaction(list(react_sp_ids), list(prod_sp_ids),
