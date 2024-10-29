@@ -447,6 +447,17 @@ class Pattern:
         return pattern1, pattern2
 
 
+def split_pattern_into_connected_components(patt: Pattern):
+    molecules = [mol.copy() for mol in patt.molecules]
+    patterns: list[Pattern] = []
+    for nodes in nx.connected_components(patt.graph):
+        molecule_idxs = [i for (i, j) in nodes if j == -1]
+        molecules_a = [molecules[i] for i in molecule_idxs]
+        new_patt = Pattern(molecules_a)
+        patterns.append(new_patt)
+    return patterns
+
+
 def form_bond(pattern1: Pattern,
               pattern2: Pattern,
               n1: tuple[int, int],
@@ -518,15 +529,17 @@ def match_pattern_specie(
     value: None | int = None
 ) -> int:
     """Checks if the pattern1 graph is isomorphic to a subgraph of the pattern2 graph.
-    To check if a species pattern matches a general pattern, pattern2 should be the species patter and pattern1 the general pattern.
-    For species-observables, count should be False and for molecules-observables it should be True.
-    If count is False returns 1 if there's a match and 0 otherwise.
-    If count is True returns a count of all subgraph isomorphisms with distinct nodes.
+    To check if a species pattern matches a general pattern, pattern2 should be the species
+    pattern and pattern1 the general pattern.
+    For species-observables, count should be False and for molecules-observables it should
+    be True.
 
     Args:
         pattern1 (Pattern): _description_
         pattern2 (Pattern): _description_
-        count_unique_matches (bool, optional): _description_. Defaults to False.
+        count_unique_matches (bool, optional): If count is False returns 1 if there's a match 
+        and 0 otherwise. If count is True returns a count of all subgraph isomorphisms with 
+        distinct nodes. Defaults to False. 
 
     Returns:
         int: _description_
