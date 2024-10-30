@@ -119,24 +119,27 @@ class TestParsePattern():
             assert comp['state'] == expected_comp[1]
             assert comp['bond'] == expected_comp[2]
 
-    @pytest.mark.parametrize("declaration, molecules_count", [
-        ("L(rec!0).R(lig!0)", 2),
-        ("R(lig!0).L(rec!0)", 2),
-        ("L(rec!1).R(lig!1)", 2),
-        ("R(lig!1).L(rec!1)", 2),
-        ("L(rec!0).R(lig!0,ch~open)", 2),
-        ("L(rec!0).R(lig!0,ch~closed)", 2),
-        ("R(lig!0,ch~open).L(rec!0)", 2),
-        ("R(lig!0,ch~closed).L(rec!0)", 2),
-        ("A(x,y!0).B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y)", 4),
-        ("B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y).A(x,y!0)", 4),
-        ("L(rec!0).R(lig!0) ", 2),
-        (" L(rec!0).R(lig!0)", 2)
+    @pytest.mark.parametrize("declaration, molecules_count, aggregate_comp", [
+        ("L(rec!0).R(lig!0)", 2, None),
+        ("R(lig!0).L(rec!0)", 2, None),
+        ("L(rec!1).R(lig!1)", 2, None),
+        ("R(lig!1).L(rec!1)", 2, None),
+        ("L(rec!0).R(lig!0,ch~open)", 2, None),
+        ("L(rec!0).R(lig!0,ch~closed)", 2, None),
+        ("R(lig!0,ch~open).L(rec!0)", 2, None),
+        ("R(lig!0,ch~closed).L(rec!0)", 2, None),
+        ("A(x,y!0).B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y)", 4, None),
+        ("B(p!0,q~a!1).C(r~d!1,s!2).A(x!2,y).A(x,y!0)", 4, None),
+        ("L(rec!0).R(lig!0) ", 2, None),
+        (" L(rec!0).R(lig!0)", 2, None),
+        ("L(rec!0)@EC.R(lig!0)@PM", 2, None),
+        ("@PM:L(rec!0)@EC.R(lig!0)", 2, "PM")
     ])
-    def test_complexes(self, declaration: str, molecules_count: int):
+    def test_complexes(self, declaration: str, molecules_count: int, aggregate_comp: str | None):
         parsed = parse_pattern(declaration)
         molecules = parsed["molecules"]
         assert len(molecules) == molecules_count
+        assert parsed["aggregate_compartment"] == aggregate_comp
 
     # @pytest.mark.parametrize("declaration", [
     #     "L( rec!0).R(lig!0)",

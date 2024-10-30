@@ -90,17 +90,22 @@ def parsed_patterns_to_list(parsed: pp.ParseResults | Any) -> list[PatternDict]:
         if not isinstance(parsed_pattern, pp.ParseResults):
             raise TypeError(f"{parsed_pattern} must be of type ParseResults.")
 
-        parts: list[MoleculeDict] = []
-        for parsed_molecule in parsed_pattern:
+        molecules: list[MoleculeDict] = []
+        parsed_mols = parsed_pattern.molecules
+        for parsed_molecule in parsed_mols:
             if parsed_molecule == '0':
                 continue
             molecule = parsed_molecule_to_dict(parsed_molecule)
-            parts.append(molecule)
+            molecules.append(molecule)
 
-        if len(parts) > 0:
+        compartment = parsed_pattern.get('compartment', None)
+        if not isinstance(compartment, str) and compartment is not None:
+            raise ValueError("Compartment must be a string or None.")
+
+        if len(molecules) > 0:
             pattern: PatternDict = {
-                'molecules': parts,
-                'aggregate_compartment': None
+                'molecules': molecules,
+                'aggregate_compartment': compartment
             }
             patterns.append(pattern)
 

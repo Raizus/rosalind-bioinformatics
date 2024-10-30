@@ -164,8 +164,11 @@ COMBINED_COMPLEX_PARSER = pp.delimitedList(
 #     pp.OneOrMore(pp.Suppress('.').leaveWhitespace() + \
 #     pp.Group(MOLECULE_PARSER).leaveWhitespace())
 
-PATTERN_PARSER = (pp.Optional(COMPARTMENT_LOC_PARSER + pp.Suppress(':')) +
-                  (COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))('molecules'))
+AGG_COMPART_PARSER = pp.Optional(COMPARTMENT_LOC_PARSER
+                                 + (pp.Suppress(':') | pp.Suppress('::'))
+                                 )
+PATTERN_PARSER = (AGG_COMPART_PARSER
+                  + (COMPLEX_PARSER | pp.Group(MOLECULE_PARSER))('molecules'))
 LABEL_PARSER = pp.Word(pp.alphas, pp.alphanums+'_')
 
 # Define numeric literals
@@ -209,12 +212,14 @@ EXPRESSION_PARSER <<= pp.infixNotation(
     ]
 )
 
-TEXT_PARSER = pp.Combine(pp.ZeroOrMore(pp.Word(pp.printables)))
 COMMENT_PARSER = (pp.Suppress("#") + pp.restOfLine('comment') +
                   (pp.LineEnd() | pp.StringEnd()))
 
 
-def parsed_molecule_to_dict(parsed: pp.ParseResults) -> MoleculeDict:
+def parsed_molecule_to_dict(parsed: pp.ParseResults | Any) -> MoleculeDict:
+    if not isinstance(parsed, pp.ParseResults):
+        raise ValueError(f"Parsed molecule ({parsed}) must be of type ParseResults.")
+
     name = parsed.molecule_name
     if not isinstance(name, str):
         raise ValueError("Molecule name must be a string.")
