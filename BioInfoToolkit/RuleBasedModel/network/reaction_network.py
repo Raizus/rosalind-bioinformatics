@@ -6,7 +6,8 @@ import networkx as nx
 import graphviz
 import numpy as np
 
-from BioInfoToolkit.RuleBasedModel.model.Model import InvalidModelBlockError, Model
+from BioInfoToolkit.RuleBasedModel.model.Model import Model
+from BioInfoToolkit.RuleBasedModel.model.ModelBlocks import InvalidModelBlockError
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
 from BioInfoToolkit.RuleBasedModel.network.blocks import GroupsBlock, ParametersBlock
