@@ -2,6 +2,7 @@ from functools import partial
 from typing import Any, Generator
 import networkx as nx
 
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_reaction_rule
@@ -154,9 +155,13 @@ class ReactionRule:
         new_rule.decompose_reaction()
         return new_rule
 
-    def validate_reactants(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate_reactants(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for pattern in self.reactants + self.products:
-            valid = pattern.validate(molecule_types)
+            valid = pattern.validate(molecule_types, compartments)
             if not valid:
                 return False
 

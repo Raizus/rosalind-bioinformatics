@@ -130,9 +130,10 @@ class ReactionNetwork:
 
         species_dict = model.species_block.items
         mol_types = dict(model.molecule_types_block.items)
+        compartments = model.compartments_block.as_compartments()
 
         for _, specie in species_dict.items():
-            if not specie.validate(mol_types):
+            if not specie.validate(mol_types, compartments):
                 raise ValueError(f"Specie {specie} is not correctly defined.")
             self.species_block.add_specie(specie)
 

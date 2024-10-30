@@ -1,3 +1,4 @@
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_observable
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_specie
@@ -48,9 +49,13 @@ class Observable:
         self.label = label
         self.elements = elements
 
-    def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for element in self.elements:
-            if not element.pattern.validate(molecule_types):
+            if not element.pattern.validate(molecule_types, compartments):
                 return False
 
         return True

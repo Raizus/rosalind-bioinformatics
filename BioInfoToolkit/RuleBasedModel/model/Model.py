@@ -37,14 +37,18 @@ class Model:
             msg = "Compartments block is not valid."
             raise InvalidModelBlockError(msg) from exc
 
+        # if the model is compartmentalized, then we need to validate the definition
+        # of observables, species and rules with the compartments
+        compartments = self.compartments_block.as_compartments()
+
         #validate observables
-        if not self.observables_block.validate(molecule_types):
+        if not self.observables_block.validate(molecule_types, compartments):
             msg = "Observables block is not valid."
             raise InvalidModelBlockError(msg)
 
         # validate species
         variables = self.parameters_block.evaluated_params
-        if not self.species_block.validate_species(molecule_types):
+        if not self.species_block.validate_species(molecule_types, compartments):
             msg = "Species block is not valid, due to invalid species."
             raise InvalidModelBlockError(msg)
         if not self.species_block.validate_expressions(variables):
@@ -52,7 +56,7 @@ class Model:
             raise InvalidModelBlockError(msg)
 
         # validate rules
-        if not self.reaction_rules_block.validate_reactants(molecule_types):
+        if not self.reaction_rules_block.validate_reactants(molecule_types, compartments):
             msg = "Reaction rules block is not valid, due to invalid pattern."
             raise InvalidModelBlockError(msg)
         if not self.reaction_rules_block.validate_rates(variables):

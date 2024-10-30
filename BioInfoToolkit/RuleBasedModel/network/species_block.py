@@ -1,5 +1,6 @@
 from typing import OrderedDict
 
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, find_species_match
@@ -18,7 +19,7 @@ class SpeciesBlock(NetworkBlock):
         self.id_count = 1
 
 
-    def get_species_id(self, species_pattern: Pattern) -> int:
+    def get_specie_id(self, species_pattern: Pattern) -> int:
         """Returns the id of the species in the species dictionary that matches the 
         given species_pattern
 
@@ -42,7 +43,7 @@ class SpeciesBlock(NetworkBlock):
             _type_: _description_
         """
         species_dict = self.items
-        match_id = self.get_species_id(specie.pattern)
+        match_id = self.get_specie_id(specie.pattern)
         if match_id in species_dict:
             return match_id
 
@@ -51,9 +52,13 @@ class SpeciesBlock(NetworkBlock):
         self.id_count += 1
         return sp_id
 
-    def validate_species(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate_species(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for _, specie in self.items.items():
-            valid = specie.validate(molecule_types)
+            valid = specie.validate(molecule_types, compartments)
             if not valid:
                 return False
         return True

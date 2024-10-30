@@ -3,6 +3,7 @@ from itertools import product
 from typing import Any
 import networkx as nx
 import graphviz
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.Component import Component, components_all_equal, components_gen, sort_components
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_pattern, parse_molecule
@@ -73,6 +74,10 @@ class Molecule:
     @property
     def compartment(self):
         return self._compartment
+
+    @compartment.setter
+    def compartment(self, compartment: str):
+        self._compartment = compartment
 
     @classmethod
     def from_dict(cls, parsed: MoleculeDict,
@@ -239,7 +244,11 @@ class Pattern:
         # create graph
         for i, molecule in enumerate(self.molecules):
             parent_id = (i, -1)
-            graph.add_node(parent_id, molecule_name=molecule.name, node_id=parent_id)
+            graph.add_node(parent_id,
+                           molecule_name=molecule.name,
+                           node_id=parent_id,
+                           compartment=molecule.compartment)
+            
             for j, component in enumerate(molecule.components):
                 child_id = (i, j)
                 graph.add_node(child_id, molecule_name=molecule.name,
@@ -279,11 +288,18 @@ class Pattern:
         reactant = cls.from_dict(parsed, molecule_types)
         return reactant
 
-    def validate(self, molecule_types: dict[str, MoleculeType] | None) -> bool:
+    def validate(
+        self,
+        molecule_types: dict[str, MoleculeType] | None,
+        compartments: Compartments | None = None
+    ) -> bool:
         for mol in self.molecules:
             if not mol.validate(molecule_types):
                 return False
-            
+
+        if compartments and not self.is_topologically_consistent(compartments):
+            return False
+
         return True
 
     @property
@@ -362,9 +378,9 @@ class Pattern:
         return connected
 
     def __repr__(self) -> str:
-        out = '.'.join(str(part) for part in self.molecules)
+        out = '.'.join(str(mol) for mol in self.molecules)
         if self.aggregate_compartment:
-            out = f"{self.aggregate_compartment}:" + out
+            out = f"@{self.aggregate_compartment}:{out}"
         return out
 
     def copy(self) -> "Pattern":
@@ -445,6 +461,40 @@ class Pattern:
 
         pattern1, pattern2 = patterns[0], patterns[1]
         return pattern1, pattern2
+
+    def is_topologically_consistent(self, compartments: Compartments) -> bool:
+        # a pattern is topologically consistent if it does not span more than one surface
+        # and if it does not have bonds that need to pass through compartments
+        spaned_compartments: set[str] = set()
+        if self.aggregate_compartment:
+            spaned_compartments.add(self.aggregate_compartment)
+
+        for mol in self.molecules:
+            if mol.compartment:
+                spaned_compartments.add(mol.compartment)
+
+        try:
+            aggregate = compartments.get_aggregate(spaned_compartments)
+            if self.aggregate_compartment and aggregate != self.aggregate_compartment:
+                return False
+        except ValueError:
+            return False
+
+        # check that bonds don't cross compartments
+        # bonds must be either in the same compartment or between adjacent compartments
+        for _, bond_nodes in self.bonds.items():
+            if len(bond_nodes) != 2:
+                return False
+            mol1_idx, mol2_idx = bond_nodes[0][0], bond_nodes[1][0]
+            compart1 = self.molecules[mol1_idx].compartment
+            compart1 = compart1 if compart1 else self.aggregate_compartment
+            compart2 = self.molecules[mol2_idx].compartment
+            compart2 = compart2 if compart2 else self.aggregate_compartment
+            if ((compart1 and compart2)
+                and ((compart1 != compart2)
+                     and not compartments.are_adjacent(compart1, compart2))):
+                return False
+        return True
 
 
 def split_pattern_into_connected_components(patt: Pattern):
@@ -555,8 +605,9 @@ def match_pattern_specie(
             return 0
 
     # check for subgraph isomorphism
+    match_func = node_pattern_matching_func
     matcher = nx.isomorphism.GraphMatcher(
-        specie.graph, pattern.graph, node_pattern_matching_func)
+        specie.graph, pattern.graph, match_func)
 
     num_matches = 0
     if count_unique_matches or (sign and value is not None):

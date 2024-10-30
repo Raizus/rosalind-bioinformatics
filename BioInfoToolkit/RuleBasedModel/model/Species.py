@@ -3,6 +3,7 @@ from itertools import product
 from typing import Any, Generator
 import networkx as nx
 
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.Component import components_gen
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_seed_species
@@ -10,26 +11,34 @@ from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, \
     match_pattern_specie, node_pattern_matching_func
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import SeedSpeciesDict
 
+
 class Species:
-    compartment: str|None
     pattern: Pattern
     expression: str
     conc: float
 
     def __init__(self,
-                 pattern: Pattern,
-                 expression: str,
-                 conc: float = 0.0,
-                 compartment: str | None = None) -> None:
-        # if not pattern.is_specie():
-        #     raise ValueError(f"Reactant {pattern} must be a specie and not a pattern.")
+        pattern: Pattern,
+        expression: str,
+        conc: float = 0.0,
+    ) -> None:
         self.pattern = pattern
+        # we must change the pattern so that implicit molecule compartments are added if
+        # the aggregate compartment is explicit
+        if pattern.aggregate_compartment:
+            for mol in pattern.molecules:
+                if not mol.compartment:
+                    mol.compartment = pattern.aggregate_compartment
+
         self.conc = conc
         self.expression = expression
-        self.compartment = compartment
 
     @classmethod
-    def from_dict(cls, parsed: SeedSpeciesDict, molecules: dict[str, MoleculeType] | None) -> "Species":
+    def from_dict(
+        cls,
+        parsed: SeedSpeciesDict,
+        molecules: dict[str, MoleculeType] | None
+    ) -> "Species":
         pattern = Pattern.from_dict(parsed["pattern"], molecules)
         expression = parsed["expression"]
         specie = Species(pattern, expression)
@@ -43,7 +52,9 @@ class Species:
         specie = cls.from_dict(parsed, molecules)
         return specie
 
-    def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate(self,
+                 molecule_types: dict[str, MoleculeType],
+                 compartments: Compartments) -> bool:
         """Checks if the specie is fully defined
 
         Args:
@@ -53,11 +64,14 @@ class Species:
             bool: _description_
         """
         pattern = self.pattern
+        if not pattern.is_connected():
+            return False
+
         for mol in pattern.molecules:
-            if not pattern.is_connected():
-                return False
             name = mol.name
             mol_type = molecule_types[name]
+
+            # check if all components are fully defined
             if mol.components_counts != mol_type.components_counts:
                 return False
             for comp in mol.components:
@@ -68,18 +82,39 @@ class Species:
                 if comp.bond in ('?', '+'):
                     return False
 
+        # when validating the species, the aggregate component could be implicit
+        # in which case it should be set
+        if all(mol.compartment for mol in pattern.molecules):
+            comps = set(mol.compartment for mol in pattern.molecules if mol.compartment)
+            aggregate_comp = compartments.get_aggregate(comps)
+            if not pattern.aggregate_compartment:
+                pattern.aggregate_compartment = aggregate_comp
+            if aggregate_comp != pattern.aggregate_compartment:
+                return False
+
+        if not pattern.is_topologically_consistent(compartments):
+            return False
+
+        # for compartmentalized models, each molecule should have their compartment
+        # explicitly declared, not just the aggregate
+        if not compartments.is_compartmentalized():
+            return True
+        
+        for mol in pattern.molecules:
+            if not mol.compartment:
+                return False
+            if not compartments.has_compartment(mol.compartment):
+                return False
+
         return True
 
     def __repr__(self) -> str:
-        out = ""
-        if self.compartment:
-            out = f"@{self.compartment}::"
-        out += str(self.pattern)
-        out += f" {self.expression}"
+        out = f"{str(self.pattern)} {self.expression}"
         return out
 
     def match_pattern(self, pattern: Pattern) -> bool:
-        """Matched the species to a given pattern. To match, there must be a subgraph of the species pattern graph that is isomorphic to the given pattern graph
+        """Matched the species to a given pattern. To match, there must be a subgraph of the 
+        species pattern graph that is isomorphic to the given pattern graph
 
         Args:
             pattern (Pattern): _description_
@@ -98,6 +133,7 @@ class Species:
             self.pattern.graph, pattern.graph, node_pattern_matching_func)
         for mapping in matcher.subgraph_isomorphisms_iter():
             yield mapping
+
 
 def generate_species_from_molecule_type(molecule_type: MoleculeType):
     name = molecule_type.name

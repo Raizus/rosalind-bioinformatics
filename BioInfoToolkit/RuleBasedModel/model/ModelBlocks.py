@@ -1,8 +1,9 @@
 
-import networkx as nx
 from typing import OrderedDict
+import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment
+from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment, Compartments, \
+    is_valid_surface, is_valid_volume
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Observable import Observable
 from BioInfoToolkit.RuleBasedModel.model.Parameter import Parameter
@@ -61,9 +62,13 @@ class ObservablesBlock(ModelBlock):
                 f"Observable with label '{observable.label}' already declared.")
         self.items[observable.label] = observable
 
-    def validate(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for observable in self.items.values():
-            if not observable.validate(molecule_types):
+            if not observable.validate(molecule_types, compartments):
                 return False
         return True
 
@@ -164,9 +169,13 @@ class SeedSpeciesBlock(ModelBlock):
         self.items[self.id_count] = species
         self.id_count += 1
 
-    def validate_species(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate_species(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for _, specie in self.items.items():
-            valid = specie.validate(molecule_types)
+            valid = specie.validate(molecule_types, compartments)
             if not valid:
                 return False
         return True
@@ -216,9 +225,13 @@ class ReactionRulesBlock(ModelBlock):
         self.items[self.count_id] = rule
         self.count_id += 1
 
-    def validate_reactants(self, molecule_types: dict[str, MoleculeType]) -> bool:
+    def validate_reactants(
+        self,
+        molecule_types: dict[str, MoleculeType],
+        compartments: Compartments
+    ) -> bool:
         for _, reaction in self.items.items():
-            if not reaction.validate_reactants(molecule_types):
+            if not reaction.validate_reactants(molecule_types, compartments):
                 return False
         return True
 
@@ -270,13 +283,13 @@ class ReactionRulesBlock(ModelBlock):
 class CompartmentsBlock(ModelBlock):
     name = 'compartments'
     items: OrderedDict[str, Compartment]
-    compartment_graph: nx.DiGraph
+    compartment_tree: nx.DiGraph
     root: str | None
 
     def __init__(self) -> None:
         super().__init__()
         self.items = OrderedDict()
-        self.compartment_graph = nx.DiGraph()
+        self.compartment_tree = nx.DiGraph()
         self.root = None
 
     def validate_new_compartment(self, compartment: Compartment):
@@ -284,19 +297,22 @@ class CompartmentsBlock(ModelBlock):
         dimensions = compartment.dimensions
         enclosing_compartment_name = compartment.enclosing_compartment
 
+        # first compartment must be the external compartment and is not enclosed
         if len(self.items) == 0:
             if compartment.is_enclosed():
                 msg = ("The first compartment must be the external one, " +
                        "enclosing_compartment must be None.")
                 raise TypeError(msg)
         else:
+            # subsequent compartments must be enclosed and the enclosing compartment must be 
+            # declared before
             if not compartment.is_enclosed() or (enclosing_compartment_name not in self.items):
                 msg = (f"The compartment '{name}' must be enclosed by another" +
                        "that has been declared. " +
                        f"Compartment '{enclosing_compartment_name}' not declared.")
                 raise ValueError(msg)
 
-            # this compartment is a surface and must be enclosed by a volumne
+            # compartment is a surface and must be enclosed by a volumne
             enclosing_compartment = self.items[enclosing_compartment_name]
             if dimensions == 2:
                 if enclosing_compartment.dimensions != 3:
@@ -319,16 +335,16 @@ class CompartmentsBlock(ModelBlock):
 
         if compartment.enclosing_compartment is None:
             self.root = compartment.name
-        self.compartment_graph.add_node(name)
+        self.compartment_tree.add_node(name)
 
         if enclosing_compartment_name:
             # if parent is surface it can only have 1 child. A surface has to enclose 1 volume
-            children = self.compartment_graph.adj[enclosing_compartment_name]
+            children = self.compartment_tree.adj[enclosing_compartment_name]
             if self.items[enclosing_compartment_name].dimensions == 2 and len(children) >= 1:
                 msg = (f"Compartment {enclosing_compartment_name} is a surface "
                        + "and can only enclose at most 1 volume.")
                 raise ValueError(msg)
-            self.compartment_graph.add_edge(enclosing_compartment_name, name)
+            self.compartment_tree.add_edge(enclosing_compartment_name, name)
 
         self.items[name] = compartment
 
@@ -336,10 +352,22 @@ class CompartmentsBlock(ModelBlock):
         if len(self.items) == 0:
             return True
 
-        for node in nx.traversal.dfs_preorder_nodes(self.compartment_graph, self.root):
-            a = 0
+        for node in nx.traversal.dfs_preorder_nodes(self.compartment_tree, self.root):
+            if node == self.root:
+                if self.items[node].dimensions != 3:
+                    return False
 
-        raise NotImplementedError()
+            valid_surface = is_valid_surface(node, self.items, self.compartment_tree)
+            valid_volume = is_valid_volume(node, self.items, self.compartment_tree)
+
+            if not (valid_surface or valid_volume):
+                return False
+
+        return True
+
+    def as_compartments(self) -> Compartments:
+        compartments = Compartments(self.items, self.compartment_tree, self.root)
+        return compartments
 
     def gen_string(self) -> str:
         """Returns the string of this model block.
