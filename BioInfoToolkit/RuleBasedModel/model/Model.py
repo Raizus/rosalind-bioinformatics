@@ -1,9 +1,6 @@
 
-from BioInfoToolkit.RuleBasedModel.model.ModelBlocks import CompartmentsBlock, \
+from BioInfoToolkit.RuleBasedModel.model.ModelBlocks import CompartmentsBlock, InvalidModelBlockError, \
     MoleculeTypesBlock, ObservablesBlock, ParametersBlock, ReactionRulesBlock, SeedSpeciesBlock
-
-class InvalidModelBlockError(Exception):
-    pass
 
 class Model:
     molecule_types_block: MoleculeTypesBlock
@@ -26,17 +23,24 @@ class Model:
     def validate(self) -> bool:
         molecule_types = self.molecule_types_block.items
 
-        #validate observables
-        if not self.observables_block.validate(molecule_types):
-            msg = "Observables block is not valid."
-            raise InvalidModelBlockError(msg)
-
         # evaluate parameters
         try:
             self.parameters_block.evaluate_parameters()
         except (TypeError, ValueError) as exc:
             msg = "Parameters block is not valid."
             raise InvalidModelBlockError(msg) from exc
+
+        # validate compartments
+        try:
+            self.compartments_block.validate()
+        except (TypeError, ValueError) as exc:
+            msg = "Compartments block is not valid."
+            raise InvalidModelBlockError(msg) from exc
+
+        #validate observables
+        if not self.observables_block.validate(molecule_types):
+            msg = "Observables block is not valid."
+            raise InvalidModelBlockError(msg)
 
         # validate species
         variables = self.parameters_block.evaluated_params
@@ -61,14 +65,10 @@ class Model:
                    "all rules into simple transformations.")
             raise InvalidModelBlockError(msg) from exc
 
-        # validate compartments
-        try:
-            self.compartments_block.validate()
-        except (TypeError, ValueError) as exc:
-            msg = "Compartments block is not valid."
-            raise InvalidModelBlockError(msg) from exc
-
         return True
+
+    def is_compartmentalized(self) -> bool:
+        return len(self.compartments_block.items) > 0
 
     def as_string(self) -> str:
         out = ''

@@ -368,3 +368,7 @@ class CompartmentsBlock(ModelBlock):
         lines.append(f"end {self.name}\n")
 
         return '\n'.join(lines)
+
+
+class InvalidModelBlockError(Exception):
+    pass
