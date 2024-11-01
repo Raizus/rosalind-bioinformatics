@@ -77,14 +77,14 @@ class Observable:
         return observable
 
     def match_species(self, species: Pattern) -> int:
-        count = not self.type == 'Species'
+        count_unique = not self.type == 'Species'
         total_matches = 0
 
         for element in self.elements:
             sign = element.sign
             value = element.value
 
-            num_matches = match_pattern_specie(element.pattern, species, count,
+            num_matches = match_pattern_specie(element.pattern, species, count_unique,
                                                sign, value)
 
             total_matches += num_matches
