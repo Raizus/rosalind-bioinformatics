@@ -23,7 +23,7 @@ def parsed_observable_to_dict(parsed: pp.ParseResults) -> ObservableDict:
     if not isinstance(label, str):
         raise TypeError(f"label {label} must be a string")
 
-    parsed_expressions = parsed.expressions
+    parsed_expressions = parsed.elements
     if not isinstance(parsed_expressions, pp.ParseResults):
         raise TypeError(f"{parsed_expressions} must be of type ParseResults.")
 
@@ -37,7 +37,7 @@ def parsed_observable_to_dict(parsed: pp.ParseResults) -> ObservableDict:
         if isinstance(parsed_value, str):
             value = int(parsed_value)
 
-        pattern = parsed_pattern_to_pattern_dict(parsed_pattern)        
+        pattern = parsed_pattern_to_pattern_dict(parsed_pattern)
         obs_expr: ObservableExpressionDict = {
             'pattern': pattern,
             'sign': sign,
@@ -298,7 +298,8 @@ def parse_observable(declaration: str) -> ObservableDict:
 
     pattern_parser = pp.Group(
         PATTERN_PARSER
-        | pp.Group(name_pattern))
+        | pp.Group(pp.Group(name_pattern))('molecules')
+        )
 
     sign_parser = (
         pp.Literal('==')
@@ -315,8 +316,11 @@ def parse_observable(declaration: str) -> ObservableDict:
 
     elements_list_parser = pp.delimitedList(obs_element_parser)
 
-    observable_parser = type_pattern(
-        'type') + label_pattern('label') + elements_list_parser('expressions')
+    observable_parser = (
+        type_pattern('type')
+        + label_pattern('label')
+        + elements_list_parser('elements')
+    )
 
     try:
         parsed = observable_parser.parseString(declaration)
