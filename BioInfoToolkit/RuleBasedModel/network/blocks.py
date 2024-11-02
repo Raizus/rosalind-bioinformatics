@@ -92,8 +92,7 @@ class GroupsBlock(NetworkBlock):
 
         data: list[tuple[str, str, str]] = []
         for g_id, group in self.items.items():
-            group_str = ','.join(f'{w}*{sp_id}' if w != 1 else f'{sp_id}' for sp_id,
-                                 w in group.weighted_species)
+            group_str = group.group_str()
             data.append((str(g_id), str(group.name), group_str))
 
         lines.extend(format_data_into_lines(data))

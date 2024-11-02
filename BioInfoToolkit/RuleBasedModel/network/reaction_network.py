@@ -146,13 +146,18 @@ class ReactionNetwork:
         species_dict = self.species_block.items
 
         for name, observable in obs_dict.items():
-            group_list: list[tuple[int,int]] = []
+            # maps species id to weights
+            group_dict: defaultdict[int, int] = defaultdict(int)
             for sp_id, specie in species_dict.items():
                 counts = observable.match_species(specie.pattern)
-                if counts > 0:
-                    group_list.append((sp_id, counts))
+                if counts == 0:
+                    continue
+                if observable.type == 'Molecules':
+                    group_dict[sp_id] += counts
+                elif observable.type == 'Species':
+                    group_dict[sp_id] = counts
 
-            group = ObservablesGroup(name, group_list)
+            group = ObservablesGroup(name, group_dict)
             groups_block.add_group(group)
 
     def generate_reactions(self, model: Model,

@@ -86,7 +86,7 @@ class ObservablesGroupDict(TypedDict):
     """Typed dict for observable group"""
     id: int
     label: str
-    species: list[tuple[int,int]]
+    weighted_species: dict[int, int]
 
 
 class ParameterDict(TypedDict):

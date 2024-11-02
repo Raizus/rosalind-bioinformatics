@@ -20,7 +20,7 @@ def parsed_obs_group_to_dict(parsed: pp.ParseResults | Any) -> ObservablesGroupD
         raise TypeError(f"type {label} must be a string")
 
     parsed_species = parsed.species
-    species: list[tuple[int, int]] = []
+    weighted_species: dict[int, int] = {}
     for parsed_specie in parsed_species:
         if not isinstance(parsed_specie, pp.ParseResults):
             raise TypeError(f"{parsed_specie} must be of type ParseResults.")
@@ -33,12 +33,12 @@ def parsed_obs_group_to_dict(parsed: pp.ParseResults | Any) -> ObservablesGroupD
         if not isinstance(weight, str):
             raise TypeError(f"type {weight} must be a string")
 
-        species.append((int(sp_id), int(weight)))
+        weighted_species[int(sp_id)] = int(weight)
 
     result: ObservablesGroupDict = {
         "id": int(g_id),
         "label": label,
-        "species": species
+        "weighted_species": weighted_species
     }
     return result
 
