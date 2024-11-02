@@ -2,6 +2,7 @@
 from collections import defaultdict
 from typing import OrderedDict
 from BioInfoToolkit.RuleBasedModel.model.Species import Species
+from BioInfoToolkit.RuleBasedModel.network.group import ObservablesGroup
 from BioInfoToolkit.RuleBasedModel.network.reaction_generation import Reaction
 
 
@@ -95,3 +96,26 @@ def compare_reactions_dicts(
         return None
 
     return bijective_map
+
+
+def compare_observables_dicts(
+    dict1: OrderedDict[int, ObservablesGroup],
+    dict2: OrderedDict[int, ObservablesGroup],
+    species_biject_map: dict[int, int]
+) -> bool:
+
+    if len(dict1) != len(dict2):
+        return False
+
+    for obs1, obs2 in zip(dict1.values(), dict2.values()):
+        if obs1.name != obs2.name:
+            return False
+        remaped_sp_w = {species_biject_map[sp1]: w1
+                        for sp1, w1 in obs1.weighted_species.items()}
+
+        sp_w2 = obs2.weighted_species
+
+        if remaped_sp_w != sp_w2:
+            return False
+
+    return True

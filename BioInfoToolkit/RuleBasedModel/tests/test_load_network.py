@@ -5,7 +5,7 @@ from BioInfoToolkit.RuleBasedModel.actions.actions import GenerateNetworkAction
 from BioInfoToolkit.RuleBasedModel.model.load_model import load_bngl
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import load_network
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-from BioInfoToolkit.RuleBasedModel.network.test_utils import compare_reactions_dicts, \
+from BioInfoToolkit.RuleBasedModel.network.test_utils import compare_observables_dicts, compare_reactions_dicts, \
     compare_species_dicts
 
 
@@ -66,3 +66,9 @@ def test_compare_networks(fp1: str, fp2: str):
                                         sp_bij_map)
 
     assert r_bij_map is not None
+
+    obs_res = compare_observables_dicts(network1.groups_block.items,
+                                        network2.groups_block.items,
+                                        sp_bij_map)
+
+    assert obs_res is True
