@@ -127,12 +127,24 @@ class Species:
         match = num_matches > 0
         return match
 
-    def iterate_matches(self, pattern: Pattern
-                        ) -> Generator[dict[tuple[int, int], tuple[int, int]], Any, None]:
+    def iterate_matches(
+            self,
+            pattern: Pattern
+        ) -> Generator[dict[tuple[int, int], tuple[int, int]], Any, None]:
+        """Generates all subraph isomorphisms between a subgraph of the species graph and
+        the graph of the given pattern
+
+        Args:
+            pattern (Pattern): _description_
+
+        Yields:
+            Generator[dict[tuple[int, int], tuple[int, int]], Any, None]: generator
+            over the subgraph isomorphisms
+        """
         matcher = nx.isomorphism.GraphMatcher(
             self.pattern.graph, pattern.graph, node_pattern_matching_func)
-        for mapping in matcher.subgraph_isomorphisms_iter():
-            yield mapping
+
+        yield from matcher.subgraph_isomorphisms_iter()
 
 
 def generate_species_from_molecule_type(molecule_type: MoleculeType):
