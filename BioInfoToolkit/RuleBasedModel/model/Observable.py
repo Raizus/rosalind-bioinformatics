@@ -3,6 +3,7 @@ from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_observable
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_specie
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import ObservableExpressionDict
+from BioInfoToolkit.RuleBasedModel.utils.utls import apply_inequality
 
 
 class ObservableElement:
@@ -84,8 +85,15 @@ class Observable:
             sign = element.sign
             value = element.value
 
-            num_matches = match_pattern_specie(element.pattern, species, count_unique,
-                                               sign, value)
+            count_unique2 = count_unique or (bool(sign) and value is not None)
+            num_matches = match_pattern_specie(element.pattern, species, count_unique2)
+
+            if sign and value is not None:
+                result = apply_inequality(num_matches, sign, value)
+                if not result:
+                    num_matches = 0
+                elif not count_unique and result:
+                    num_matches = 1
 
             total_matches += num_matches
         return total_matches

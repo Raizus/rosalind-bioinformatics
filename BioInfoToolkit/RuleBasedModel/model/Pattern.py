@@ -574,19 +574,17 @@ def node_pattern_matching_func(n1: Any, n2: Any) -> bool:
 def match_pattern_specie(
     pattern: Pattern,
     specie: Pattern,
-    count_unique_matches: bool = False,
-    sign: None | str = None,
-    value: None | int = None
+    count_unique_matches: bool = False
 ) -> int:
-    """Checks if the pattern1 graph is isomorphic to a subgraph of the pattern2 graph.
-    To check if a species pattern matches a general pattern, pattern2 should be the species
+    """Checks if the pattern1 graph is isomorphic to a subgraph of the specie graph.
+    To check if a species pattern matches a general pattern, specie should be the species
     pattern and pattern1 the general pattern.
     For species-observables, count should be False and for molecules-observables it should
     be True.
 
     Args:
         pattern1 (Pattern): _description_
-        pattern2 (Pattern): _description_
+        specie (Pattern): _description_
         count_unique_matches (bool, optional): If count is False returns 1 if there's a match 
         and 0 otherwise. If count is True returns a count of all subgraph isomorphisms with 
         distinct nodes. Defaults to False. 
@@ -610,21 +608,16 @@ def match_pattern_specie(
         specie.graph, pattern.graph, match_func)
 
     num_matches = 0
-    if count_unique_matches or (sign and value is not None):
-        nodes_set: list[set[tuple[int, int]]] = []
+    if count_unique_matches:
+        nodes_set: list[set[
+            tuple[tuple[int, int], tuple[int, int]]
+            ]] = []
         num_matches = 0
         for mapping in matcher.subgraph_isomorphisms_iter():
-            nodes = set(n for n in mapping.keys())
+            nodes = set((n1, n2) for n1, n2 in mapping.items())
             if nodes not in nodes_set:
                 nodes_set.append(nodes)
                 num_matches += 1
-
-        if sign and value is not None:
-            result = apply_inequality(len(nodes_set), sign, value)
-            if not result:
-                num_matches = 0
-            elif not count_unique_matches and result:
-                num_matches = 1
 
     else:
         num_matches = int(matcher.subgraph_is_isomorphic())
