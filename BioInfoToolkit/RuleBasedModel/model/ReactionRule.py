@@ -16,7 +16,7 @@ from BioInfoToolkit.RuleBasedModel.utils.utls import eval_expr
 
 ChemArrayNodeId = tuple[int, int, int]
 
-def graph_automorphism_gen(graph: nx.Graph):
+def chem_array_graph_automorphism_gen(graph: nx.Graph):
     match_func = partial(node_matching, match_state=True, match_bond=True)
     matcher = nx.isomorphism.GraphMatcher(graph, graph, match_func)
     yield from matcher.isomorphisms_iter()
@@ -127,9 +127,9 @@ class ReactionRule:
                     count += 1
             return count
 
-        gen1 = graph_automorphism_gen(self.reactants_graph)
+        gen1 = chem_array_graph_automorphism_gen(self.reactants_graph)
         react_symmetry_c = automorphism_counter(gen1)
-        gen2 = graph_automorphism_gen(self.products_graph)
+        gen2 = chem_array_graph_automorphism_gen(self.products_graph)
         prod_symmetry_c = automorphism_counter(gen2)
         if (react_symmetry_c > 1 and prod_symmetry_c > 1
             and react_symmetry_c == prod_symmetry_c):
