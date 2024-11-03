@@ -576,7 +576,7 @@ def match_pattern_specie(
     specie: Pattern,
     count_unique_matches: bool = False
 ) -> int:
-    """Checks if the pattern1 graph is isomorphic to a subgraph of the specie graph.
+    """Checks if the pattern graph is isomorphic to a subgraph of the specie graph.
     To check if a species pattern matches a general pattern, specie should be the species
     pattern and pattern1 the general pattern.
     For species-observables, count should be False and for molecules-observables it should

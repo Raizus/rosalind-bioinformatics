@@ -33,9 +33,22 @@ def build_chemical_array_graph(chemical_array: list[Pattern]) -> nx.Graph:
     return graph
 
 
-def node_matching(n1: Any, n2: Any,
-                  match_state: bool = False,
-                  match_bond: bool = True) -> bool:
+def node_matching(
+    n1: Any, n2: Any,
+    match_state: bool = False,
+    match_bond: bool = True
+) -> bool:
+    """Node matching function to compare chemical array graphs
+
+    Args:
+        n1 (Any): _description_
+        n2 (Any): _description_
+        match_state (bool, optional): _description_. Defaults to False.
+        match_bond (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        bool: _description_
+    """
     mol1_name = n1.get('molecule_name')
     comp1_name = n1.get('comp_name', None)
     comp1_state = n1.get('state', None)
@@ -74,6 +87,16 @@ def node_matching(n1: Any, n2: Any,
 
 
 def compare_chemical_array_graphs(graph1: nx.Graph, graph2: nx.Graph) -> bool:
+    """Compares two graphs of chemical arrays and returns True if they are isomorphic,
+    False otherwise.
+
+    Args:
+        graph1 (nx.Graph): _description_
+        graph2 (nx.Graph): _description_
+
+    Returns:
+        bool: bool indicating if arrays are isomorphic
+    """
     match_func = partial(node_matching, match_state=True, match_bond=True)
     is_iso: bool = nx.isomorphism.is_isomorphic(graph1, graph2, match_func)
     return is_iso
