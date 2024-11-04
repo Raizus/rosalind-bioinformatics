@@ -1,4 +1,4 @@
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_observable
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern, match_pattern_specie

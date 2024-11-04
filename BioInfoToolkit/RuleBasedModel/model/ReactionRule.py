@@ -2,7 +2,7 @@ from functools import partial
 from typing import Any, Generator
 import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_reaction_rule

@@ -1,6 +1,6 @@
 
 from BioInfoToolkit.RuleBasedModel.actions.actions import BNGLACtion, GenerateNetworkAction, ResetConcentrationsAction, SaveConcentrationsAction, SetConcentrationAction, SimulateAction
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartment
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Observable import Observable

@@ -1,6 +1,6 @@
 from typing import OrderedDict
 
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.model.Species import Species, find_species_match

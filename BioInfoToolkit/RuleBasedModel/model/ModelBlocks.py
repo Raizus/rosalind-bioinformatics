@@ -2,7 +2,7 @@
 from typing import OrderedDict
 import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartment, Compartments, \
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartment, Compartments, \
     is_valid_surface, is_valid_volume
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Observable import Observable

@@ -3,7 +3,7 @@ from itertools import product
 from typing import Any, Generator
 import networkx as nx
 
-from BioInfoToolkit.RuleBasedModel.model.Compartment import Compartments
+from BioInfoToolkit.RuleBasedModel.model.compartment import Compartments
 from BioInfoToolkit.RuleBasedModel.model.Component import components_gen
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_seed_species
