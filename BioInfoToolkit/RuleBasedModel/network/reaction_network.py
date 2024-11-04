@@ -79,6 +79,8 @@ class ReactionNetwork:
         except InvalidModelBlockError as exc:
             msg = "Could not build the reaction network. Model has invalid block(s)."
             raise NetworkConstructionError(msg) from exc
+        except NotImplementedError as exc:
+            raise exc
 
         # generate parameters
         self.generate_parameters(model)

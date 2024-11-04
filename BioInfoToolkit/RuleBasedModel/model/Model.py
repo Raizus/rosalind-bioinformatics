@@ -29,6 +29,7 @@ class Model:
         except (TypeError, ValueError) as exc:
             msg = "Parameters block is not valid."
             raise InvalidModelBlockError(msg) from exc
+        variables = self.parameters_block.evaluated_params
 
         # validate compartments
         try:
@@ -47,7 +48,6 @@ class Model:
             raise InvalidModelBlockError(msg)
 
         # validate species
-        variables = self.parameters_block.evaluated_params
         if not self.species_block.validate_species(molecule_types, compartments):
             msg = "Species block is not valid, due to invalid species."
             raise InvalidModelBlockError(msg)
@@ -62,6 +62,11 @@ class Model:
         if not self.reaction_rules_block.validate_rates(variables):
             msg = "Reaction rules block is not valid, due to invalid rate expression."
             raise InvalidModelBlockError(msg)
+
+        # check if reactions can be decomposed into simple transformations
+        if self.is_compartmentalized():
+            msg = "Reaction decomposition for compartmentalized model is not implemented."
+            raise NotImplementedError(msg)
         try:
             self.reaction_rules_block.decompose_reactions()
         except ValueError as exc:
