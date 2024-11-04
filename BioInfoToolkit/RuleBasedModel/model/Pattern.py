@@ -248,7 +248,7 @@ class Pattern:
                            molecule_name=molecule.name,
                            node_id=parent_id,
                            compartment=molecule.compartment)
-            
+
             for j, component in enumerate(molecule.components):
                 child_id = (i, j)
                 graph.add_node(child_id, molecule_name=molecule.name,
@@ -538,23 +538,33 @@ def form_bond(pattern1: Pattern,
     return new_pattern
 
 
-def node_pattern_matching_func(n1: Any, n2: Any) -> bool:
-    mol1_name = n1.get('molecule_name')
-    comp1_name = n1.get('comp_name', None)
-    comp1_state = n1.get('state', None)
-    comp1_bond = n1.get('bond', None)
+def sp_pattern_node_matching(sp_node: Any, patt_node: Any) -> bool:
+    mol1_name = sp_node.get('molecule_name')
+    comp1_name = sp_node.get('comp_name', None)
+    comp1_state = sp_node.get('state', None)
+    comp1_bond = sp_node.get('bond', None)
 
-    mol2_name = n2.get('molecule_name')
-    comp2_name = n2.get('comp_name', None)
-    comp2_state = n2.get('state', None)
-    comp2_bond = n2.get('bond', None)
+    mol2_name = patt_node.get('molecule_name')
+    comp2_name = patt_node.get('comp_name', None)
+    comp2_state = patt_node.get('state', None)
+    comp2_bond = patt_node.get('bond', None)
 
     component_match = mol1_name == mol2_name and comp1_name == comp2_name
+    if not component_match:
+        return False
 
     # state does not have to match, but must be either undefined in both or defined in both
     state_match = comp1_state == comp2_state
     if comp2_state is not None and len(comp2_state) == 0:
         state_match = True
+    if not state_match:
+        return False
+
+    # check compartments
+    patt_compart = patt_node.get('compartment', None)
+    sp_compart = sp_node.get('compartment', None)
+    if patt_compart and sp_compart and patt_compart != sp_compart:
+        return False
 
     # check bonds
     is_bonded1 = bool(comp1_bond)
@@ -567,8 +577,7 @@ def node_pattern_matching_func(n1: Any, n2: Any) -> bool:
     elif comp1_bond == '+':
         bond_match = comp2_bond is not None and len(comp2_bond) > 0
 
-    full_match = component_match and state_match and bond_match
-    return full_match
+    return bond_match
 
 
 def match_pattern_specie(
@@ -603,7 +612,7 @@ def match_pattern_specie(
             return 0
 
     # check for subgraph isomorphism
-    match_func = node_pattern_matching_func
+    match_func = sp_pattern_node_matching
     matcher = nx.isomorphism.GraphMatcher(
         specie.graph, pattern.graph, match_func)
 

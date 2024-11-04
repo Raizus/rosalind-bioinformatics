@@ -5,7 +5,7 @@ from typing import Any, Generator
 import networkx as nx
 
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, form_bond, \
-    node_pattern_matching_func, split_pattern_into_connected_components
+    sp_pattern_node_matching, split_pattern_into_connected_components
 from BioInfoToolkit.RuleBasedModel.model.RuleModifiers import RuleModifiers
 
 def idxs_from_reactants(reactants: list[Pattern]):
@@ -155,7 +155,7 @@ class FormBondTransform(ReactionTransformation):
         specie1 = reactants[i1]
         specie2 = reactants[i2]
 
-        match_func = node_pattern_matching_func
+        match_func = sp_pattern_node_matching
         matcher1 = nx.isomorphism.GraphMatcher(
             specie1.graph, self.patterns[i1].graph, match_func)
         matcher2 = nx.isomorphism.GraphMatcher(
@@ -267,7 +267,7 @@ class BreakBondTransform(ReactionTransformation):
         center1 = self.reaction_center_in[0]
         i = center1[0]
         specie = reactants[i]
-        match_func = node_pattern_matching_func
+        match_func = sp_pattern_node_matching
         matcher = nx.isomorphism.GraphMatcher(
             specie.graph, self.patterns_graph, match_func)
         
@@ -359,7 +359,7 @@ class ChangeStateAction(ReactionTransformation):
         i,j,k = center
         specie = reactants[i]
 
-        match_func = node_pattern_matching_func
+        match_func = sp_pattern_node_matching
         matcher = nx.isomorphism.GraphMatcher(
             specie.graph, self.patterns[i].graph, match_func)
         for mapping in matcher.subgraph_isomorphisms_iter():
@@ -435,7 +435,7 @@ class DestroyMoleculeAction(ReactionTransformation):
 
             # we need to find the isomorphism between the affected reactant and the pattern
             # and then delete the correct molecules and any dangling bonds
-            match_func = node_pattern_matching_func
+            match_func = sp_pattern_node_matching
             matcher = nx.isomorphism.GraphMatcher(
                 affected_specie.graph, pattern.graph, match_func)
             for mapping in matcher.subgraph_isomorphisms_iter():

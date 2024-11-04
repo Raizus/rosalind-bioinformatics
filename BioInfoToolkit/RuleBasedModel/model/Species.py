@@ -8,7 +8,7 @@ from BioInfoToolkit.RuleBasedModel.model.Component import components_gen
 from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_seed_species
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, \
-    match_pattern_specie, node_pattern_matching_func
+    match_pattern_specie, sp_pattern_node_matching
 from BioInfoToolkit.RuleBasedModel.utils.parsing_utils import SeedSpeciesDict
 
 
@@ -142,7 +142,7 @@ class Species:
             over the subgraph isomorphisms
         """
         matcher = nx.isomorphism.GraphMatcher(
-            self.pattern.graph, pattern.graph, node_pattern_matching_func)
+            self.pattern.graph, pattern.graph, sp_pattern_node_matching)
 
         yield from matcher.subgraph_isomorphisms_iter()
 
