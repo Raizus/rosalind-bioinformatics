@@ -1,0 +1,195 @@
+# Created by BioNetGen 2.9.2
+begin parameters
+    1 NaV2                    6.02e8  # Constant
+    2 miu                     1e-6  # Constant
+    3 L0                      0  # Constant
+    4 T0                      7000  # Constant
+    5 CheY0                   20000  # Constant
+    6 CheZ0                   6000  # Constant
+    7 CheR0                   120  # Constant
+    8 CheB0                   250  # Constant
+    9 k_lr_bind               8.8e6/NaV2  # ConstantExpression
+   10 k_lr_dis                35  # Constant
+   11 k_TaUnbound_phos        7.5  # Constant
+   12 k_Y_phos                3.8e6/NaV2  # ConstantExpression
+   13 k_Y_dephos              8.6e5/NaV2  # ConstantExpression
+   14 k_TR_bind               2e7/NaV2  # ConstantExpression
+   15 k_TR_dis                1  # Constant
+   16 k_TaR_meth              0.08  # Constant
+   17 k_B_phos                1e5/NaV2  # ConstantExpression
+   18 k_B_dephos              0.17  # Constant
+   19 k_Tb_demeth             5e4/NaV2  # ConstantExpression
+   20 k_Tc_demeth             2e4/NaV2  # ConstantExpression
+   21 _rateLaw1               k_TaUnbound_phos*1.1  # ConstantExpression
+   22 _rateLaw2               k_TaUnbound_phos*2.8  # ConstantExpression
+   23 _rateLaw3               0  # Constant
+   24 _rateLaw4               k_TaUnbound_phos*0.8  # ConstantExpression
+   25 _rateLaw5               k_TaUnbound_phos*1.6  # ConstantExpression
+   26 _rateLaw6               k_TaR_meth*0.1  # ConstantExpression
+   27 _rateLaw7               k_TaR_meth*30  # ConstantExpression
+   28 _rateLaw8               k_TaR_meth*3  # ConstantExpression
+   29 _InitialConc1           (T0*0.84)*0.9  # ConstantExpression
+   30 _InitialConc2           (T0*0.15)*0.9  # ConstantExpression
+   31 _InitialConc3           (T0*0.01)*0.9  # ConstantExpression
+   32 _InitialConc4           (T0*0.84)*0.1  # ConstantExpression
+   33 _InitialConc5           (T0*0.15)*0.1  # ConstantExpression
+   34 _InitialConc6           (T0*0.01)*0.1  # ConstantExpression
+   35 _InitialConc7           CheY0*0.71  # ConstantExpression
+   36 _InitialConc8           CheY0*0.29  # ConstantExpression
+   37 _InitialConc9           CheB0*0.62  # ConstantExpression
+   38 _InitialConc10          CheB0*0.38  # ConstantExpression
+end parameters
+begin species
+    1 @EC::L(t) L0
+    2 @PM::T(Meth~A,Phos~U,l,r) _InitialConc1
+    3 @PM::T(Meth~B,Phos~U,l,r) _InitialConc2
+    4 @PM::T(Meth~C,Phos~U,l,r) _InitialConc3
+    5 @PM::T(Meth~A,Phos~P,l,r) _InitialConc4
+    6 @PM::T(Meth~B,Phos~P,l,r) _InitialConc5
+    7 @PM::T(Meth~C,Phos~P,l,r) _InitialConc6
+    8 @CP::CheY(Phos~U) _InitialConc7
+    9 @CP::CheY(Phos~P) _InitialConc8
+   10 @CP::CheZ() CheZ0
+   11 @CP::CheB(Phos~U) _InitialConc9
+   12 @CP::CheB(Phos~P) _InitialConc10
+   13 @CP::CheR(t) CheR0
+   14 @PM::L(t!1)@EC.T(Meth~A,Phos~U,l!1,r) 0
+   15 @PM::L(t!1)@EC.T(Meth~B,Phos~U,l!1,r) 0
+   16 @PM::L(t!1)@EC.T(Meth~C,Phos~U,l!1,r) 0
+   17 @PM::L(t!1)@EC.T(Meth~A,Phos~P,l!1,r) 0
+   18 @PM::L(t!1)@EC.T(Meth~B,Phos~P,l!1,r) 0
+   19 @PM::L(t!1)@EC.T(Meth~C,Phos~P,l!1,r) 0
+   20 @PM::CheR(t!1)@CP.T(Meth~A,Phos~U,l,r!1) 0
+   21 @PM::CheR(t!1)@CP.T(Meth~B,Phos~U,l,r!1) 0
+   22 @PM::CheR(t!1)@CP.T(Meth~C,Phos~U,l,r!1) 0
+   23 @PM::CheR(t!1)@CP.T(Meth~A,Phos~P,l,r!1) 0
+   24 @PM::CheR(t!1)@CP.T(Meth~B,Phos~P,l,r!1) 0
+   25 @PM::CheR(t!1)@CP.T(Meth~C,Phos~P,l,r!1) 0
+   26 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~A,Phos~U,l!2,r!1) 0
+   27 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~B,Phos~U,l!2,r!1) 0
+   28 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~C,Phos~U,l!2,r!1) 0
+   29 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~A,Phos~P,l!2,r!1) 0
+   30 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~B,Phos~P,l!2,r!1) 0
+   31 @PM::CheR(t!1)@CP.L(t!2)@EC.T(Meth~C,Phos~P,l!2,r!1) 0
+end species
+begin reactions
+    1 1,2 14 0.01*k_lr_bind #LR unit_conversion=1/100
+    2 1,3 15 0.01*k_lr_bind #LR unit_conversion=1/100
+    3 1,4 16 0.01*k_lr_bind #LR unit_conversion=1/100
+    4 1,5 17 0.01*k_lr_bind #LR unit_conversion=1/100
+    5 1,6 18 0.01*k_lr_bind #LR unit_conversion=1/100
+    6 1,7 19 0.01*k_lr_bind #LR unit_conversion=1/100
+    7 2 5 k_TaUnbound_phos #TaUnboundP
+    8 3 6 _rateLaw1 #TbUnboundP
+    9 4 7 _rateLaw2 #TcUnboundP
+   10 5,8 2,9 1*k_Y_phos #YP unit_conversion=1/1
+   11 6,8 3,9 1*k_Y_phos #YP unit_conversion=1/1
+   12 7,8 4,9 1*k_Y_phos #YP unit_conversion=1/1
+   13 9,10 8,10 1*k_Y_dephos #YDep unit_conversion=1/1
+   14 2,13 20 1*k_TR_bind #TRBind unit_conversion=1/1
+   15 3,13 21 1*k_TR_bind #TRBind unit_conversion=1/1
+   16 4,13 22 1*k_TR_bind #TRBind unit_conversion=1/1
+   17 5,13 23 1*k_TR_bind #TRBind unit_conversion=1/1
+   18 6,13 24 1*k_TR_bind #TRBind unit_conversion=1/1
+   19 7,13 25 1*k_TR_bind #TRBind unit_conversion=1/1
+   20 5,11 2,12 1*k_B_phos #CheBphos unit_conversion=1/1
+   21 6,11 3,12 1*k_B_phos #CheBphos unit_conversion=1/1
+   22 7,11 4,12 1*k_B_phos #CheBphos unit_conversion=1/1
+   23 12 11 k_B_dephos #CheBdephos
+   24 3,12 2,12 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   25 6,12 5,12 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   26 4,12 3,12 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   27 7,12 6,12 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   28 1,20 26 0.01*k_lr_bind #LR unit_conversion=1/100
+   29 1,21 27 0.01*k_lr_bind #LR unit_conversion=1/100
+   30 1,22 28 0.01*k_lr_bind #LR unit_conversion=1/100
+   31 1,23 29 0.01*k_lr_bind #LR unit_conversion=1/100
+   32 1,24 30 0.01*k_lr_bind #LR unit_conversion=1/100
+   33 1,25 31 0.01*k_lr_bind #LR unit_conversion=1/100
+   34 14 1,2 k_lr_dis #_reverse_LR
+   35 15 1,3 k_lr_dis #_reverse_LR
+   36 16 1,4 k_lr_dis #_reverse_LR
+   37 17 1,5 k_lr_dis #_reverse_LR
+   38 18 1,6 k_lr_dis #_reverse_LR
+   39 19 1,7 k_lr_dis #_reverse_LR
+   40 20 23 k_TaUnbound_phos #TaUnboundP
+   41 21 24 _rateLaw1 #TbUnboundP
+   42 22 25 _rateLaw2 #TcUnboundP
+   43 14 17 _rateLaw3 #TaLigandP
+   44 15 18 _rateLaw4 #TbLigandP
+   45 16 19 _rateLaw5 #TcLigandP
+   46 8,17 9,14 1*k_Y_phos #YP unit_conversion=1/1
+   47 8,18 9,15 1*k_Y_phos #YP unit_conversion=1/1
+   48 8,19 9,16 1*k_Y_phos #YP unit_conversion=1/1
+   49 8,23 9,20 1*k_Y_phos #YP unit_conversion=1/1
+   50 8,24 9,21 1*k_Y_phos #YP unit_conversion=1/1
+   51 8,25 9,22 1*k_Y_phos #YP unit_conversion=1/1
+   52 13,14 26 1*k_TR_bind #TRBind unit_conversion=1/1
+   53 13,15 27 1*k_TR_bind #TRBind unit_conversion=1/1
+   54 13,16 28 1*k_TR_bind #TRBind unit_conversion=1/1
+   55 13,17 29 1*k_TR_bind #TRBind unit_conversion=1/1
+   56 13,18 30 1*k_TR_bind #TRBind unit_conversion=1/1
+   57 13,19 31 1*k_TR_bind #TRBind unit_conversion=1/1
+   58 20 2,13 k_TR_dis #_reverse_TRBind
+   59 21 3,13 k_TR_dis #_reverse_TRBind
+   60 22 4,13 k_TR_dis #_reverse_TRBind
+   61 23 5,13 k_TR_dis #_reverse_TRBind
+   62 24 6,13 k_TR_dis #_reverse_TRBind
+   63 25 7,13 k_TR_dis #_reverse_TRBind
+   64 20 3,13 k_TaR_meth #TaRUnboundMeth
+   65 23 6,13 k_TaR_meth #TaRUnboundMeth
+   66 21 4,13 _rateLaw6 #TbRUnboundMeth
+   67 24 7,13 _rateLaw6 #TbRUnboundMeth
+   68 11,17 12,14 1*k_B_phos #CheBphos unit_conversion=1/1
+   69 11,18 12,15 1*k_B_phos #CheBphos unit_conversion=1/1
+   70 11,19 12,16 1*k_B_phos #CheBphos unit_conversion=1/1
+   71 11,23 12,20 1*k_B_phos #CheBphos unit_conversion=1/1
+   72 11,24 12,21 1*k_B_phos #CheBphos unit_conversion=1/1
+   73 11,25 12,22 1*k_B_phos #CheBphos unit_conversion=1/1
+   74 12,15 12,14 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   75 12,18 12,17 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   76 12,21 12,20 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   77 12,24 12,23 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+   78 12,16 12,15 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   79 12,19 12,18 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   80 12,22 12,21 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   81 12,25 12,24 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+   82 26 1,20 k_lr_dis #_reverse_LR
+   83 27 1,21 k_lr_dis #_reverse_LR
+   84 28 1,22 k_lr_dis #_reverse_LR
+   85 29 1,23 k_lr_dis #_reverse_LR
+   86 30 1,24 k_lr_dis #_reverse_LR
+   87 31 1,25 k_lr_dis #_reverse_LR
+   88 26 29 _rateLaw3 #TaLigandP
+   89 27 30 _rateLaw4 #TbLigandP
+   90 28 31 _rateLaw5 #TcLigandP
+   91 8,29 9,26 1*k_Y_phos #YP unit_conversion=1/1
+   92 8,30 9,27 1*k_Y_phos #YP unit_conversion=1/1
+   93 8,31 9,28 1*k_Y_phos #YP unit_conversion=1/1
+   94 26 13,14 k_TR_dis #_reverse_TRBind
+   95 27 13,15 k_TR_dis #_reverse_TRBind
+   96 28 13,16 k_TR_dis #_reverse_TRBind
+   97 29 13,17 k_TR_dis #_reverse_TRBind
+   98 30 13,18 k_TR_dis #_reverse_TRBind
+   99 31 13,19 k_TR_dis #_reverse_TRBind
+  100 26 13,15 _rateLaw7 #TaRLigandMeth
+  101 29 13,18 _rateLaw7 #TaRLigandMeth
+  102 27 13,16 _rateLaw8 #TbRLigandMeth
+  103 30 13,19 _rateLaw8 #TbRLigandMeth
+  104 11,29 12,26 1*k_B_phos #CheBphos unit_conversion=1/1
+  105 11,30 12,27 1*k_B_phos #CheBphos unit_conversion=1/1
+  106 11,31 12,28 1*k_B_phos #CheBphos unit_conversion=1/1
+  107 12,27 12,26 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+  108 12,30 12,29 1*k_Tb_demeth #TbDemeth unit_conversion=1/1
+  109 12,28 12,27 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+  110 12,31 12,30 1*k_Tc_demeth #TcDemeth unit_conversion=1/1
+end reactions
+begin groups
+    1 bound_ligand         14,15,16,17,18,19,26,27,28,29,30,31
+    2 phosphorylated_CheY  9
+    3 low_methyl_receptor  2,5,14,17,20,23,26,29
+    4 medium_methyl_receptor 3,6,15,18,21,24,27,30
+    5 high_methyl_receptor 4,7,16,19,22,25,28,31
+    6 phosphorylated_CheB  12
+    7 CheRbound            20,21,22,23,24,25,26,27,28,29,30,31
+end groups

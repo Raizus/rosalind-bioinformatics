@@ -62,7 +62,7 @@ begin reaction rules
 A(t!1,b)@CYT.T1(a!1) -> A(t,b)@O1V + T1(a) k_AT1trans
 
 # A and B bind to form a complex C
-A(t,b) + B(a)  -> A(t,b!1).B(a!1) kp_AB
+A(t,b) + B(a) -> A(t,b!1).B(a!1) kp_AB
 
 # A.B in interior of organelle 1 binds to T1 (reversibly)
 @O1V:A(t,b!1).B(a!1) + T1(a) <-> A(t!2,b!1).B(a!1).T1(a!2) kp_CT1, km_CT1
@@ -82,4 +82,4 @@ end reaction rules
 
 #generate_network()
 #writeSBML()  
-simulate({method=>"ode",t_start=>0,t_end=>.01,n_steps=>1000})
+simulate({method=>"ode",t_start=>0,t_end=>0.01,n_steps=>1000})

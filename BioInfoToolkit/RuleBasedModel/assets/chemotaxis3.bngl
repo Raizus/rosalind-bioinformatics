@@ -110,4 +110,4 @@ end species
 end model
 
 generate_network({overwrite=>1})
-simulate({method=>"ssa", t_end=>800, n_steps=>800})
+# simulate({method=>"ssa", t_end=>800, n_steps=>800})
