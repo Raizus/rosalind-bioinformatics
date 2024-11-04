@@ -18,6 +18,12 @@ class SpeciesBlock(NetworkBlock):
         self.items = OrderedDict()
         self.id_count = 1
 
+    def get_specie(self, sp_id: int) -> Species | None:
+        return self.items.get(sp_id, None)
+
+    def has_specie(self, sp_id: int) -> bool:
+        specie = self.get_specie(sp_id)
+        return specie is not None
 
     def get_specie_id(self, species_pattern: Pattern) -> int:
         """Returns the id of the species in the species dictionary that matches the 
