@@ -32,6 +32,9 @@ class TransformationType(Enum):
     CHANGE_COMPONENT_STATE = "Change Component State"
     CREATE_MOLECULE = "Create Molecules"
     DESTROY_MOLECULE = "Destroy Molecule"
+    ADJ_COMPARTMENT_MOL_TRANSPORT = "Adjacent Compartment Molecular Transport"
+    BRIDGED_VOLUME_MOL_TRANSPORT = "Bridged-Volume Molecular Transport"
+    BRIDGED_SURFACE_CONNECTED_TRANSPORT = "Bridged-Surface Connected Transport"
 
 
 class ReactionTransformation(abc.ABC):
