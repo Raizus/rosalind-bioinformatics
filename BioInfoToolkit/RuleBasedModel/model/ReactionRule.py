@@ -504,6 +504,7 @@ def find_transformation(
                                               bond_forms[0], bond_forms[1])
         transformations.append(bond_forms_action)
 
+    # find deleted molecules
     res = find_deleted_molecules(curr_reactants, curr_graph_r, node_map)
     if res:
         idx, _ = res
@@ -511,6 +512,7 @@ def find_transformation(
             curr_reactants, curr_graph_r, idx)
         transformations.append(delete_molecule_action)
 
+    # find created molecules
     created_pattern = find_created_molecules(products, graph_p, node_map)
     if created_pattern:
         create_molecule_action = CreateMoleculeAction(
