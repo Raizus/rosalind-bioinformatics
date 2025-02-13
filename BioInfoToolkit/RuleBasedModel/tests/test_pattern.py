@@ -5,7 +5,7 @@ from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Molecule, Pattern, match_pattern_specie
 
 
-def test_valid_1():
+def test_valid_molecule():
     components = [Component('x', {'a', 'b'}),
                   Component('x', {'a', 'b'}),
                   Component('y', set())]
@@ -90,7 +90,7 @@ class TestPattern():
         ("R(lig,ch)", "R(lig!0,ch)", False),                # with vs without bond
 
         # omited vs explicit component, component mismatch
-        ("R(lig!0,ch)", "R(lig!0)", False),                 
+        ("R(lig!0,ch)", "R(lig!0)", False),
         ("R(lig,ch~open)", "R(lig!0,ch~open)", False),
         ("R(lig,ch)", "R(lig)", False),
 

@@ -147,20 +147,6 @@ class Species:
         yield from matcher.subgraph_isomorphisms_iter()
 
 
-def generate_species_from_molecule_type(molecule_type: MoleculeType):
-    name = molecule_type.name
-
-    molecule_type_components = [component for name, component in molecule_type.components.items(
-    ) for _ in range(molecule_type.components_counts[name])]
-    components_iters = [
-        components_gen(component) for component in molecule_type_components]
-
-    for aux2 in product(*components_iters):
-        molecule = Molecule(name, list(aux2))
-        pattern = Pattern([molecule])
-        yield pattern
-
-
 def find_species_match(pattern: Pattern, species: dict[int, Species]):
     """Returns the species_id that matches pattern exactly. Returns -1 if no match
 

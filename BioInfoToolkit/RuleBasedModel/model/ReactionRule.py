@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import partial
 from typing import Any, Generator
 import networkx as nx
@@ -463,6 +464,30 @@ def find_created_molecules(
         new_pattern = Pattern(molecules)
         if len(molecules) > 0:
             return new_pattern
+
+
+def find_bridged_vol_mol_transport(
+    graph_r: nx.Graph,
+    graph_p: nx.Graph,
+    node_map: dict[ChemArrayNodeId, ChemArrayNodeId]
+):
+    # individual molecules moved from one volume to another volume through a
+    # bridging surface
+    # example: A(x)@Cyt -> A(x)@Nuc k
+
+    # identify matching individual molecules
+    node_groups_r: defaultdict[int,
+                               set[ChemArrayNodeId]
+                               ] = defaultdict(set)
+    node_groups_p: defaultdict[int,
+                               set[ChemArrayNodeId]
+                               ] = defaultdict(set)
+    for n1, n2 in node_map.items():
+        node_groups_r[n1[0]].add(n1)
+        node_groups_p[n2[0]].add(n2)
+
+    for i, nodes_r in node_groups_r.items():
+        n_mol = set(node[1] for node in nodes_r)
 
 
 def find_transformation(

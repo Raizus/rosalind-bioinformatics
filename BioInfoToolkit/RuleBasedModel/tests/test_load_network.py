@@ -5,31 +5,36 @@ from BioInfoToolkit.RuleBasedModel.actions.actions import GenerateNetworkAction
 from BioInfoToolkit.RuleBasedModel.model.load_model import load_bngl
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import load_network
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-from BioInfoToolkit.RuleBasedModel.network.test_utils import compare_observables_dicts, compare_reactions_dicts, \
-    compare_species_dicts
+from BioInfoToolkit.RuleBasedModel.network.test_utils import compare_observables_dicts, \
+    compare_reactions_dicts, compare_species_dicts
 
+FILES_PATH = './BioInfoToolkit/RuleBasedModel/assets/'
 
-@pytest.mark.parametrize("fp", [
-    './BioInfoToolkit/RuleBasedModel/assets/chemotaxis1.net',
-    './BioInfoToolkit/RuleBasedModel/assets/chemotaxis2.net',
-    './BioInfoToolkit/RuleBasedModel/assets/BLBR.net',
-    './BioInfoToolkit/RuleBasedModel/assets/repressilator.net',
-    './BioInfoToolkit/RuleBasedModel/assets/egfr_simple.net',
-    './BioInfoToolkit/RuleBasedModel/assets/FceRI_ji.net',
-])
+bngl_files = [
+    f'{FILES_PATH}chemotaxis1.bngl',
+    f'{FILES_PATH}chemotaxis2.bngl',
+    f'{FILES_PATH}BLBR.bngl',
+    f'{FILES_PATH}repressilator.bngl',
+    f'{FILES_PATH}egfr_simple.bngl',
+    f'{FILES_PATH}FceRI_ji.bngl',
+]
+
+net_files = [
+    f'{FILES_PATH}chemotaxis1.net',
+    f'{FILES_PATH}chemotaxis2.net',
+    f'{FILES_PATH}BLBR.net',
+    f'{FILES_PATH}repressilator.net',
+    f'{FILES_PATH}egfr_simple.net',
+    f'{FILES_PATH}FceRI_ji.net',
+]
+
+@pytest.mark.parametrize("fp", net_files)
 def test_load_network(fp: str):
     network = load_network(fp)
     assert isinstance(network, ReactionNetwork)
 
 
-@pytest.mark.parametrize("fp", [
-    './BioInfoToolkit/RuleBasedModel/assets/chemotaxis1.bngl',
-    './BioInfoToolkit/RuleBasedModel/assets/chemotaxis2.bngl',
-    './BioInfoToolkit/RuleBasedModel/assets/BLBR.bngl',
-    './BioInfoToolkit/RuleBasedModel/assets/repressilator.bngl',
-    './BioInfoToolkit/RuleBasedModel/assets/egfr_simple.bngl',
-    './BioInfoToolkit/RuleBasedModel/assets/FceRI_ji.bngl',
-])
+@pytest.mark.parametrize("fp", bngl_files)
 def test_generate_network(fp: str):
     model, actions = load_bngl(fp)
     for action in actions:

@@ -4,7 +4,6 @@ from BioInfoToolkit.RuleBasedModel.model.MoleculeType import MoleculeType
 
 
 class TestMoleculeType:
-
     @pytest.mark.parametrize("declaration", [
         "A(x~a~b,x~a~b,y)",
         "A(y)",

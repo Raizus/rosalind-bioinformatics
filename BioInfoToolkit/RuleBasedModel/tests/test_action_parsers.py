@@ -17,8 +17,8 @@ class TestParseGenerateNetwork:
 
 class TestParseSimulate:
     @pytest.mark.parametrize("declaration, method, t_start, t_end, n_steps", [
-        ('simulate({method=>"ssa", t_end=>1, n_steps=>100});', "ssa", 0.0, 1.0, 100),
-        ('simulate({method=>"ssa", t_end=>0.8})', "ssa", 0.0, 0.8, None),
+        ('simulate({method=>"ssa", t_end=>1, n_steps=>100});', "ssa", None, 1.0, 100),
+        ('simulate({method=>"ssa", t_end=>0.8})', "ssa", None, 0.8, None),
         ('simulate({method=>"ssa", t_start=>0.8, t_end=>4.5})',
          "ssa", 0.8, 4.5, None),
     ])
