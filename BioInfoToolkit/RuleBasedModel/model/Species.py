@@ -165,7 +165,7 @@ def find_species_match(pattern: Pattern, species: dict[int, Species]):
 
 def species_match_gen(pattern: Pattern,
                       species: dict[int, Species],
-                      cache: dict[tuple[str,int], int] | None = None):
+                      cache: set[tuple[str,int]] | None = None):
     """Generator of species_id that match the given pattern with memoization
 
     Args:
@@ -178,23 +178,16 @@ def species_match_gen(pattern: Pattern,
         int: sp_id (species_id)
     """
     if cache is None:
-        cache = {}
+        cache = set()
 
     pattern_str = str(pattern)
-
-    # Check if the result is already cached
-    if pattern_str in cache:
-        sp_id = cache[pattern_str]
-        if sp_id is not None:
-            yield sp_id
-        return
 
     for sp_id, specie in species.items():
         key = (pattern_str, sp_id)
         if key in cache:
-            yield cache[key]
+            yield sp_id
         else:
             match = specie.match_pattern(pattern)
             if match:
-                cache[(pattern_str, sp_id)] = sp_id
+                cache.add(key)
                 yield sp_id

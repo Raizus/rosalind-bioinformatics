@@ -128,14 +128,17 @@ def count_generated_rules(
     species_block: SpeciesBlock,
     max_stoich: dict[str, int]
 ) -> defaultdict[tuple[int, tuple[int, ...], tuple[int, ...]], int]:
-    """_summary_
+    """Given a list of reactant species id's which match the reactants in
+    the given reaction rule, applies the reaction rule to the given species,
+    counts the total number of reactions generated that do not break stoichiometry
 
     Args:
-        react_species_ids (list[int]): _description_
-        rule_id (int): _description_
-        rule (ReactionRule): _description_
-        species_block (SpeciesBlock): _description_
-        max_stoich (dict[str, int]): _description_
+        react_species_ids (list[int]): list of reactant species id's
+        rule_id (int): rule id
+        rule (ReactionRule): reaction rule
+        species_block (SpeciesBlock): network species block
+        max_stoich (dict[str, int]): max stoichiometry, maps molecule names to a
+            maximum number of allowed molecules of that name per complex, can be empty
 
     Returns:
         defaultdict[tuple[int, tuple[int, ...], tuple[int, ...]], int]: 
@@ -151,7 +154,10 @@ def count_generated_rules(
         int
     ] = defaultdict(int)
 
-    products_gen = apply_transforms(react_species, rule.transformations, rule.modifiers)
+    # when applying a rule to the reactant species, there may be more than one reaction generated
+    # because of things like symmetry
+    products_gen = apply_transforms(
+        react_species, rule.transformations, rule.modifiers)
     for prod_sp_patts in products_gen:
         # check max stoichiometry
         if breaks_stoich_multiple(prod_sp_patts, max_stoich):
@@ -171,45 +177,66 @@ def count_generated_rules(
             tuple(sorted(react_species_ids)),
             tuple(sorted(prod_sp_ids))
         )
-        reaction_counter[reaction_key]+=1
+        reaction_counter[reaction_key] += 1
 
     return reaction_counter
 
 
 class ReactionGenerator:
+    """
+    Generates reactions from reaction rules and a given species list
+
+    Yields:
+        _type_: _description_
+    """
     rules: OrderedDict[int, ReactionRule]
-    # stores with combinations of rule_ids and sorted reactants have already been computed
-    apply_rule_cache: set[tuple[int, tuple[int,...]]]
+    # stores which combinations of rule_ids and sorted reactants have already been computed
+    # each element in the set is a tuple containting (rule_id, (reactant1, reactant2, ...))
+    applied_rule_cache: set[tuple[int, tuple[int, ...]]]
     # this maps str(pattern): sp_id
-    species_match_cache: dict[tuple[str,int], int]
+    species_match_cache: set[tuple[str, int]]
 
     def __init__(self, rules: OrderedDict[int, ReactionRule]) -> None:
         self.rules = rules
-        self.apply_rule_cache = set()
-        self.species_match_cache = {}
+        self.applied_rule_cache = set()
+        self.species_match_cache = set()
 
     def generate(self, species_block: SpeciesBlock, max_stoich: dict[str, int]):
+        """Generator of new reactions, given the species block of a reaction network
+
+        Args:
+            species_block (SpeciesBlock): _description_
+            max_stoich (dict[str, int]): _description_
+
+        Yields:
+            _type_: _description_
+        """
         species_dict = species_block.items
 
         for rule_id, rule in self.rules.items():
             reactants = rule.reactants
 
+            # creates a list of generators, where each generator
+            # yields all the species that match each reactant in the reaction rule
             reactants_gens = [species_match_gen(patt, species_dict,
                                                 self.species_match_cache)
                               for patt in reactants]
 
+            # counts all the generated reactions
+            # (rule_id, (reactant1, ...), (product1, ...))
             reaction_counter: Counter[tuple[int,
                                             tuple[int, ...], tuple[int, ...]]] = Counter()
 
+            # iterate over all permutations of species that match the reactants in the rule
             for react_sp_ids in product(*reactants_gens):
                 rule_sp_key = (rule_id, tuple(sorted(react_sp_ids)))
 
                 # check if we already applied this rule to this combination of reactants
-                if rule_sp_key in self.apply_rule_cache:
+                if rule_sp_key in self.applied_rule_cache:
                     continue
 
-                # apply rule to reactants
-                # (id, react_sps, prod_sps)
+                # apply rule to reactants and count all the generated reactions
+                # to take multiplicity into account
                 counter2 = count_generated_rules(
                     list(react_sp_ids), rule_id, rule,
                     species_block, max_stoich
@@ -223,7 +250,7 @@ class ReactionGenerator:
                 rule_sp_key = (rule_id, tuple(sorted(react_sp_ids)))
 
                 # update cache
-                self.apply_rule_cache.add(rule_sp_key)
+                self.applied_rule_cache.add(rule_sp_key)
 
                 # create new reaction
                 rate_expr = rule.forward_rate
@@ -233,5 +260,5 @@ class ReactionGenerator:
 
                 comment = f"{rule.name}"
                 rxn = Reaction(list(react_sp_ids), list(prod_sp_ids),
-                            rate_expr, rule_id, comment)
+                               rate_expr, rule_id, comment)
                 yield rxn
