@@ -32,7 +32,7 @@ class Molecule:
             valid = components_all_equal(comps)
             if not valid:
                 msg = (f"At least one component with name {comp_name} " +
-                "does not match other components with the same name.")
+                       "does not match other components with the same name.")
                 raise ValueError(msg)
 
     def validate(self, molecule_types: dict[str, MoleculeType] | None) -> bool:
@@ -127,7 +127,7 @@ class Molecule:
                 max_count = molecule_type.components_counts[comp_name]
                 if components_count[comp_name] >= max_count:
                     msg = (f"Molecule {molecule_name} can only have at most {max_count} " +
-                        f"components with name {comp_name}.")
+                           f"components with name {comp_name}.")
                     raise ValueError(msg)
 
             components.append(component)
@@ -214,6 +214,7 @@ def sort_molecules(molecules: list[Molecule]) -> list[Molecule]:
     sorted_mol = sorted(molecules, key=sort_fun)
     return sorted_mol
 
+
 def generate_species(molecule: MoleculeType):
     name = molecule.name
 
@@ -266,7 +267,7 @@ class Pattern:
                 graph.add_edge(node1, node2, bond=bond_id)
             else:
                 msg = (f"There are bonds ({bond_id}) with a number " +
-                "of nodes different than 2 ({len(nodes)}).")
+                       "of nodes different than 2 ({len(nodes)}).")
                 print(msg)
 
     @classmethod
@@ -346,8 +347,10 @@ class Pattern:
             state_match = comp1_state == comp2_state
 
             # check bonds
-            comp1_is_bonded = comp1_bond is not None and len(comp1_bond) > 0 and comp1_bond != '?'
-            comp2_is_bonded = comp2_bond is not None and len(comp2_bond) > 0 and comp2_bond != '?'
+            comp1_is_bonded = comp1_bond is not None and len(
+                comp1_bond) > 0 and comp1_bond != '?'
+            comp2_is_bonded = comp2_bond is not None and len(
+                comp2_bond) > 0 and comp2_bond != '?'
 
             bond_match = comp1_is_bonded == comp2_is_bonded
             if comp1_bond == '?' or comp2_bond == '?':
@@ -358,7 +361,8 @@ class Pattern:
             full_match = component_match and state_match and bond_match
             return full_match
 
-        is_iso = nx.isomorphism.is_isomorphic(self.graph, other.graph, node_matching)
+        is_iso = nx.isomorphism.is_isomorphic(
+            self.graph, other.graph, node_matching)
         return is_iso
 
     def molecule_counts(self) -> Counter[str]:
@@ -423,7 +427,7 @@ class Pattern:
                 else:
                     style = 'solid'
 
-            label = f"{node_id}\n"+ label
+            label = f"{node_id}\n" + label
             dot.node(str(node_id), label=label, shape=shape, style=style)
 
         # Add edges between molecules and components
@@ -588,8 +592,9 @@ def match_pattern_specie(
     """Checks if the pattern graph is isomorphic to a subgraph of the specie graph.
     To check if a species pattern matches a general pattern, specie should be the species
     pattern and pattern1 the general pattern.
-    For species-observables, count should be False and for molecules-observables it should
-    be True.
+
+        For species-observables, count_unique_matches should be False and 
+    for molecules-observables it should be True.
 
     Args:
         pattern1 (Pattern): _description_
@@ -620,7 +625,7 @@ def match_pattern_specie(
     if count_unique_matches:
         nodes_set: list[set[
             tuple[tuple[int, int], tuple[int, int]]
-            ]] = []
+        ]] = []
         num_matches = 0
         for mapping in matcher.subgraph_isomorphisms_iter():
             nodes = set((n1, n2) for n1, n2 in mapping.items())

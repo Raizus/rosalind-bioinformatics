@@ -251,16 +251,16 @@ def parse_molecule_type(declaration: str):
     molecule_type_state = pp.Suppress('~') + STATE
     molecule_type_states = pp.Group(pp.Optional(molecule_type_state[2, ...]))
     molecule_type_component = \
-        (NAME_EXPRESSION('name') + molecule_type_states('states')).leaveWhitespace()
+        (NAME_EXPRESSION('name') + molecule_type_states('states'))
 
     molecule_type_components = pp.delimitedList(
-        pp.Group(molecule_type_component)).leaveWhitespace()
+        pp.Group(molecule_type_component))
 
     molecule_type_parser = (
         NAME_EXPRESSION('molecule_name') +
         pp.Literal('(').leaveWhitespace() +
         pp.Optional(molecule_type_components)('components') +
-        pp.Literal(')').leaveWhitespace()
+        pp.Literal(')')
     )
 
     try:

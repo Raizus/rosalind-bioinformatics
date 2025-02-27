@@ -5,7 +5,10 @@ from BioInfoToolkit.RuleBasedModel.model.Observable import Observable
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 
 
-class TestObservable():
+class TestObservable:
+    """
+        Class with Obvervable tests
+    """
     molecules: dict[str, MoleculeType] = {
         "A": MoleculeType.from_declaration("A(b,b,c)"),
         "B": MoleculeType.from_declaration("B(a)"),
@@ -14,7 +17,6 @@ class TestObservable():
 
     species_str_list = [
         "A(b,b,c)", "B(a)", "C(a)",
-        # "A(b,c,b)",
         "A(b!0,b,c).B(a!0)",
         "A(b!0,b!1,c).B(a!0).B(a!1)",
         "A(b,b,c!2).C(a!2)",
@@ -29,6 +31,13 @@ class TestObservable():
         ("Species test_2 A(b!+)", ('Species', 'test_2')),
     ])
     def test_valid(self, declaration: str, expected: tuple[str, str]):
+        """Tests valid string declarations of observables
+
+        Args:
+            declaration (str): _description_
+            expected (tuple[str, str]): tuple with the expected type and label 
+                of the observable
+        """
         observable = Observable.from_declaration(declaration, self.molecules)
         assert observable.type == expected[0]
         assert observable.label == expected[1]
@@ -43,6 +52,14 @@ class TestObservable():
         ("Molecules C C(a)", 1, 1),
     ])
     def test_pattern_matching(self, declaration: str, expected_num_matches: int, total_counts: int):
+        """Tests how many matches there are between an observable given by declaration and 
+        a given list of species.
+
+        Args:
+            declaration (str): _description_
+            expected_num_matches (int): _description_
+            total_counts (int): _description_
+        """
         observable = Observable.from_declaration(declaration, self.molecules)
         species = [Pattern.from_declaration(
             species_str, self.molecules) for species_str in self.species_str_list]

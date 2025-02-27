@@ -4,7 +4,7 @@ import abc
 from BioInfoToolkit.RuleBasedModel.model.Model import Model
 from BioInfoToolkit.RuleBasedModel.model.Pattern import Pattern
 from BioInfoToolkit.RuleBasedModel.network.reaction_network import ReactionNetwork
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict, \
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulationParams, \
     parse_generate_network, parse_set_concentration, parse_simulate
 from BioInfoToolkit.RuleBasedModel.utils.action_parsers import GenerateNetworkDict
 
@@ -26,9 +26,9 @@ class GenerateNetworkAction(BNGLACtion):
 
 
 class SimulateAction(BNGLACtion):
-    params: SimulateDict
+    params: SimulationParams
 
-    def __init__(self, params: SimulateDict) -> None:
+    def __init__(self, params: SimulationParams) -> None:
         self.params = params
 
     @classmethod

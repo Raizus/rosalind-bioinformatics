@@ -1,9 +1,20 @@
 from collections import Counter
-from BioInfoToolkit.RuleBasedModel.model.Component import MoleculeTypeComponent, components_all_equal
+from BioInfoToolkit.RuleBasedModel.model.Component import MoleculeTypeComponent, \
+    components_all_equal
 from BioInfoToolkit.RuleBasedModel.utils.model_parsers import parse_molecule_type
 
 
 class MoleculeType:
+    """Class implementing a molecule type
+
+    Raises:
+        ValueError: Raises error if there are components with the same name 
+            but different possible states
+        ValueError: Raises error if the molecule type declaration is invalid
+
+    Returns:
+        MoleculeType: _description_
+    """
     name: str
     components_counts: Counter[str]
     components: dict[str, MoleculeTypeComponent]
@@ -26,6 +37,17 @@ class MoleculeType:
 
     @classmethod
     def from_declaration(cls, declaration: str) -> "MoleculeType":
+        """Creates a MoleculeType object from the string declaration
+
+        Args:
+            declaration (str): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            MoleculeType: _description_
+        """
         parsed = parse_molecule_type(declaration)
         if not parsed:
             raise ValueError(f"Invalid molecule declaration: {declaration}")

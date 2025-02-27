@@ -7,6 +7,15 @@ from BioInfoToolkit.RuleBasedModel.utils.utls import apply_inequality
 
 
 class ObservableElement:
+    """Defines an Observable element, from which observables are formed.
+    Pattern defines a pattern to compare with a given species.
+    Sign and value can be used to find species of molecules that satisfy a given condition.
+    For example, for an element defined as "R>20", the observable element will match with 
+    all species that form a complex with more than 20 R molecules.
+
+    Returns:
+        ObservableElement: _description_
+    """
     pattern: Pattern
     sign: str | None
     value: int | None
@@ -78,6 +87,21 @@ class Observable:
         return observable
 
     def match_species(self, species: Pattern) -> int:
+        """Matches the observable object to a given species.
+        A molecules-observable weights the concentrations of the species by 
+        the number of matches to a pattern (or list of patterns).
+
+        A species-observable is an unweighted sum of the concentrations of species
+        matched to a pattern (or list of patterns).
+
+        Args:
+            species (Pattern): _description_
+
+        Returns:
+            int: If species-observable, returns 1 if there's a match, 0 otherwise.
+            If molecules-observable, return 0 if there's no match, n otherwise, 
+            where n is the number of all subgraph isomorphisms.
+        """
         count_unique = not self.type == 'Species'
         total_matches = 0
 

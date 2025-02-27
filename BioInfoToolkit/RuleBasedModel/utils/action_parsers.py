@@ -142,7 +142,7 @@ def parse_generate_network(declaration: str):
         raise ParsingError(msg) from ee
 
 
-class SimulateDict(TypedDict):
+class SimulationParams(TypedDict):
     method: str
     t_start: float | None
     t_end: float
@@ -155,7 +155,7 @@ class SimulateDict(TypedDict):
     suffix: str | None
 
 
-def parse_simulate(declaration: str) -> SimulateDict:
+def parse_simulate(declaration: str) -> SimulationParams:
     # Basic patterns
     integer = pp.Word(pp.nums)
     exp_part = pp.Optional(pp.CaselessLiteral(
@@ -247,7 +247,7 @@ def parse_simulate(declaration: str) -> SimulateDict:
         t_end = parsed_dict["t_end"]  # t_end is mandatory
 
         # Build the result dictionary
-        result: SimulateDict = {
+        result: SimulationParams = {
             "method": parsed_dict["method"],
             "t_start": t_start,
             "t_end": t_end,

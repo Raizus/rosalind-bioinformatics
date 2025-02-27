@@ -3,18 +3,18 @@ import numpy as np
 import numpy.typing as npt
 
 from BioInfoToolkit.RuleBasedModel.simulation.simulation_utils import write_data_row
-from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulateDict
+from BioInfoToolkit.RuleBasedModel.utils.action_parsers import SimulationParams
 from BioInfoToolkit.RuleBasedModel.utils.utls import get_cdat_last_line
 
 
 class SimulatorABC(abc.ABC):
-    sim_params: SimulateDict
+    sim_params: SimulationParams
     cdat_filename: str = 'output.cdat'
     gdat_filename: str = 'output.gdat'
     next_recording_idx: int
 
     def __init__(self,
-                 sim_params: SimulateDict,
+                 sim_params: SimulationParams,
                  cdat_filename: str = 'output.cdat',
                  gdat_filename: str = 'output.gdat'
                  ) -> None:
